@@ -1,0 +1,36 @@
+{
+  "name": "@medassist/patient-pwa",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts,.tsx"
+  },
+  "dependencies": {
+    "@medassist/shared-types": "workspace:*",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.28.1",
+    "react-signature-canvas": "^1.0.6",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@types/react-signature-canvas": "^1.0.6",
+    "@vitejs/plugin-react": "^4.3.4",
+    "happy-dom": "^16.6.0",
+    "typescript": "^5.7.2",
+    "vite": "^5.4.11",
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^2.1.8",
+    "workbox-window": "^7.3.0"
+  }
+}
