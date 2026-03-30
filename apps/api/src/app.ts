@@ -2,6 +2,8 @@ import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
+import visitRouter from './modules/visit.router';
+import authRouter from './modules/staff/auth.router';
 
 const app = express();
 
@@ -29,11 +31,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// ─── Route mounts (filled in as modules are implemented) ──────────────────────
-// app.use('/api/auth',   authRouter);
-// app.use('/api/visit',  visitRouter);
-// app.use('/api/staff',  staffRouter);
-// app.use('/api/admin',  adminRouter);
+// ─── Route mounts ──────────────────────────────────────────────
+app.use('/api/auth', authRouter);
+app.use('/api/visit', visitRouter);
+// Additional routers for staff operations, admin, etc. can be mounted here as implemented
+// app.use('/api/staff', staffRouter);
+// app.use('/api/admin', adminRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

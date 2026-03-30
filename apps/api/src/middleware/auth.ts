@@ -26,7 +26,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      staffUser?: StaffJwtPayload;
+      staffAuth?: StaffJwtPayload;
       magicLink?: MagicLinkContext;
     }
   }
@@ -62,18 +62,18 @@ export function requireStaffAuth(req: Request, res: Response, next: NextFunction
         [payload.sub]
       ).catch((err) => console.error('Failed to update last_active_at:', err));
 
-      req.staffUser = payload;
+      req.staffAuth = payload;
       next();
     })
     .catch(next);
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction): void {
-  if (!req.staffUser) {
+  if (!req.staffAuth) {
     res.status(401).json({ error: 'not_authenticated' });
     return;
   }
-  if (req.staffUser.role !== 'admin') {
+  if (req.staffAuth.role !== 'admin') {
     res.status(403).json({ error: 'insufficient_role' });
     return;
   }

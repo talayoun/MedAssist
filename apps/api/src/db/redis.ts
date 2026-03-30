@@ -25,4 +25,5 @@ export async function isTokenRevoked(token: string): Promise<boolean> {
   return val !== null;
 }
 
+export const redisClient = redis;
 export default redis;
