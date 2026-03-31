@@ -113,14 +113,6 @@ export function requireMagicLinkToken(req: Request, res: Response, next: NextFun
       }
       const row = rows[0];
 
-      if (row.used_at !== null) {
-        res.status(409).json({
-          error: 'link_used',
-          message: 'הקישור כבר נפתח. פנה לצוות לקישור חדש.',
-        });
-        return;
-      }
-
       if (new Date(row.expires_at) <= new Date()) {
         res.status(410).json({
           error: 'link_expired',

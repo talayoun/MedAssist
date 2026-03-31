@@ -45,10 +45,11 @@ export async function resolveToken(token: string): Promise<VisitContext> {
 
   const row = rows[0];
 
-  if (row.used_at !== null) {
+  // A 'done' appointment means the visit is over — link is no longer valid
+  if (row.appt_status === 'done') {
     const err = Object.assign(new Error('link_used'), {
       status: 409,
-      message: 'הקישור כבר נפתח. פנה לצוות לקישור חדש.',
+      message: 'הביקור הסתיים. אם אתה זקוק לגישה מחדש, פנה לצוות המחלקה.',
     });
     throw err;
   }
@@ -61,13 +62,15 @@ export async function resolveToken(token: string): Promise<VisitContext> {
     throw err;
   }
 
-  // Mark token as used
-  await query(
-    'UPDATE magic_links SET used_at = NOW() WHERE token = $1',
-    [token]
-  );
+  // Record first open time (for analytics only — does not block re-use)
+  if (row.used_at === null) {
+    await query(
+      'UPDATE magic_links SET used_at = NOW() WHERE token = $1',
+      [token]
+    );
+  }
 
-  // Activate appointment if still scheduled
+  // Activate appointment on first open
   if (row.appt_status === 'scheduled') {
     await query(
       "UPDATE appointments SET status = 'active', updated_at = NOW() WHERE id = $1",
