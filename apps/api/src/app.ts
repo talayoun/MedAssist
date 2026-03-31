@@ -12,16 +12,18 @@ const app = express();
 // Security headers
 app.use(helmet());
 
-// CORS — only allow the patient PWA and staff back-office origins
-const allowedOrigins = [
-  process.env.PATIENT_APP_URL ?? 'http://localhost:5173',
-  process.env.STAFF_APP_URL ?? 'http://localhost:5174',
-];
+// CORS — allow configured origins plus always-allow localhost for dev
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'http://localhost:5174',
+  ...(process.env.PATIENT_APP_URL ? process.env.PATIENT_APP_URL.split(',').map(s => s.trim()) : []),
+  ...(process.env.STAFF_APP_URL  ? process.env.STAFF_APP_URL.split(',').map(s => s.trim())  : []),
+]);
 app.use(
   cors({
     origin: (origin, cb) => {
       // Allow requests with no origin (e.g. Supertest, curl)
-      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      if (!origin || allowedOrigins.has(origin)) return cb(null, true);
       cb(new Error(`CORS: origin ${origin} not allowed`));
     },
     credentials: true,
