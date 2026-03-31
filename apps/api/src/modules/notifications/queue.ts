@@ -1,5 +1,5 @@
 import { Queue, Worker, Job } from 'bullmq';
-import redis from '../../db/redis';
+import IORedis from 'ioredis';
 
 export interface NotificationJobData {
   notificationId: string;
@@ -11,10 +11,14 @@ export interface NotificationJobData {
   retryCount: number;
 }
 
-const connection = redis;
+// BullMQ Queue connection (standard)
+const queueConnection = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+});
+
 
 export const notificationQueue = new Queue<NotificationJobData>('notifications', {
-  connection,
+  connection: queueConnection,
   defaultJobOptions: {
     attempts: 3,
     backoff: {
@@ -30,7 +34,9 @@ export function createNotificationWorker(
   processor: (job: Job<NotificationJobData>) => Promise<void>
 ): Worker<NotificationJobData> {
   return new Worker<NotificationJobData>('notifications', processor, {
-    connection,
+    connection: new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+      maxRetriesPerRequest: null,
+    }),
     concurrency: 5,
   });
 }
