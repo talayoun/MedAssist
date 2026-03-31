@@ -33,7 +33,7 @@ router.post(
   requireMagicLinkToken,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await confirmStep(req.magicLink!.appointmentId, req.params.step_id);
+      const result = await confirmStep(req.magicLink!.appointmentId, req.params.step_id as string);
       res.json(result);
     } catch (err: unknown) {
       const e = err as { status?: number };

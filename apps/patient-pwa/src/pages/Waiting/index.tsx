@@ -3,10 +3,7 @@ import { useParams } from 'react-router-dom';
 import { getWaitingStatus, sendContactMessage, ApiError } from '../../services/api';
 import type { WaitingResponse } from '@medassist/shared-types';
 
-const POLL_INTERVAL_MS = parseInt(
-  (typeof import.meta !== 'undefined' && (import.meta as { env?: Record<string, string> }).env?.VITE_POLLING_INTERVAL_MS) ?? '60000',
-  10
-);
+const POLL_INTERVAL_MS = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS ?? '60000', 10);
 
 const styles = {
   page: {

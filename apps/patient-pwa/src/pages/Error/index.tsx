@@ -33,7 +33,7 @@ const styles: React.CSSProperties = {
 
 export default function ErrorPage() {
   const { type } = useParams<{ type: string }>();
-  const content = (type && errorMessages[type]) ?? errorMessages.not_found;
+  const content = (type ? errorMessages[type] : undefined) ?? errorMessages.not_found;
 
   return (
     <div style={styles}>

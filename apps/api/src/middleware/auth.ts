@@ -83,7 +83,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 // ─── Magic Link token auth ────────────────────────────────────────────────────
 
 export function requireMagicLinkToken(req: Request, res: Response, next: NextFunction): void {
-  const { token } = req.params;
+  const token = req.params.token as string;
   if (!token) {
     res.status(400).json({ error: 'missing_token' });
     return;

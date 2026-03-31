@@ -9,7 +9,7 @@ const router = Router();
  */
 router.get('/:token', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const context = await resolveToken(req.params.token);
+    const context = await resolveToken(req.params.token as string);
     res.json(context);
   } catch (err: unknown) {
     const e = err as { status?: number; message?: string; name?: string };

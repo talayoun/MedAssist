@@ -15,7 +15,7 @@ router.post('/patients/:appointment_id/stations', requireStaffAuth, async (req: 
   try {
     const parsed = AddStationSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
-    const result = await addStation(req.params.appointment_id, parsed.data.department_id, parsed.data.order_index);
+    const result = await addStation(req.params.appointment_id as string, parsed.data.department_id, parsed.data.order_index);
     res.status(201).json(result);
   } catch (err) { next(err); }
 });
@@ -27,7 +27,7 @@ router.put('/patients/:appointment_id/stations/order', requireStaffAuth, async (
   try {
     const parsed = ReorderSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
-    await reorderStations(req.params.appointment_id, parsed.data.station_ids);
+    await reorderStations(req.params.appointment_id as string, parsed.data.station_ids);
     res.json({ updated: true });
   } catch (err) { next(err); }
 });
@@ -40,8 +40,8 @@ router.patch('/patients/:appointment_id/stations/:station_id', requireStaffAuth,
     const parsed = CompleteSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
     const result = await markStationComplete(
-      req.params.appointment_id,
-      req.params.station_id,
+      req.params.appointment_id as string,
+      req.params.station_id as string,
       req.staffAuth!.sub
     );
     res.json(result);

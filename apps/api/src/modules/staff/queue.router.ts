@@ -31,7 +31,7 @@ router.patch('/queue/:appointment_id/status', requireStaffAuth, async (req: Requ
     const parsed = StatusSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
     const result = await updatePatientStatus(
-      req.params.appointment_id,
+      req.params.appointment_id as string,
       req.staffAuth!.departmentId!,
       parsed.data.status
     );
