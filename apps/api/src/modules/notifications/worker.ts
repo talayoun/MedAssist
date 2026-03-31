@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import { startNotificationWorker } from './notifications.consumer';
 
 console.log('[worker] Starting notification worker...');
