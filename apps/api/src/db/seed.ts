@@ -1,8 +1,18 @@
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt';
 import { randomUUID } from 'crypto';
+import IORedis from 'ioredis';
+import { Queue } from 'bullmq';
+import type { NotificationJobData } from '../modules/notifications/queue';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+const redisConn = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+  maxRetriesPerRequest: null,
+});
+const notificationQueue = new Queue<NotificationJobData>('notifications', {
+  connection: redisConn,
+});
 
 async function seed() {
   const client = await pool.connect();
@@ -43,13 +53,13 @@ async function seed() {
     // ─── Patient ──────────────────────────────────────────────────────────────
     const { rows: [patient] } = await client.query<{ id: string }>(`
       INSERT INTO patients (name, phone_number)
-      VALUES ('שרה כהן', '+972501234567')
+      VALUES ('רועי דוידוביץ', '+972526068400')
       ON CONFLICT (phone_number) DO NOTHING
       RETURNING id
     `);
 
     const patientId: string = patient?.id ?? (
-      await client.query<{ id: string }>(`SELECT id FROM patients WHERE phone_number = '+972501234567'`)
+      await client.query<{ id: string }>(`SELECT id FROM patients WHERE phone_number = '+972526068400'`)
     ).rows[0].id;
 
     // ─── Appointment ─────────────────────────────────────────────────────────
@@ -118,13 +128,36 @@ async function seed() {
     await client.query('COMMIT');
 
     const patientAppUrl = process.env.MAGIC_LINK_BASE_URL ?? 'http://localhost:5173/visit';
+    const magicLinkUrl = `${patientAppUrl}/${token}`;
+
+    // ─── Enqueue magic link SMS ───────────────────────────────────────────────
+    const PHONE_NUMBER = '+972526068400';
+    const smsMessage = `שלום רועי! הקישור שלך לביקור במחלקת קרדיולוגיה: ${magicLinkUrl}`;
+
+    const { rows: [notif] } = await pool.query<{ id: string }>(`
+      INSERT INTO notifications (patient_id, appointment_id, type, status, triggering_event)
+      VALUES ($1, $2, 'magic_link', 'retrying', 'seed')
+      RETURNING id
+    `, [patientId, appointmentId]);
+
+    await notificationQueue.add(`sms:magic_link:${appointmentId}`, {
+      notificationId: notif.id,
+      patientId,
+      appointmentId,
+      phoneNumber: PHONE_NUMBER,
+      message: smsMessage,
+      type: 'magic_link',
+      retryCount: 0,
+    });
+
     console.log('\n✅ Seed data inserted successfully.\n');
     console.log('─────────────────────────────────────────');
     console.log('Test accounts:');
     console.log('  Admin:  admin@medassist.test / AdminPassword123');
     console.log('  Staff:  staff@medassist.test / StaffPassword123');
     console.log('\nTest Magic Link:');
-    console.log(`  ${patientAppUrl}/${token}`);
+    console.log(`  ${magicLinkUrl}`);
+    console.log('\n📱 SMS queued → worker will send to', PHONE_NUMBER);
     console.log('─────────────────────────────────────────\n');
   } catch (err) {
     await client.query('ROLLBACK');
@@ -133,6 +166,8 @@ async function seed() {
   } finally {
     client.release();
     await pool.end();
+    await notificationQueue.close();
+    await redisConn.quit();
   }
 }
 
