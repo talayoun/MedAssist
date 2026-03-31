@@ -4,6 +4,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import visitRouter from './modules/visit.router';
 import authRouter from './modules/staff/auth.router';
+import queueRouter from './modules/staff/queue.router';
+import stationsRouter from './modules/staff/stations.router';
 
 const app = express();
 
@@ -34,9 +36,8 @@ app.use(cookieParser());
 // ─── Route mounts ──────────────────────────────────────────────
 app.use('/api/auth', authRouter);
 app.use('/api/visit', visitRouter);
-// Additional routers for staff operations, admin, etc. can be mounted here as implemented
-// app.use('/api/staff', staffRouter);
-// app.use('/api/admin', adminRouter);
+app.use('/api/staff', queueRouter);
+app.use('/api/staff', stationsRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
