@@ -11,6 +11,7 @@ async function sendTelegram(message: string): Promise<string> {
     .map((s) => s.trim())
     .filter(Boolean);
 
+  const errors: string[] = [];
   for (const chatId of chatIds) {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
@@ -19,8 +20,12 @@ async function sendTelegram(message: string): Promise<string> {
     });
     if (!res.ok) {
       const body = await res.text();
-      throw new Error(`Telegram error for chat ${chatId}: ${body}`);
+      errors.push(`chat ${chatId}: ${body}`);
+      console.error(`[notifications] Telegram send failed for chat ${chatId}: ${body}`);
     }
+  }
+  if (errors.length > 0 && errors.length === chatIds.length) {
+    throw new Error(`Telegram send failed for all chats: ${errors.join('; ')}`);
   }
   return `telegram:${Date.now()}`;
 }
@@ -43,7 +48,7 @@ async function processNotification(job: Job<NotificationJobData>): Promise<void>
       [providerMessageId, notificationId]
     );
   } catch (err) {
-    const currentRetry = retryCount + 1;
+    const currentRetry = rows[0].retry_count + 1;
 
     if (currentRetry >= MAX_RETRY_COUNT) {
       await query(
@@ -64,15 +69,14 @@ async function processNotification(job: Job<NotificationJobData>): Promise<void>
 }
 
 export function startNotificationWorker() {
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
+    throw new Error('[notifications] TELEGRAM_BOT_TOKEN env var is required');
+  }
+  if (!process.env.TELEGRAM_CHAT_IDS) {
+    throw new Error('[notifications] TELEGRAM_CHAT_IDS env var is required');
+  }
   const worker = createNotificationWorker(processNotification);
-
-  worker.on('completed', (job) => {
-    console.log(`[notifications] Job ${job.id} completed`);
-  });
-
-  worker.on('failed', (job, err) => {
-    console.error(`[notifications] Job ${job?.id} failed:`, err.message);
-  });
-
+  worker.on('completed', (job) => console.log(`[notifications] Job ${job.id} completed`));
+  worker.on('failed', (job, err) => console.error(`[notifications] Job ${job?.id} failed:`, err.message));
   return worker;
 }
