@@ -31,7 +31,7 @@ async function sendTelegram(message: string): Promise<string> {
 }
 
 async function processNotification(job: Job<NotificationJobData>): Promise<void> {
-  const { notificationId, message, retryCount } = job.data;
+  const { notificationId, message } = job.data;
 
   // Fetch current retry_count from DB (authoritative)
   const { rows } = await query<{ retry_count: number; status: string }>(
