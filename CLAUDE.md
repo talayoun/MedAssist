@@ -138,6 +138,27 @@ These are hard constraints from `.specify/memory/constitution.md` — never viol
 
 ---
 
+## Git Workflow
+
+**Branch per task — always.**
+
+- Create a feature branch before starting any task: `git checkout -b <feature-name>`
+- Commit only the files for that task with a clear message
+- Merge back to the working branch when the task is complete and verified
+- Never commit directly to `main`
+- Keep branches short-lived — one task, one branch, one merge
+
+```bash
+git checkout -b feat/telegram-notification-consumer
+# ... implement ...
+git add <specific files>
+git commit -m "feat(notifications): replace Twilio with Telegram Bot API"
+git checkout 001-patient-visit-companion
+git merge feat/telegram-notification-consumer
+```
+
+---
+
 ## What NOT to Do
 
 - No medical/clinical data stored on MedAssist servers (name, date, procedure only)
