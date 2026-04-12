@@ -1,12 +1,32 @@
-import twilio from 'twilio';
 import { Job } from 'bullmq';
 import { query } from '../../db/db';
 import { createNotificationWorker, NotificationJobData } from './queue';
 
 const MAX_RETRY_COUNT = 3;
 
+async function sendTelegram(message: string): Promise<string> {
+  const token = process.env.TELEGRAM_BOT_TOKEN!;
+  const chatIds = (process.env.TELEGRAM_CHAT_IDS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  for (const chatId of chatIds) {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message }),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Telegram error for chat ${chatId}: ${body}`);
+    }
+  }
+  return `telegram:${Date.now()}`;
+}
+
 async function processNotification(job: Job<NotificationJobData>): Promise<void> {
-  const { notificationId, phoneNumber, message, retryCount } = job.data;
+  const { notificationId, message, retryCount } = job.data;
 
   // Fetch current retry_count from DB (authoritative)
   const { rows } = await query<{ retry_count: number; status: string }>(
@@ -16,23 +36,11 @@ async function processNotification(job: Job<NotificationJobData>): Promise<void>
 
   if (rows.length === 0 || rows[0].status === 'sent') return;
 
-  const client = twilio(
-    process.env.TWILIO_ACCOUNT_SID!,
-    process.env.TWILIO_AUTH_TOKEN!
-  );
-
   try {
-    const msg = await client.messages.create({
-      body: message,
-      from: process.env.TWILIO_FROM_NUMBER!,
-      to: phoneNumber,
-    });
-
+    const providerMessageId = await sendTelegram(message);
     await query(
-      `UPDATE notifications
-       SET status = 'sent', provider_message_id = $1
-       WHERE id = $2`,
-      [msg.sid, notificationId]
+      `UPDATE notifications SET status = 'sent', provider_message_id = $1 WHERE id = $2`,
+      [providerMessageId, notificationId]
     );
   } catch (err) {
     const currentRetry = retryCount + 1;
