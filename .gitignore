@@ -33,3 +33,10 @@ pnpm-debug.log*
 coverage/
 
 # pnpm lock (keep pnpm-lock.yaml committed)
+
+# Claude Code — local-only data (not project tooling)
+# Keep: .claude/commands/ (project slash commands), .specify/ (constitution + templates)
+# Keep: docs/superpowers/ (design specs and plans are project artifacts)
+# Ignore: local settings and session state only
+.claude/settings.local.json
+.claude/todos/
