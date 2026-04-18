@@ -9,10 +9,11 @@ import {
   resetArrivalToNow,
   QueuePhase,
 } from './queue.service';
+import { resendInviteForAppointment } from './resend-invite.service';
 
 const router = Router();
 
-const PHASE_VALUES: QueuePhase[] = ['link_sent', 'checklist', 'navigation', 'waiting', 'done'];
+const PHASE_VALUES: QueuePhase[] = ['link_sent', 'checklist', 'navigation', 'waiting', 'done', 'expired'];
 const PhaseEnum = z.enum(PHASE_VALUES as [QueuePhase, ...QueuePhase[]]);
 
 /** GET /api/staff/queue */
@@ -106,6 +107,23 @@ router.post('/queue/broadcast', requireStaffAuth, async (req: Request, res: Resp
     const result = await broadcastMessage(targetDept, parsed.data.message);
     res.json(result);
   } catch (err) { next(err); }
+});
+
+/** POST /api/staff/queue/:appointment_id/resend-invite */
+router.post('/queue/:appointment_id/resend-invite', requireStaffAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await resendInviteForAppointment(
+      req.params.appointment_id as string,
+      req.staffAuth!.departmentId ?? null
+    );
+    res.status(200).json(result);
+  } catch (err: unknown) {
+    const e = err as { status?: number };
+    if (e.status === 404) { res.status(404).json({ error: 'not_found' }); return; }
+    if (e.status === 403) { res.status(403).json({ error: 'forbidden' }); return; }
+    if (e.status === 409) { res.status(409).json({ error: 'invalid_phase', message: (e as any).message }); return; }
+    next(err);
+  }
 });
 
 export default router;

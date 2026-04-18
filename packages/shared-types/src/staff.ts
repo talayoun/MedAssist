@@ -40,7 +40,7 @@ export const PatientStationDTO = z.object({
 });
 
 export const AppointmentPhaseSchema = z.enum([
-  'link_sent', 'checklist', 'navigation', 'waiting', 'done',
+  'link_sent', 'checklist', 'navigation', 'waiting', 'done', 'expired',
 ]);
 
 export const QueuePatientDTO = z.object({
@@ -82,6 +82,12 @@ export const WaitEstimateRequestDTO = z.object({
 
 export const StatusUpdateRequestDTO = z.object({
   status: z.enum(['waiting', 'in_treatment', 'done']),
+});
+
+export const ResendInviteResultDTO = z.object({
+  appointment_id: z.string().uuid(),
+  token: z.string(),
+  expires_at: z.string().datetime(),
 });
 
 // ─── ER Link ──────────────────────────────────────────────────────────────────
