@@ -5,23 +5,31 @@ export type AppointmentPhase =
   | 'checklist'
   | 'navigation'
   | 'waiting'
-  | 'done';
+  | 'done'
+  | 'expired';
 
+// 'expired' is a terminal side-state, not part of the forward progression.
+// It is set only by the expiry sweeper (from 'link_sent') and cleared only by
+// the resend-invite action. advanceAppointmentPhase never transitions into or
+// out of it.
 const PHASE_RANK: Record<AppointmentPhase, number> = {
   link_sent: 0,
   checklist: 1,
   navigation: 2,
   waiting: 3,
   done: 4,
+  expired: 99,
 };
 
 export function phaseRank(phase: AppointmentPhase): number {
   return PHASE_RANK[phase];
 }
 
+export type ForwardPhase = Exclude<AppointmentPhase, 'expired'>;
+
 export async function advanceAppointmentPhase(
   appointmentId: string,
-  target: AppointmentPhase
+  target: ForwardPhase
 ): Promise<void> {
   await query(
     `UPDATE appointments
