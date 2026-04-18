@@ -138,6 +138,16 @@ These are hard constraints from `.specify/memory/constitution.md` — never viol
 
 ---
 
+## Security Rules (Non-Negotiable)
+
+- **Validate and sanitize all user input** — never trust request body, query params, or headers; use Zod schemas at every API boundary
+- **No secrets in code** — all credentials and keys via environment variables only; never hardcode or commit `.env` files
+- **Parameterized queries only** — use `pg` parameterized query syntax (`$1, $2, …`); never build SQL by string concatenation
+- **Auth middleware on every protected route** — no route that touches patient or staff data may be mounted without the JWT middleware
+- **No sensitive data in logs** — never log tokens, passwords, patient names, or any PII; log IDs and event types only
+
+---
+
 ## Git Workflow
 
 **Branch per task — always.**
