@@ -39,12 +39,21 @@ export const PatientStationDTO = z.object({
   status: z.enum(['pending', 'complete']),
 });
 
+export const AppointmentPhaseSchema = z.enum([
+  'link_sent', 'checklist', 'navigation', 'waiting', 'done',
+]);
+
 export const QueuePatientDTO = z.object({
   appointment_id: z.string().uuid(),
   patient_name: z.string(),
-  arrival_time: z.string().datetime(),
-  minutes_waiting: z.number().int(),
-  status: z.enum(['waiting', 'in_treatment', 'done']),
+  department_id: z.string().uuid(),
+  department: z.string(),
+  track: z.enum(['elective', 'er']),
+  current_phase: AppointmentPhaseSchema,
+  link_sent_at: z.string().datetime(),
+  arrival_time: z.string().datetime().nullable(),
+  minutes_waiting: z.number().int().nullable(),
+  queue_status: z.enum(['waiting', 'in_treatment', 'done']).nullable(),
   estimated_wait_minutes: z.number().int().nullable(),
   stations: z.array(PatientStationDTO),
   forms_submitted: z.number().int(),
@@ -52,10 +61,15 @@ export const QueuePatientDTO = z.object({
 });
 
 export const QueueResponseDTO = z.object({
-  department: z.string(),
+  department_label: z.string(),
   patients: z.array(QueuePatientDTO),
   broadcast_message: z.string().nullable(),
   broadcast_sent_at: z.string().datetime().nullable(),
+});
+
+export const DepartmentDTO = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
 });
 
 export const BroadcastRequestDTO = z.object({
@@ -133,8 +147,10 @@ export const CompanionLinkRequestDTO = z.object({
 
 export type StaffUser = z.infer<typeof StaffUserDTO>;
 export type StaffRole = z.infer<typeof StaffRoleSchema>;
+export type AppointmentPhase = z.infer<typeof AppointmentPhaseSchema>;
 export type QueuePatient = z.infer<typeof QueuePatientDTO>;
 export type QueueResponse = z.infer<typeof QueueResponseDTO>;
+export type Department = z.infer<typeof DepartmentDTO>;
 export type AdminRoute = z.infer<typeof AdminRouteDTO>;
 export type ChecklistTemplate = z.infer<typeof ChecklistTemplateDTO>;
 export type TimingRule = z.infer<typeof TimingRuleDTO>;

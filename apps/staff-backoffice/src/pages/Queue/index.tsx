@@ -1,11 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  getQueue, updatePatientStatus, setWaitEstimate,
-  sendBroadcast, logout, ApiError,
+  getQueue, getDepartments, updatePatientStatus, setWaitEstimate,
+  sendBroadcast, resetArrivalToNow, logout, ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
-import type { QueueResponse, QueuePatient } from '@medassist/shared-types';
+import type {
+  QueueResponse, QueuePatient, AppointmentPhase, Department,
+} from '@medassist/shared-types';
 
 type Queue = QueueResponse;
 type Patient = QueuePatient;
@@ -22,9 +24,31 @@ const STATUS_COLORS: Record<string, string> = {
   done: '#10b981',
 };
 
+const PHASE_LABELS: Record<AppointmentPhase, string> = {
+  link_sent: 'קישור נשלח',
+  checklist: 'צ׳קליסט',
+  navigation: 'בדרך למחלקה',
+  waiting: 'ממתין במחלקה',
+  done: 'סיים',
+};
+
+const PHASE_COLORS: Record<AppointmentPhase, string> = {
+  link_sent: '#94a3b8',
+  checklist: '#8b5cf6',
+  navigation: '#0ea5e9',
+  waiting: '#f59e0b',
+  done: '#10b981',
+};
+
+const PHASE_OPTIONS: AppointmentPhase[] = [
+  'link_sent', 'checklist', 'navigation', 'waiting', 'done',
+];
+
 export default function Queue() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  const isAdmin = user?.role === 'admin';
+
   const [queue, setQueue] = useState<Queue | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [broadcastText, setBroadcastText] = useState('');
@@ -32,9 +56,16 @@ export default function Queue() {
   const [estimateInput, setEstimateInput] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [filterDept, setFilterDept] = useState<string>('');
+  const [filterPhase, setFilterPhase] = useState<AppointmentPhase | ''>('');
+
   const fetchQueue = useCallback(async () => {
     try {
-      const data = await getQueue();
+      const data = await getQueue({
+        departmentId: filterDept || null,
+        phase: filterPhase || null,
+      });
       setQueue(data);
       setLoadError(null);
     } catch (err) {
@@ -42,7 +73,7 @@ export default function Queue() {
         setLoadError('שגיאה בטעינת התור');
       }
     }
-  }, []);
+  }, [filterDept, filterPhase]);
 
   useEffect(() => {
     fetchQueue();
@@ -50,10 +81,27 @@ export default function Queue() {
     return () => clearInterval(interval);
   }, [fetchQueue]);
 
-  async function handleStatusChange(appointmentId: string, status: Patient['status']) {
+  useEffect(() => {
+    if (!isAdmin) return;
+    getDepartments()
+      .then(({ departments: rows }) => setDepartments(rows))
+      .catch(() => { /* non-fatal */ });
+  }, [isAdmin]);
+
+  async function handleStatusChange(appointmentId: string, status: Exclude<Patient['queue_status'], null>) {
     setUpdatingId(appointmentId);
     try {
       await updatePatientStatus(appointmentId, status);
+      await fetchQueue();
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleResetArrival(appointmentId: string) {
+    setUpdatingId(appointmentId);
+    try {
+      await resetArrivalToNow(appointmentId);
       await fetchQueue();
     } finally {
       setUpdatingId(null);
@@ -64,7 +112,7 @@ export default function Queue() {
     e.preventDefault();
     const mins = parseInt(estimateInput, 10);
     if (!mins || mins < 1) return;
-    await setWaitEstimate(mins);
+    await setWaitEstimate(mins, isAdmin ? (filterDept || null) : null);
     setEstimateInput('');
     await fetchQueue();
   }
@@ -72,7 +120,7 @@ export default function Queue() {
   async function handleBroadcast(e: React.FormEvent) {
     e.preventDefault();
     if (!broadcastText.trim()) return;
-    const result = await sendBroadcast(broadcastText.trim());
+    const result = await sendBroadcast(broadcastText.trim(), isAdmin ? (filterDept || null) : null);
     setBroadcastResult(`נשלח ל-${result.recipient_count} מטופלים`);
     setBroadcastText('');
     setTimeout(() => setBroadcastResult(null), 4000);
@@ -84,13 +132,14 @@ export default function Queue() {
     navigate('/login', { replace: true });
   }
 
+  const adminBroadcastDisabled = isAdmin && !filterDept;
+
   return (
     <div style={styles.page}>
-      {/* Header */}
       <header style={styles.header}>
         <div>
-          <h1 style={styles.headerTitle}>MedAssist — לוח בקרה</h1>
-          {queue && <span style={styles.deptBadge}>{queue.department}</span>}
+          <h1 style={styles.headerTitle}>MedAssist, לוח בקרה</h1>
+          {queue && <span style={styles.deptBadge}>{queue.department_label}</span>}
         </div>
         <div style={styles.headerRight}>
           <span style={styles.userName}>{user?.name}</span>
@@ -99,7 +148,37 @@ export default function Queue() {
       </header>
 
       <div style={styles.body}>
-        {/* Broadcast + Wait Estimate row */}
+        <div style={styles.filtersRow}>
+          {isAdmin && (
+            <label style={styles.filterLabel}>
+              מחלקה:
+              <select
+                value={filterDept}
+                onChange={(e) => setFilterDept(e.target.value)}
+                style={styles.filterSelect}
+              >
+                <option value="">כל המחלקות</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </label>
+          )}
+          <label style={styles.filterLabel}>
+            שלב:
+            <select
+              value={filterPhase}
+              onChange={(e) => setFilterPhase(e.target.value as AppointmentPhase | '')}
+              style={styles.filterSelect}
+            >
+              <option value="">כל השלבים</option>
+              {PHASE_OPTIONS.map((p) => (
+                <option key={p} value={p}>{PHASE_LABELS[p]}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
         <div style={styles.controlsRow}>
           <form onSubmit={handleBroadcast} style={styles.controlBox}>
             <h3 style={styles.controlTitle}>שידור הודעה לכל הממתינים</h3>
@@ -111,8 +190,11 @@ export default function Queue() {
                 placeholder="הזן הודעה לשידור..."
                 style={styles.textInput}
               />
-              <button type="submit" style={styles.primaryBtn}>שלח</button>
+              <button type="submit" style={styles.primaryBtn} disabled={adminBroadcastDisabled}>שלח</button>
             </div>
+            {adminBroadcastDisabled && (
+              <p style={styles.hintMsg}>בחר מחלקה כדי לשדר</p>
+            )}
             {broadcastResult && <p style={styles.successMsg}>{broadcastResult}</p>}
           </form>
 
@@ -128,12 +210,14 @@ export default function Queue() {
                 placeholder="דקות"
                 style={{ ...styles.textInput, maxWidth: 100 }}
               />
-              <button type="submit" style={styles.primaryBtn}>עדכן</button>
+              <button type="submit" style={styles.primaryBtn} disabled={adminBroadcastDisabled}>עדכן</button>
             </div>
+            {adminBroadcastDisabled && (
+              <p style={styles.hintMsg}>בחר מחלקה כדי לעדכן</p>
+            )}
           </form>
         </div>
 
-        {/* Queue list */}
         {loadError && <p style={styles.errorBanner}>{loadError}</p>}
 
         {!queue ? (
@@ -148,6 +232,8 @@ export default function Queue() {
                 patient={patient}
                 updating={updatingId === patient.appointment_id}
                 onStatusChange={handleStatusChange}
+                onResetArrival={handleResetArrival}
+                showDepartment={isAdmin && !filterDept}
               />
             ))}
           </div>
@@ -161,26 +247,45 @@ function PatientCard({
   patient,
   updating,
   onStatusChange,
+  onResetArrival,
+  showDepartment,
 }: {
   patient: Patient;
   updating: boolean;
-  onStatusChange: (id: string, status: Patient['status']) => void;
+  onStatusChange: (id: string, status: Exclude<Patient['queue_status'], null>) => void;
+  onResetArrival: (id: string) => void;
+  showDepartment: boolean;
 }) {
   const navigate = useNavigate();
-  const statusColor = STATUS_COLORS[patient.status] ?? '#9ca3af';
+  const statusColor = patient.queue_status ? STATUS_COLORS[patient.queue_status] : '#9ca3af';
+  const phaseColor = PHASE_COLORS[patient.current_phase] ?? '#9ca3af';
+  const canResetArrival = patient.current_phase === 'waiting';
 
   return (
     <div style={styles.card}>
       <div style={styles.cardHeader}>
         <div>
           <span style={styles.patientName}>{patient.patient_name}</span>
-          <span style={{ ...styles.statusBadge, background: statusColor }}>
-            {STATUS_LABELS[patient.status] ?? patient.status}
+          <span style={{ ...styles.phaseBadge, background: phaseColor }}>
+            {PHASE_LABELS[patient.current_phase]}
           </span>
+          {patient.queue_status && (
+            <span style={{ ...styles.statusBadge, background: statusColor }}>
+              {STATUS_LABELS[patient.queue_status] ?? patient.queue_status}
+            </span>
+          )}
+          {patient.track === 'er' && (
+            <span style={styles.erBadge}>מיון</span>
+          )}
         </div>
         <div style={styles.cardMeta}>
-          <span style={styles.metaItem}>המתין: {patient.minutes_waiting} דק׳</span>
-          {patient.estimated_wait_minutes && (
+          {showDepartment && (
+            <span style={styles.metaItem}>מחלקה: {patient.department}</span>
+          )}
+          {patient.minutes_waiting != null && (
+            <span style={styles.metaItem}>המתין: {patient.minutes_waiting} דק׳</span>
+          )}
+          {patient.estimated_wait_minutes != null && (
             <span style={styles.metaItem}>משוער: {patient.estimated_wait_minutes} דק׳</span>
           )}
           <span style={styles.metaItem}>
@@ -189,7 +294,6 @@ function PatientCard({
         </div>
       </div>
 
-      {/* Stations */}
       {patient.stations.length > 0 && (
         <div style={styles.stations}>
           {patient.stations.map((s) => (
@@ -208,25 +312,40 @@ function PatientCard({
         </div>
       )}
 
-      {/* Actions */}
       <div style={styles.cardActions}>
-        <select
-          value={patient.status}
-          disabled={updating}
-          onChange={(e) =>
-            onStatusChange(patient.appointment_id, e.target.value as Patient['status'])
-          }
-          style={styles.statusSelect}
-        >
-          <option value="waiting">ממתין</option>
-          <option value="in_treatment">בטיפול</option>
-          <option value="done">סיים</option>
-        </select>
+        {patient.queue_status ? (
+          <select
+            value={patient.queue_status}
+            disabled={updating}
+            onChange={(e) =>
+              onStatusChange(
+                patient.appointment_id,
+                e.target.value as Exclude<Patient['queue_status'], null>
+              )
+            }
+            style={styles.statusSelect}
+          >
+            <option value="waiting">ממתין</option>
+            <option value="in_treatment">בטיפול</option>
+            <option value="done">סיים</option>
+          </select>
+        ) : (
+          <span style={styles.mutedNote}>לא בתור המתנה עדיין</span>
+        )}
+        {canResetArrival && (
+          <button
+            onClick={() => onResetArrival(patient.appointment_id)}
+            disabled={updating}
+            style={styles.resetBtn}
+          >
+            עדכן ל-עכשיו
+          </button>
+        )}
         <button
           onClick={() => navigate(`/patients/${patient.appointment_id}`)}
           style={styles.detailBtn}
         >
-          פרטים →
+          פרטים ←
         </button>
       </div>
     </div>
@@ -269,6 +388,28 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
   },
   body: { padding: 24, maxWidth: 900, margin: '0 auto' },
+  filtersRow: {
+    display: 'flex',
+    gap: 16,
+    marginBottom: 16,
+    flexWrap: 'wrap',
+    alignItems: 'center',
+  },
+  filterLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 14,
+    color: '#374151',
+  },
+  filterSelect: {
+    padding: '7px 12px',
+    borderRadius: 7,
+    border: '1.5px solid #d1d5db',
+    fontSize: 14,
+    cursor: 'pointer',
+    background: '#fff',
+  },
   controlsRow: { display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' },
   controlBox: {
     flex: 1,
@@ -300,6 +441,7 @@ const styles: Record<string, React.CSSProperties> = {
     whiteSpace: 'nowrap',
   },
   successMsg: { margin: '8px 0 0', color: '#059669', fontSize: 13 },
+  hintMsg: { margin: '8px 0 0', color: '#b45309', fontSize: 12 },
   errorBanner: {
     background: '#fef2f2',
     border: '1px solid #fca5a5',
@@ -327,6 +469,16 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   patientName: { fontWeight: 700, fontSize: 16, marginLeft: 10 },
+  phaseBadge: {
+    display: 'inline-block',
+    borderRadius: 20,
+    padding: '2px 10px',
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#fff',
+    verticalAlign: 'middle',
+    marginLeft: 6,
+  },
   statusBadge: {
     display: 'inline-block',
     borderRadius: 20,
@@ -335,6 +487,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     color: '#fff',
     verticalAlign: 'middle',
+    marginLeft: 6,
+  },
+  erBadge: {
+    display: 'inline-block',
+    borderRadius: 20,
+    padding: '2px 10px',
+    fontSize: 12,
+    fontWeight: 700,
+    color: '#fff',
+    background: '#dc2626',
+    verticalAlign: 'middle',
+    marginLeft: 6,
   },
   cardMeta: { display: 'flex', gap: 12, flexWrap: 'wrap' },
   metaItem: { fontSize: 13, color: '#6b7280' },
@@ -345,13 +509,24 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 500,
   },
-  cardActions: { display: 'flex', gap: 10, alignItems: 'center' },
+  cardActions: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
   statusSelect: {
     padding: '7px 12px',
     borderRadius: 7,
     border: '1.5px solid #d1d5db',
     fontSize: 14,
     cursor: 'pointer',
+  },
+  mutedNote: { fontSize: 13, color: '#9ca3af', fontStyle: 'italic' },
+  resetBtn: {
+    padding: '7px 14px',
+    background: '#fef3c7',
+    border: '1px solid #f59e0b',
+    borderRadius: 7,
+    cursor: 'pointer',
+    fontSize: 14,
+    color: '#92400e',
+    fontWeight: 600,
   },
   detailBtn: {
     padding: '7px 14px',
