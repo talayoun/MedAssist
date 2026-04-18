@@ -6,19 +6,39 @@ import {
   updatePatientStatus,
   setWaitEstimate,
   broadcastMessage,
+  resetArrivalToNow,
+  QueuePhase,
 } from './queue.service';
 
 const router = Router();
 
+const PHASE_VALUES: QueuePhase[] = ['link_sent', 'checklist', 'navigation', 'waiting', 'done'];
+const PhaseEnum = z.enum(PHASE_VALUES as [QueuePhase, ...QueuePhase[]]);
+
 /** GET /api/staff/queue */
 router.get('/queue', requireStaffAuth, async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const departmentId = req.staffAuth!.departmentId;
-    if (!departmentId) {
-      res.status(400).json({ error: 'no_department', message: 'Admin must specify department_id' });
-      return;
+    const staffDeptId = req.staffAuth!.departmentId;
+    const requestedDeptId = typeof req.query.department_id === 'string'
+      ? req.query.department_id
+      : null;
+    const requestedPhase = typeof req.query.phase === 'string' ? req.query.phase : null;
+
+    let departmentId: string | null;
+    if (staffDeptId) {
+      departmentId = staffDeptId;
+    } else {
+      departmentId = requestedDeptId;
     }
-    const result = await getQueue(departmentId);
+
+    let phase: QueuePhase | null = null;
+    if (requestedPhase) {
+      const parsed = PhaseEnum.safeParse(requestedPhase);
+      if (!parsed.success) { res.status(400).json({ error: 'invalid_phase' }); return; }
+      phase = parsed.data;
+    }
+
+    const result = await getQueue({ departmentId, phase });
     res.json(result);
   } catch (err) { next(err); }
 });
@@ -32,8 +52,23 @@ router.patch('/queue/:appointment_id/status', requireStaffAuth, async (req: Requ
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
     const result = await updatePatientStatus(
       req.params.appointment_id as string,
-      req.staffAuth!.departmentId!,
-      parsed.data.status
+      parsed.data.status,
+      req.staffAuth!.departmentId ?? null
+    );
+    res.json(result);
+  } catch (err: unknown) {
+    const e = err as { status?: number };
+    if (e.status === 404) { res.status(404).json({ error: 'not_found' }); return; }
+    next(err);
+  }
+});
+
+/** POST /api/staff/queue/:appointment_id/reset-arrival */
+router.post('/queue/:appointment_id/reset-arrival', requireStaffAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await resetArrivalToNow(
+      req.params.appointment_id as string,
+      req.staffAuth!.departmentId ?? null
     );
     res.json(result);
   } catch (err: unknown) {
@@ -50,7 +85,10 @@ router.patch('/queue/wait-estimate', requireStaffAuth, async (req: Request, res:
   try {
     const parsed = EstimateSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
-    await setWaitEstimate(req.staffAuth!.departmentId!, parsed.data.estimated_wait_minutes);
+    const targetDept = req.staffAuth!.departmentId
+      ?? (typeof req.body.department_id === 'string' ? req.body.department_id : null);
+    if (!targetDept) { res.status(400).json({ error: 'department_required' }); return; }
+    await setWaitEstimate(targetDept, parsed.data.estimated_wait_minutes);
     res.json({ updated: true });
   } catch (err) { next(err); }
 });
@@ -62,7 +100,10 @@ router.post('/queue/broadcast', requireStaffAuth, async (req: Request, res: Resp
   try {
     const parsed = BroadcastSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
-    const result = await broadcastMessage(req.staffAuth!.departmentId!, parsed.data.message);
+    const targetDept = req.staffAuth!.departmentId
+      ?? (typeof req.body.department_id === 'string' ? req.body.department_id : null);
+    if (!targetDept) { res.status(400).json({ error: 'department_required' }); return; }
+    const result = await broadcastMessage(targetDept, parsed.data.message);
     res.json(result);
   } catch (err) { next(err); }
 });
