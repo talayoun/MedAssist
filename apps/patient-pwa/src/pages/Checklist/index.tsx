@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { getChecklist, saveChecklistProgress, ApiError } from '../../services/api';
 import type { ChecklistResponse, ChecklistItem } from '@medassist/shared-types';
 
@@ -39,6 +39,20 @@ const styles = {
     color: '#333',
     whiteSpace: 'nowrap',
   } as React.CSSProperties,
+  continueButton: {
+    display: 'block',
+    width: '100%',
+    minHeight: '52px',
+    marginBottom: '24px',
+    padding: '14px 16px',
+    border: 'none',
+    borderRadius: '8px',
+    background: '#1a73e8',
+    color: '#fff',
+    fontSize: '1.125rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  } as React.CSSProperties,
   completionBanner: {
     background: '#d4edda',
     border: '1px solid #28a745',
@@ -53,6 +67,7 @@ const styles = {
 
 export default function Checklist() {
   const { token } = useParams<{ token: string }>();
+  const navigate = useNavigate();
   const [data, setData] = useState<ChecklistResponse | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +128,16 @@ export default function Checklist() {
       </p>
 
       {allComplete && (
-        <div style={styles.completionBanner}>✅ כל הפריטים הושלמו — אתה מוכן לביקור!</div>
+        <>
+          <div style={styles.completionBanner}>✅ כל הפריטים הושלמו, אתה מוכן לביקור!</div>
+          <button
+            type="button"
+            style={styles.continueButton}
+            onClick={() => token && navigate(`/visit/${token}/navigation`)}
+          >
+            המשך לניווט
+          </button>
+        </>
       )}
 
       {data.items.map((item) => {
