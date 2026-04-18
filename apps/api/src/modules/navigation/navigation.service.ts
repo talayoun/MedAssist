@@ -1,4 +1,5 @@
 import { query } from '../../db/db';
+import { advanceAppointmentPhase } from '../appointments/phase.service';
 
 export interface NavigationStepResponse {
   step_id: string;
@@ -73,6 +74,8 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
   // In production this would be a dedicated nav_progress column; for MVP use the last confirmed step
   const currentStepOrder = await getCurrentStepOrder(appointmentId);
 
+  await advanceAppointmentPhase(appointmentId, 'navigation');
+
   // Fetch current + next step only (not full route)
   const { rows: steps } = await query<StepRow>(`
     SELECT id, step_order, image_url, instruction_text
@@ -142,6 +145,8 @@ export async function confirmStep(
       "UPDATE appointments SET status = 'active', updated_at = NOW() WHERE id = $1",
       [appointmentId]
     );
+
+    await advanceAppointmentPhase(appointmentId, 'waiting');
 
     return { phase: 'waiting', message: 'הגעת! הצוות יודע שאתה כאן.' };
   }

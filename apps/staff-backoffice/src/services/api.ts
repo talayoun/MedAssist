@@ -1,5 +1,5 @@
 import type {
-  StaffUser, QueueResponse, PatientStationDTO,
+  StaffUser, QueueResponse, PatientStationDTO, AppointmentPhase, Department,
   TimingRule, AdminRoute, ChecklistTemplate
 } from '@medassist/shared-types';
 import type { z } from 'zod';
@@ -62,8 +62,18 @@ export function getMe(): Promise<{ user: StaffUser }> {
 
 // ─── Queue ────────────────────────────────────────────────────────────────────
 
-export function getQueue(): Promise<QueueResponse> {
-  return apiRequest('/staff/queue');
+export function getQueue(
+  filter?: { departmentId?: string | null; phase?: AppointmentPhase | null }
+): Promise<QueueResponse> {
+  const params = new URLSearchParams();
+  if (filter?.departmentId) params.set('department_id', filter.departmentId);
+  if (filter?.phase) params.set('phase', filter.phase);
+  const qs = params.toString();
+  return apiRequest(`/staff/queue${qs ? `?${qs}` : ''}`);
+}
+
+export function getDepartments(): Promise<{ departments: Department[] }> {
+  return apiRequest('/staff/departments');
 }
 
 export function updatePatientStatus(
@@ -76,21 +86,37 @@ export function updatePatientStatus(
   });
 }
 
+export function resetArrivalToNow(
+  appointmentId: string
+): Promise<{ appointment_id: string; arrival_time: string }> {
+  return apiRequest(`/staff/queue/${appointmentId}/reset-arrival`, {
+    method: 'POST',
+  });
+}
+
 export function setWaitEstimate(
-  estimatedWaitMinutes: number
+  estimatedWaitMinutes: number,
+  departmentId?: string | null
 ): Promise<{ updated: boolean }> {
   return apiRequest('/staff/queue/wait-estimate', {
     method: 'PATCH',
-    body: JSON.stringify({ estimated_wait_minutes: estimatedWaitMinutes }),
+    body: JSON.stringify({
+      estimated_wait_minutes: estimatedWaitMinutes,
+      ...(departmentId ? { department_id: departmentId } : {}),
+    }),
   });
 }
 
 export function sendBroadcast(
-  message: string
+  message: string,
+  departmentId?: string | null
 ): Promise<{ sent: boolean; recipient_count: number; sent_at: string }> {
   return apiRequest('/staff/queue/broadcast', {
     method: 'POST',
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({
+      message,
+      ...(departmentId ? { department_id: departmentId } : {}),
+    }),
   });
 }
 

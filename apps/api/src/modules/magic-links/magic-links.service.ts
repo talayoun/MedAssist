@@ -1,5 +1,6 @@
 import { query } from '../../db/db';
 import { randomUUID } from 'crypto';
+import { advanceAppointmentPhase, AppointmentPhase } from '../appointments/phase.service';
 
 type AppointmentTrack = 'elective' | 'er';
 type VisitPhase = 'checklist' | 'navigation' | 'waiting';
@@ -78,7 +79,15 @@ export async function resolveToken(token: string): Promise<VisitContext> {
     );
   }
 
-  const phase = determinePhase(row.track, row.appt_status);
+  // Advance phase to the track's entry point (forward-only, safe on re-open)
+  const entryPhase: AppointmentPhase = row.track === 'er' ? 'navigation' : 'checklist';
+  await advanceAppointmentPhase(row.appointment_id, entryPhase);
+
+  const { rows: phaseRows } = await query<{ current_phase: AppointmentPhase }>(
+    'SELECT current_phase FROM appointments WHERE id = $1',
+    [row.appointment_id]
+  );
+  const phase = toVisitPhase(phaseRows[0].current_phase);
 
   return {
     track: row.track,
@@ -94,10 +103,10 @@ export async function resolveToken(token: string): Promise<VisitContext> {
   };
 }
 
-function determinePhase(track: AppointmentTrack, apptStatus: string): VisitPhase {
-  if (track === 'er') return 'waiting';
-  if (apptStatus === 'active') return 'navigation';
-  return 'checklist';
+function toVisitPhase(phase: AppointmentPhase): VisitPhase {
+  if (phase === 'link_sent') return 'checklist';
+  if (phase === 'done') return 'waiting';
+  return phase;
 }
 
 /** Generate a new magic link token for an appointment */
