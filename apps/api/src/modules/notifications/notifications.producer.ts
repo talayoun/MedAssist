@@ -13,6 +13,10 @@ interface EnqueueOptions {
   message: string;
   triggeringEvent: string;
   delayMs?: number;
+  // Skip the per-type dedup check. Per-visit cap (max 4) still applies.
+  // Used by explicit staff actions like resend-invite, where the duplicate is
+  // intentional.
+  bypassDedup?: boolean;
 }
 
 /**
@@ -20,7 +24,7 @@ interface EnqueueOptions {
  * Returns the notification DB row id if enqueued, or null if suppressed.
  */
 export async function enqueueNotification(opts: EnqueueOptions): Promise<string | null> {
-  const { patientId, appointmentId, phoneNumber, type, message, triggeringEvent, delayMs } = opts;
+  const { patientId, appointmentId, phoneNumber, type, message, triggeringEvent, delayMs, bypassDedup } = opts;
 
   // 1. Check per-visit notification cap (max 4)
   const { rows: capRows } = await query<{ count: string }>(
@@ -32,14 +36,17 @@ export async function enqueueNotification(opts: EnqueueOptions): Promise<string 
     return null;
   }
 
-  // 2. Dedup: no prior notification of same type for this appointment
-  const { rows: dedupRows } = await query<{ count: string }>(
-    `SELECT COUNT(*) AS count FROM notifications WHERE appointment_id = $1 AND type = $2`,
-    [appointmentId, type]
-  );
-  if (parseInt(dedupRows[0].count, 10) > 0) {
-    console.log(`[notifications] Duplicate ${type} for appointment ${appointmentId} — suppressing`);
-    return null;
+  // 2. Dedup: no prior notification of same type for this appointment.
+  // Skipped for explicit staff-triggered resends.
+  if (!bypassDedup) {
+    const { rows: dedupRows } = await query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM notifications WHERE appointment_id = $1 AND type = $2`,
+      [appointmentId, type]
+    );
+    if (parseInt(dedupRows[0].count, 10) > 0) {
+      console.log(`[notifications] Duplicate ${type} for appointment ${appointmentId}, suppressing`);
+      return null;
+    }
   }
 
   // 3. Insert notification row

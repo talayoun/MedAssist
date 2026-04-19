@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getQueue, getDepartments, updatePatientStatus, setWaitEstimate,
-  sendBroadcast, resetArrivalToNow, logout, ApiError,
+  sendBroadcast, resetArrivalToNow, resendInvite, logout, ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
 import type {
@@ -30,6 +30,7 @@ const PHASE_LABELS: Record<AppointmentPhase, string> = {
   navigation: 'בדרך למחלקה',
   waiting: 'ממתין במחלקה',
   done: 'סיים',
+  expired: 'פג תוקף',
 };
 
 const PHASE_COLORS: Record<AppointmentPhase, string> = {
@@ -38,10 +39,11 @@ const PHASE_COLORS: Record<AppointmentPhase, string> = {
   navigation: '#0ea5e9',
   waiting: '#f59e0b',
   done: '#10b981',
+  expired: '#6b7280',
 };
 
 const PHASE_OPTIONS: AppointmentPhase[] = [
-  'link_sent', 'checklist', 'navigation', 'waiting', 'done',
+  'link_sent', 'checklist', 'navigation', 'waiting', 'done', 'expired',
 ];
 
 export default function Queue() {
@@ -102,6 +104,16 @@ export default function Queue() {
     setUpdatingId(appointmentId);
     try {
       await resetArrivalToNow(appointmentId);
+      await fetchQueue();
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleResendInvite(appointmentId: string) {
+    setUpdatingId(appointmentId);
+    try {
+      await resendInvite(appointmentId);
       await fetchQueue();
     } finally {
       setUpdatingId(null);
@@ -233,6 +245,7 @@ export default function Queue() {
                 updating={updatingId === patient.appointment_id}
                 onStatusChange={handleStatusChange}
                 onResetArrival={handleResetArrival}
+                onResendInvite={handleResendInvite}
                 showDepartment={isAdmin && !filterDept}
               />
             ))}
@@ -248,18 +261,19 @@ function PatientCard({
   updating,
   onStatusChange,
   onResetArrival,
+  onResendInvite,
   showDepartment,
 }: {
   patient: Patient;
   updating: boolean;
   onStatusChange: (id: string, status: Exclude<Patient['queue_status'], null>) => void;
   onResetArrival: (id: string) => void;
+  onResendInvite: (id: string) => void;
   showDepartment: boolean;
 }) {
   const navigate = useNavigate();
   const statusColor = patient.queue_status ? STATUS_COLORS[patient.queue_status] : '#9ca3af';
   const phaseColor = PHASE_COLORS[patient.current_phase] ?? '#9ca3af';
-  const canResetArrival = patient.current_phase === 'waiting';
 
   return (
     <div style={styles.card}>
@@ -332,13 +346,22 @@ function PatientCard({
         ) : (
           <span style={styles.mutedNote}>לא בתור המתנה עדיין</span>
         )}
-        {canResetArrival && (
+        {patient.current_phase === 'waiting' && (
           <button
             onClick={() => onResetArrival(patient.appointment_id)}
             disabled={updating}
             style={styles.resetBtn}
           >
             עדכן ל-עכשיו
+          </button>
+        )}
+        {patient.current_phase === 'expired' && (
+          <button
+            onClick={() => onResendInvite(patient.appointment_id)}
+            disabled={updating}
+            style={styles.resendBtn}
+          >
+            שלח מחדש קישור
           </button>
         )}
         <button
@@ -526,6 +549,16 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontSize: 14,
     color: '#92400e',
+    fontWeight: 600,
+  },
+  resendBtn: {
+    padding: '7px 14px',
+    background: '#dcfce7',
+    border: '1px solid #86efac',
+    borderRadius: 7,
+    cursor: 'pointer',
+    fontSize: 14,
+    color: '#166534',
     fontWeight: 600,
   },
   detailBtn: {

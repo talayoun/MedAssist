@@ -1,5 +1,6 @@
 import { query } from '../../db/db';
 import { advanceAppointmentPhase, AppointmentPhase } from '../appointments/phase.service';
+import { expireStaleLinkSentAppointments } from '../appointments/expiry.service';
 
 export type QueuePhase = AppointmentPhase;
 
@@ -33,16 +34,25 @@ export interface QueueFilter {
 }
 
 export async function getQueue(filter: QueueFilter): Promise<QueueResponse> {
+  // Opportunistic sweep: mark stale link_sent appointments as 'expired' so
+  // the board self-cleans without a separate cron. Cheap when nothing is
+  // stale (no rows match the WHERE predicate).
+  await expireStaleLinkSentAppointments();
+
   const params: (string | null)[] = [];
-  const where: string[] = ["a.current_phase != 'done'"];
+  const where: string[] = [];
 
   if (filter.departmentId) {
     params.push(filter.departmentId);
     where.push(`a.department_id = $${params.length}`);
   }
   if (filter.phase) {
+    // Explicit filter lets admin inspect any phase, including terminal ones
+    // like 'expired' (needed for the resend-invite flow).
     params.push(filter.phase);
     where.push(`a.current_phase = $${params.length}::appointment_phase`);
+  } else {
+    where.push("a.current_phase NOT IN ('done', 'expired')");
   }
 
   const { rows } = await query<{

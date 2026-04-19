@@ -120,6 +120,14 @@ export function sendBroadcast(
   });
 }
 
+export function resendInvite(
+  appointmentId: string
+): Promise<{ appointment_id: string; token: string; expires_at: string }> {
+  return apiRequest(`/staff/queue/${appointmentId}/resend-invite`, {
+    method: 'POST',
+  });
+}
+
 // ─── Stations ─────────────────────────────────────────────────────────────────
 
 export function addStation(

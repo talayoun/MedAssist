@@ -104,7 +104,7 @@ export async function resolveToken(token: string): Promise<VisitContext> {
 }
 
 function toVisitPhase(phase: AppointmentPhase): VisitPhase {
-  if (phase === 'link_sent') return 'checklist';
+  if (phase === 'link_sent' || phase === 'expired') return 'checklist';
   if (phase === 'done') return 'waiting';
   return phase;
 }
