@@ -49,11 +49,18 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Checkl
     time_sensitive: it.time_sensitive,
   }));
 
+  // Resolve hospital_id from departments (single-hospital MVP)
+  const { rows: deptRows } = await query<{ hospital_id: string }>(
+    'SELECT hospital_id FROM departments LIMIT 1'
+  );
+  if (!deptRows[0]) throw Object.assign(new Error('no departments found'), { status: 500 });
+  const hospitalId = deptRows[0].hospital_id;
+
   const { rows } = await query<ChecklistTemplateRow>(
-    `INSERT INTO checklist_templates (procedure_type, items_json)
-     VALUES ($1, $2)
+    `INSERT INTO checklist_templates (procedure_type, hospital_id, items_json)
+     VALUES ($1, $2, $3)
      RETURNING id, procedure_type, items_json, archived, created_at, updated_at`,
-    [input.procedure_type, JSON.stringify(items)]
+    [input.procedure_type, hospitalId, JSON.stringify(items)]
   );
   return rows[0];
 }
@@ -101,7 +108,7 @@ export async function deleteTemplate(
      FROM checklist_progress cp
      JOIN appointments a ON a.id = cp.appointment_id
      WHERE cp.template_id = $1
-       AND a.phase NOT IN ('done', 'expired', 'cancelled')`,
+       AND a.current_phase NOT IN ('done', 'expired')`,
     [id]
   );
   const activeCount = parseInt(activeRows[0].active_count, 10);
@@ -128,5 +135,5 @@ export async function deleteTemplate(
 
   // Zero usage: hard delete
   await query('DELETE FROM checklist_templates WHERE id = $1', [id]);
-  return { deleted: true };
+  return { deleted: true, archived: false };
 }
