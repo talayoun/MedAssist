@@ -120,6 +120,35 @@ export function sendBroadcast(
   });
 }
 
+export interface CreateAppointmentBody {
+  patient_name: string;
+  phone_number: string;
+  department_id: string;
+  procedure_type: string;
+  visit_datetime: string;
+  custom_items: Array<{
+    text: string;
+    category: 'bring' | 'fast' | 'medication' | 'other';
+    time_sensitive: boolean;
+  }>;
+  suppressed_template_item_ids: string[];
+  send_now: boolean;
+}
+
+export function createAppointment(
+  body: CreateAppointmentBody
+): Promise<{
+  appointment_id: string;
+  patient_id: string;
+  magic_link_token: string | null;
+  sms_status: 'queued_now' | 'scheduled';
+}> {
+  return apiRequest('/staff/appointments', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 export function resendInvite(
   appointmentId: string
 ): Promise<{ appointment_id: string; token: string; expires_at: string }> {
