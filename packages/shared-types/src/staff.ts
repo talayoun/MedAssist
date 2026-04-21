@@ -126,7 +126,22 @@ export const ChecklistTemplateDTO = z.object({
   template_id: z.string().uuid(),
   procedure_type: z.string().min(1),
   item_count: z.number().int(),
+  archived: z.boolean(),
   items: z.array(ChecklistTemplateItemDTO).optional(),
+});
+
+export const CreateChecklistTemplateRequestDTO = z.object({
+  procedure_type: z.string().min(1),
+  items: z.array(
+    ChecklistTemplateItemDTO.omit({ id: true }).extend({ id: z.string().uuid().optional() })
+  ).max(100),
+});
+
+export const UpdateChecklistTemplateRequestDTO = z.object({
+  procedure_type: z.string().min(1).optional(),
+  items: z.array(
+    ChecklistTemplateItemDTO.omit({ id: true }).extend({ id: z.string().uuid().optional() })
+  ).max(100).optional(),
 });
 
 // ─── Admin — Timing Rules ─────────────────────────────────────────────────────
@@ -159,4 +174,7 @@ export type QueueResponse = z.infer<typeof QueueResponseDTO>;
 export type Department = z.infer<typeof DepartmentDTO>;
 export type AdminRoute = z.infer<typeof AdminRouteDTO>;
 export type ChecklistTemplate = z.infer<typeof ChecklistTemplateDTO>;
+export type ChecklistTemplateItem = z.infer<typeof ChecklistTemplateItemDTO>;
+export type CreateChecklistTemplateRequest = z.infer<typeof CreateChecklistTemplateRequestDTO>;
+export type UpdateChecklistTemplateRequest = z.infer<typeof UpdateChecklistTemplateRequestDTO>;
 export type TimingRule = z.infer<typeof TimingRuleDTO>;
