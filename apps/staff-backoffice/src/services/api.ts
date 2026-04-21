@@ -232,8 +232,46 @@ export function listRoutes(): Promise<{ routes: AdminRoute[] }> {
   return apiRequest('/admin/routes');
 }
 
-export function listChecklists(): Promise<{ templates: ChecklistTemplate[] }> {
-  return apiRequest('/admin/checklists');
+export function listChecklists(includeArchived = false): Promise<{ templates: ChecklistTemplate[] }> {
+  const qs = includeArchived ? '?include_archived=true' : '';
+  return apiRequest(`/admin/checklists${qs}`);
+}
+
+export function getChecklist(templateId: string): Promise<ChecklistTemplate> {
+  return apiRequest(`/admin/checklists/${templateId}`);
+}
+
+export interface ChecklistItemInput {
+  id?: string;
+  text: string;
+  category: 'bring' | 'fast' | 'medication' | 'other';
+  time_sensitive: boolean;
+}
+
+export function createChecklist(
+  procedureType: string,
+  items: ChecklistItemInput[]
+): Promise<ChecklistTemplate> {
+  return apiRequest('/admin/checklists', {
+    method: 'POST',
+    body: JSON.stringify({ procedure_type: procedureType, items }),
+  });
+}
+
+export function updateChecklist(
+  templateId: string,
+  patch: { procedure_type?: string; items?: ChecklistItemInput[] }
+): Promise<ChecklistTemplate> {
+  return apiRequest(`/admin/checklists/${templateId}`, {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteChecklist(
+  templateId: string
+): Promise<{ deleted: boolean; archived: boolean }> {
+  return apiRequest(`/admin/checklists/${templateId}`, { method: 'DELETE' });
 }
 
 export function listTimingRules(): Promise<{ rules: TimingRule[] }> {
