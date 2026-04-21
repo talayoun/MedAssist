@@ -95,7 +95,7 @@ router.put('/checklists/:id', async (req: Request, res: Response, next: NextFunc
       res.status(400).json({ error: 'invalid_request', issues: parsed.error.issues });
       return;
     }
-    const row = await updateTemplate(String(String(req.params.id)), parsed.data);
+    const row = await updateTemplate(String(req.params.id), parsed.data);
     if (!row) { res.status(404).json({ error: 'not_found' }); return; }
     res.json({
       template_id: row.id,
