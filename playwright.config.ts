@@ -11,6 +11,7 @@ export default defineConfig({
   retries: 0,
   reporter: 'list',
   use: {
+    headless: !!process.env.CI,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
