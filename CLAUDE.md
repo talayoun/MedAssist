@@ -18,7 +18,7 @@
 **Auth:** JWT magic-links (one-time-use, token-only) + bcrypt (staff passwords)
 **File Storage:** AWS S3 (navigation step images, PDF exports)
 **SMS:** Twilio
-**Testing:** Vitest + supertest (API), Vitest + happy-dom (PWA / backoffice)
+**Testing:** Playwright (all API contract tests + patient PWA E2E + staff backoffice E2E); Vitest (pure unit tests only — shared-types Zod schemas, pure helpers)
 **Linting:** ESLint 9 (flat config `eslint.config.mjs`)
 **Monorepo:** pnpm workspaces + Turborepo
 
@@ -93,6 +93,18 @@ pnpm --filter api worker           # run BullMQ notification worker (separate pr
 - No medical data in Magic Link URLs — token only
 - BullMQ worker uses dedicated IORedis connections with `maxRetriesPerRequest: null`
 - Notification cap: max 4 notifications per appointment; dedup by type before enqueuing
+
+---
+
+## Testing Discipline
+
+- Anything that touches HTTP, DB, Redis, BullMQ, or a real browser → **Playwright**.
+- Pure functions with no I/O (Zod schemas, checklist merge logic, pure helpers) → **Vitest**.
+- Do **not** introduce `supertest` or `happy-dom` — both retired.
+- API tests live in `tests/api/` using Playwright `request` fixture (real HTTP, real cookies, real Redis/Postgres).
+- E2E tests live in `tests/e2e/` with two Playwright projects: `patient-pwa-mobile` (mobile viewport, `dir="rtl"`) and `staff-backoffice-desktop`.
+- Patient PWA E2E must assert constitutional requirements: tap targets ≥ 44×44px, text ≥ 16pt, Hebrew RTL layout.
+- One spec per user-visible behavior; trace + screenshot on failure enabled by default.
 
 ---
 

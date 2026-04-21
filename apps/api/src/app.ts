@@ -7,6 +7,7 @@ import authRouter from './modules/staff/auth.router';
 import queueRouter from './modules/staff/queue.router';
 import stationsRouter from './modules/staff/stations.router';
 import departmentsRouter from './modules/staff/departments.router';
+import appointmentsRouter from './modules/staff/appointments.router';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/visit', visitRouter);
 app.use('/api/staff', queueRouter);
 app.use('/api/staff', stationsRouter);
 app.use('/api/staff', departmentsRouter);
+app.use('/api/staff', appointmentsRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

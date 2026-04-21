@@ -6,10 +6,13 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
+    "test:api": "playwright test --project=api",
+    "test:e2e": "playwright test --project=staff-backoffice-desktop --project=patient-pwa-mobile",
     "lint": "turbo run lint"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
+    "@playwright/test": "^1.59.1",
     "@typescript-eslint/eslint-plugin": "^8.20.0",
     "@typescript-eslint/parser": "^8.20.0",
     "eslint": "^9.18.0",

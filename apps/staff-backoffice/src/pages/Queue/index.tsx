@@ -5,6 +5,7 @@ import {
   sendBroadcast, resetArrivalToNow, resendInvite, logout, ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
+import NewAppointment from '../NewAppointment';
 import type {
   QueueResponse, QueuePatient, AppointmentPhase, Department,
 } from '@medassist/shared-types';
@@ -61,6 +62,8 @@ export default function Queue() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [filterDept, setFilterDept] = useState<string>('');
   const [filterPhase, setFilterPhase] = useState<AppointmentPhase | ''>('');
+  const [showNewAppointment, setShowNewAppointment] = useState(false);
+  const [createResult, setCreateResult] = useState<string | null>(null);
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -84,11 +87,10 @@ export default function Queue() {
   }, [fetchQueue]);
 
   useEffect(() => {
-    if (!isAdmin) return;
     getDepartments()
       .then(({ departments: rows }) => setDepartments(rows))
       .catch(() => { /* non-fatal */ });
-  }, [isAdmin]);
+  }, []);
 
   async function handleStatusChange(appointmentId: string, status: Exclude<Patient['queue_status'], null>) {
     setUpdatingId(appointmentId);
@@ -154,12 +156,19 @@ export default function Queue() {
           {queue && <span style={styles.deptBadge}>{queue.department_label}</span>}
         </div>
         <div style={styles.headerRight}>
+          <button
+            onClick={() => setShowNewAppointment(true)}
+            style={styles.newAppointmentBtn}
+          >
+            + מטופל חדש
+          </button>
           <span style={styles.userName}>{user?.name}</span>
           <button onClick={handleLogout} style={styles.logoutBtn}>יציאה</button>
         </div>
       </header>
 
       <div style={styles.body}>
+        {createResult && <p style={styles.successBanner}>{createResult}</p>}
         <div style={styles.filtersRow}>
           {isAdmin && (
             <label style={styles.filterLabel}>
@@ -252,6 +261,25 @@ export default function Queue() {
           </div>
         )}
       </div>
+
+      {showNewAppointment && (
+        <NewAppointment
+          departments={departments}
+          defaultDepartmentId={isAdmin ? (filterDept || null) : (user?.department_id ?? null)}
+          isAdmin={isAdmin}
+          onClose={() => setShowNewAppointment(false)}
+          onCreated={(result) => {
+            setShowNewAppointment(false);
+            setCreateResult(
+              result.sms_status === 'queued_now'
+                ? 'המטופל נוצר ו-SMS נשלח'
+                : 'המטופל נוצר, SMS מתוזמן לפי הזמנון'
+            );
+            setTimeout(() => setCreateResult(null), 6000);
+            fetchQueue();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -400,6 +428,24 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
   },
   headerRight: { display: 'flex', alignItems: 'center', gap: 12 },
+  newAppointmentBtn: {
+    background: '#fff',
+    color: '#1a56db',
+    border: 'none',
+    borderRadius: 7,
+    padding: '7px 14px',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 700,
+  },
+  successBanner: {
+    background: '#d1fae5',
+    border: '1px solid #6ee7b7',
+    color: '#065f46',
+    borderRadius: 8,
+    padding: '10px 14px',
+    marginBottom: 16,
+  },
   userName: { fontSize: 14, opacity: 0.9 },
   logoutBtn: {
     background: 'rgba(255,255,255,0.15)',
