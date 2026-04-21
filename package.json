@@ -6,6 +6,8 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
+    "test:api": "playwright test --project=api",
+    "test:e2e": "playwright test --project=staff-backoffice-desktop --project=patient-pwa-mobile",
     "lint": "turbo run lint"
   },
   "devDependencies": {
