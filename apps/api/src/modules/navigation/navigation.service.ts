@@ -43,13 +43,26 @@ interface StepRow {
 
 /** Get the current and next step for this appointment's navigation route */
 export async function getNavigation(appointmentId: string): Promise<NavigationRouteResponse> {
-  // Get department + route for this appointment
+  // Resolve route for this appointment:
+  //   1. Per-appointment override (a.navigation_route_id) if set.
+  //   2. Else the default route to this department from the main entrance
+  //      (from_department_id IS NULL, is_default = TRUE, not archived).
   const { rows: [routeRow] } = await query<RouteRow>(`
     SELECT nr.id AS route_id, nr.name AS route_name, nr.steps_count,
            NULL::float AS dept_lat, NULL::float AS dept_lng
     FROM appointments a
-    JOIN departments d ON d.id = a.department_id
-    JOIN navigation_routes nr ON nr.id = d.navigation_route_id
+    JOIN navigation_routes nr
+      ON nr.id = COALESCE(
+           a.navigation_route_id,
+           (
+             SELECT dr.id FROM navigation_routes dr
+             WHERE dr.to_department_id = a.department_id
+               AND dr.from_department_id IS NULL
+               AND dr.is_default = TRUE
+               AND dr.archived = FALSE
+             LIMIT 1
+           )
+         )
     WHERE a.id = $1
   `, [appointmentId]);
 
@@ -109,6 +122,7 @@ export async function confirmStep(
   stepId: string
 ): Promise<StepConfirmResult> {
   // Verify step belongs to this appointment's route
+  // Step must belong to the appointment's resolved route (override or dept default).
   const { rows: [stepRow] } = await query<{
     step_order: number;
     route_id: string;
@@ -117,9 +131,19 @@ export async function confirmStep(
     SELECT rs.step_order, rs.route_id, nr.steps_count AS route_steps_count
     FROM route_steps rs
     JOIN navigation_routes nr ON nr.id = rs.route_id
-    JOIN departments d ON d.navigation_route_id = nr.id
-    JOIN appointments a ON a.department_id = d.id
-    WHERE rs.id = $1 AND a.id = $2
+    JOIN appointments a ON a.id = $2
+    WHERE rs.id = $1
+      AND nr.id = COALESCE(
+        a.navigation_route_id,
+        (
+          SELECT dr.id FROM navigation_routes dr
+          WHERE dr.to_department_id = a.department_id
+            AND dr.from_department_id IS NULL
+            AND dr.is_default = TRUE
+            AND dr.archived = FALSE
+          LIMIT 1
+        )
+      )
   `, [stepId, appointmentId]);
 
   if (!stepRow) {

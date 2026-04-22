@@ -96,21 +96,49 @@ export const ERLinkRequestDTO = z.object({
   phone_number: E164PhoneSchema,
 });
 
-// ─── Admin — Routes ───────────────────────────────────────────────────────────
+// ─── Admin — Navigation Routes ────────────────────────────────────────────────
 
 export const AdminRouteStepDTO = z.object({
   step_id: z.string().uuid(),
   order: z.number().int().positive(),
   image_url: z.string().url(),
-  instruction: z.string().min(1).max(120),
+  instruction: z.string().min(1).max(200),
 });
 
 export const AdminRouteDTO = z.object({
   route_id: z.string().uuid(),
-  name: z.string().min(1),
-  department_id: z.string().uuid(),
+  name: z.string().min(1).max(80),
+  from_department_id: z.string().uuid().nullable(),
+  to_department_id: z.string().uuid(),
+  is_default: z.boolean(),
+  archived: z.boolean(),
   steps_count: z.number().int(),
   steps: z.array(AdminRouteStepDTO).optional(),
+});
+
+export const AdminRouteStepInputDTO = z.object({
+  image_url: z.string().url(),
+  instruction_text: z.string().min(1).max(200),
+});
+
+export const CreateAdminRouteRequestDTO = z.object({
+  name: z.string().min(1).max(80),
+  from_department_id: z.string().uuid().nullable(),
+  to_department_id: z.string().uuid(),
+  is_default: z.boolean().default(false),
+  steps: z.array(AdminRouteStepInputDTO).max(20).default([]),
+});
+
+export const UpdateAdminRouteRequestDTO = z.object({
+  name: z.string().min(1).max(80).optional(),
+  from_department_id: z.string().uuid().nullable().optional(),
+  to_department_id: z.string().uuid().optional(),
+  is_default: z.boolean().optional(),
+  archived: z.boolean().optional(),
+});
+
+export const ReorderAdminRouteStepsRequestDTO = z.object({
+  ordered_ids: z.array(z.string().uuid()).min(1).max(20),
 });
 
 // ─── Admin — Checklists ───────────────────────────────────────────────────────
@@ -173,6 +201,11 @@ export type QueuePatient = z.infer<typeof QueuePatientDTO>;
 export type QueueResponse = z.infer<typeof QueueResponseDTO>;
 export type Department = z.infer<typeof DepartmentDTO>;
 export type AdminRoute = z.infer<typeof AdminRouteDTO>;
+export type AdminRouteStep = z.infer<typeof AdminRouteStepDTO>;
+export type AdminRouteStepInput = z.infer<typeof AdminRouteStepInputDTO>;
+export type CreateAdminRouteRequest = z.infer<typeof CreateAdminRouteRequestDTO>;
+export type UpdateAdminRouteRequest = z.infer<typeof UpdateAdminRouteRequestDTO>;
+export type ReorderAdminRouteStepsRequest = z.infer<typeof ReorderAdminRouteStepsRequestDTO>;
 export type ChecklistTemplate = z.infer<typeof ChecklistTemplateDTO>;
 export type ChecklistTemplateItem = z.infer<typeof ChecklistTemplateItemDTO>;
 export type CreateChecklistTemplateRequest = z.infer<typeof CreateChecklistTemplateRequestDTO>;

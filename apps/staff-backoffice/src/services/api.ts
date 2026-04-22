@@ -1,6 +1,6 @@
 import type {
   StaffUser, QueueResponse, PatientStationDTO, AppointmentPhase, Department,
-  TimingRule, AdminRoute, ChecklistTemplate
+  TimingRule, AdminRoute, AdminRouteStep, ChecklistTemplate
 } from '@medassist/shared-types';
 import type { z } from 'zod';
 
@@ -228,8 +228,97 @@ export function listStaff(departmentId?: string): Promise<{ staff: StaffUser[] }
   return apiRequest(`/admin/staff${qs}`);
 }
 
-export function listRoutes(): Promise<{ routes: AdminRoute[] }> {
-  return apiRequest('/admin/routes');
+// ─── Admin — Navigation Routes ────────────────────────────────────────────────
+
+export function listNavigationRoutes(
+  includeArchived = false
+): Promise<{ routes: AdminRoute[] }> {
+  const qs = includeArchived ? '?include_archived=true' : '';
+  return apiRequest(`/admin/navigation-routes${qs}`);
+}
+
+export function getNavigationRoute(routeId: string): Promise<AdminRoute> {
+  return apiRequest(`/admin/navigation-routes/${routeId}`);
+}
+
+export interface NavigationRouteStepInput {
+  image_url: string;
+  instruction_text: string;
+}
+
+export function createNavigationRoute(body: {
+  name: string;
+  from_department_id: string | null;
+  to_department_id: string;
+  is_default: boolean;
+  steps: NavigationRouteStepInput[];
+}): Promise<AdminRoute> {
+  return apiRequest('/admin/navigation-routes', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateNavigationRoute(
+  routeId: string,
+  patch: {
+    name?: string;
+    from_department_id?: string | null;
+    to_department_id?: string;
+    is_default?: boolean;
+    archived?: boolean;
+  }
+): Promise<AdminRoute> {
+  return apiRequest(`/admin/navigation-routes/${routeId}`, {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteNavigationRoute(
+  routeId: string
+): Promise<{ deleted: boolean; archived: boolean }> {
+  return apiRequest(`/admin/navigation-routes/${routeId}`, { method: 'DELETE' });
+}
+
+export function addNavigationStep(
+  routeId: string,
+  body: NavigationRouteStepInput
+): Promise<AdminRouteStep> {
+  return apiRequest(`/admin/navigation-routes/${routeId}/steps`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateNavigationStep(
+  routeId: string,
+  stepId: string,
+  patch: { image_url?: string; instruction_text?: string }
+): Promise<AdminRouteStep> {
+  return apiRequest(`/admin/navigation-routes/${routeId}/steps/${stepId}`, {
+    method: 'PUT',
+    body: JSON.stringify(patch),
+  });
+}
+
+export function deleteNavigationStep(
+  routeId: string,
+  stepId: string
+): Promise<{ deleted: boolean }> {
+  return apiRequest(`/admin/navigation-routes/${routeId}/steps/${stepId}`, {
+    method: 'DELETE',
+  });
+}
+
+export function reorderNavigationSteps(
+  routeId: string,
+  orderedIds: string[]
+): Promise<{ ok: boolean }> {
+  return apiRequest(`/admin/navigation-routes/${routeId}/steps/order`, {
+    method: 'PUT',
+    body: JSON.stringify({ ordered_ids: orderedIds }),
+  });
 }
 
 export function listChecklists(includeArchived = false): Promise<{ templates: ChecklistTemplate[] }> {

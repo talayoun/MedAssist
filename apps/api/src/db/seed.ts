@@ -84,8 +84,9 @@ async function seed() {
 
     // ─── Navigation route ─────────────────────────────────────────────────────
     const { rows: [route] } = await client.query<{ id: string }>(`
-      INSERT INTO navigation_routes (department_id, name, steps_count)
-      VALUES ($1, 'חניון מרכזי → קרדיולוגיה', 5)
+      INSERT INTO navigation_routes
+        (from_department_id, to_department_id, name, is_default, archived, steps_count)
+      VALUES (NULL, $1, 'חניון מרכזי → קרדיולוגיה', TRUE, FALSE, 5)
       RETURNING id
     `, [deptId]);
 
@@ -105,12 +106,6 @@ async function seed() {
         VALUES ($1, $2, $3, $4)
       `, [routeId, step.order, `https://placeholder.example.com/step-${step.order}.jpg`, step.instruction]);
     }
-
-    // ─── Update dept with route ───────────────────────────────────────────────
-    await client.query(
-      'UPDATE departments SET navigation_route_id = $1 WHERE id = $2',
-      [routeId, deptId]
-    );
 
     // ─── Checklist Template ───────────────────────────────────────────────────
     const items = [

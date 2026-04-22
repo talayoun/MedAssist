@@ -9,6 +9,7 @@ import stationsRouter from './modules/staff/stations.router';
 import departmentsRouter from './modules/staff/departments.router';
 import appointmentsRouter from './modules/staff/appointments.router';
 import adminChecklistsRouter from './modules/admin/checklists.router';
+import adminNavigationRoutesRouter from './modules/admin/navigation-routes.router';
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use('/api/staff', stationsRouter);
 app.use('/api/staff', departmentsRouter);
 app.use('/api/staff', appointmentsRouter);
 app.use('/api/admin', adminChecklistsRouter);
+app.use('/api/admin', adminNavigationRoutesRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
