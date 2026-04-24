@@ -404,6 +404,19 @@ function PatientCard({
       )}
 
       <div style={styles.cardActions}>
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => onTrash(patient.appointment_id)}
+              disabled={updating}
+              style={styles.deleteBtn}
+              title="העבר לפח"
+            >
+              🗑
+            </button>
+            <span style={styles.actionDivider} />
+          </>
+        )}
         {patient.queue_status ? (
           <select
             value={patient.queue_status}
@@ -447,16 +460,6 @@ function PatientCard({
         >
           פרטים ←
         </button>
-        {isAdmin && (
-          <button
-            onClick={() => onTrash(patient.appointment_id)}
-            disabled={updating}
-            style={styles.deleteBtn}
-            title="העבר לפח"
-          >
-            🗑
-          </button>
-        )}
       </div>
     </div>
   );
@@ -717,6 +720,12 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     color: '#1b3a6b',
     fontWeight: 600,
+  },
+  actionDivider: {
+    width: 1,
+    height: 24,
+    background: '#e5e7eb',
+    flexShrink: 0,
   },
   deleteBtn: {
     padding: '6px 10px',
