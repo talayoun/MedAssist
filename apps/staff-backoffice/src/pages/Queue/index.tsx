@@ -159,7 +159,7 @@ export default function Queue() {
             {isAdmin && (
               <>
                 <span style={styles.navDivider}>|</span>
-                <button onClick={() => navigate('/admin')} style={styles.adminBtn}>
+                <button onClick={() => navigate('/admin/checklists')} style={styles.adminBtn}>
                   תבניות צ׳קליסט
                 </button>
                 <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>

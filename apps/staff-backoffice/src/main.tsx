@@ -95,7 +95,7 @@ function AdminLayout() {
           <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <NavLink to="/queue" style={ghostBtn}>לוח בקרה</NavLink>
             <span style={{ color: 'rgba(255,255,255,0.25)', padding: '0 4px' }}>|</span>
-            <NavLink to="/admin" end style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
+            <NavLink to="/admin/checklists" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
               תבניות צ׳קליסט
             </NavLink>
             <NavLink to="/admin/navigation-routes" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
@@ -155,7 +155,8 @@ function App() {
               </RequireAdmin>
             }
           >
-            <Route index element={<Admin />} />
+            <Route index element={<Navigate to="checklists" replace />} />
+            <Route path="checklists" element={<Admin />} />
             <Route path="navigation-routes" element={<NavigationRoutes />} />
           </Route>
           <Route path="*" element={<Navigate to="/queue" replace />} />
