@@ -253,46 +253,48 @@ export default function NavigationRoutes() {
       ) : routes.length === 0 ? (
         <p style={s.hint}>אין מסלולים. לחץ "מסלול חדש" כדי ליצור.</p>
       ) : (
-        <table style={s.table}>
-          <thead>
-            <tr>
-              <th style={s.th}>מקור</th>
-              <th style={s.th}>יעד</th>
-              <th style={s.th}>שם</th>
-              <th style={s.th}>ברירת-מחדל</th>
-              <th style={s.th}>צעדים</th>
-              <th style={s.th}>סטטוס</th>
-              <th style={s.th}>פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {routes.map((r) => (
-              <tr key={r.route_id} style={r.archived ? s.archivedRow : undefined}>
-                <td style={s.td}>{deptName(r.from_department_id)}</td>
-                <td style={s.td}>{deptName(r.to_department_id)}</td>
-                <td style={s.td}>{r.name}</td>
-                <td style={s.td}>{r.is_default ? '✓' : ''}</td>
-                <td style={s.td}>{r.steps_count}</td>
-                <td style={s.td}>
-                  {r.archived
-                    ? <span style={s.archivedBadge}>בארכיון</span>
-                    : <span style={s.activeBadge}>פעיל</span>}
-                </td>
-                <td style={s.td}>
-                  {!r.archived && (
-                    <>
-                      <button onClick={() => openEdit(r.route_id)} style={s.editBtn}>עריכה</button>
-                      <button
-                        onClick={() => { setDeleteError(null); setConfirmDeleteId(r.route_id); }}
-                        style={s.deleteBtn}
-                      >מחיקה</button>
-                    </>
-                  )}
-                </td>
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>מקור</th>
+                <th style={s.th}>יעד</th>
+                <th style={s.th}>שם</th>
+                <th style={s.th}>ברירת-מחדל</th>
+                <th style={s.th}>צעדים</th>
+                <th style={s.th}>סטטוס</th>
+                <th style={s.th}>פעולות</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {routes.map((r) => (
+                <tr key={r.route_id} style={r.archived ? s.archivedRow : undefined}>
+                  <td style={s.td}>{deptName(r.from_department_id)}</td>
+                  <td style={s.td}>{deptName(r.to_department_id)}</td>
+                  <td style={s.td}>{r.name}</td>
+                  <td style={s.td}>{r.is_default ? '✓' : ''}</td>
+                  <td style={s.td}>{r.steps_count}</td>
+                  <td style={s.td}>
+                    {r.archived
+                      ? <span style={s.archivedBadge}>בארכיון</span>
+                      : <span style={s.activeBadge}>פעיל</span>}
+                  </td>
+                  <td style={s.td}>
+                    {!r.archived && (
+                      <>
+                        <button onClick={() => openEdit(r.route_id)} style={s.editBtn}>עריכה</button>
+                        <button
+                          onClick={() => { setDeleteError(null); setConfirmDeleteId(r.route_id); }}
+                          style={s.deleteBtn}
+                        >מחיקה</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Edit / Create modal */}
@@ -463,6 +465,7 @@ const s: Record<string, React.CSSProperties> = {
   archiveToggle: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#6b7280', cursor: 'pointer' },
   hint: { color: '#6b7280', fontSize: 14 },
   errorBanner: { background: '#fee2e2', color: '#b91c1c', padding: '8px 12px', borderRadius: 7, fontSize: 13, marginBottom: 12 },
+  tableWrap: { background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(27,58,107,0.08)', border: '1px solid #e5e7eb', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'right', padding: '8px 12px', borderBottom: '2px solid #e5e7eb', fontSize: 13, fontWeight: 700, color: '#374151' },
   td: { padding: '10px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 14, verticalAlign: 'middle' },
