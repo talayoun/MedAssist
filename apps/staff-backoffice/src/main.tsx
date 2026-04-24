@@ -56,7 +56,7 @@ function AdminLayout() {
     ...tabStyle, background: '#1b3a6b', color: '#fff', fontWeight: 600,
   };
   return (
-    <div style={{ direction: 'rtl' }}>
+    <div style={{ direction: 'rtl', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#eef2f7', minHeight: '100vh' }}>
       <nav style={{
         display: 'flex', gap: 8, padding: '12px 24px', borderBottom: '1px solid #e5e7eb',
         background: '#fff',

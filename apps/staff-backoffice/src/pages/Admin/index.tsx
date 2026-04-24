@@ -148,7 +148,7 @@ export default function Admin() {
 
   return (
     <div style={s.page}>
-      <h1 style={s.heading}>ניהול — תבניות צ׳קליסט</h1>
+      <h1 style={s.heading}>ניהול: תבניות צ׳קליסט</h1>
 
       <div style={s.toolbar}>
         <button onClick={openNew} style={s.primaryBtn}>+ תבנית חדשה</button>

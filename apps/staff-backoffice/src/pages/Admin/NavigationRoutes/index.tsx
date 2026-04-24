@@ -59,7 +59,7 @@ export default function NavigationRoutes() {
 
   function deptName(id: string | null): string {
     if (!id) return 'כניסה ראשית / קבלה';
-    return departments.find((d) => d.id === id)?.name ?? '—';
+    return departments.find((d) => d.id === id)?.name ?? '-';
   }
 
   function openNew() {
@@ -236,7 +236,7 @@ export default function NavigationRoutes() {
 
   return (
     <div style={s.page}>
-      <h1 style={s.heading}>ניהול — מסלולי ניווט</h1>
+      <h1 style={s.heading}>ניהול: מסלולי ניווט</h1>
 
       <div style={s.toolbar}>
         <button onClick={openNew} style={s.primaryBtn}>+ מסלול חדש</button>
@@ -339,7 +339,7 @@ export default function NavigationRoutes() {
                     onChange={(e) => setEditState((p) => p && ({ ...p, to_department_id: e.target.value }))}
                     style={s.input}
                   >
-                    <option value="" disabled>— בחר —</option>
+                    <option value="" disabled>בחר מחלקה</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
@@ -395,7 +395,7 @@ export default function NavigationRoutes() {
                               const url = await uploadNavigationStepImage(file);
                               updateStep(s_._key, { image_url: url });
                             } catch {
-                              setEditError('שגיאה בהעלאת תמונה — נסה שוב');
+                              setEditError('שגיאה בהעלאת תמונה, נסה שוב');
                             }
                           }}
                         />
