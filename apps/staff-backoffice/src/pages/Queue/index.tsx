@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getQueue, getDepartments, updatePatientStatus, setWaitEstimate,
-  sendBroadcast, resetArrivalToNow, resendInvite, logout, ApiError,
+  sendBroadcast, resetArrivalToNow, resendInvite, logout, softDeleteAppointment, ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
 import NewAppointment from '../NewAppointment';
@@ -109,6 +109,17 @@ export default function Queue() {
     }
   }
 
+  async function handleTrashPatient(appointmentId: string) {
+    if (!window.confirm('להעביר מטופל זה לפח האשפה?')) return;
+    setUpdatingId(appointmentId);
+    try {
+      await softDeleteAppointment(appointmentId);
+      await fetchQueue();
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
   async function handleResendInvite(appointmentId: string) {
     setUpdatingId(appointmentId);
     try {
@@ -164,6 +175,9 @@ export default function Queue() {
                 </button>
                 <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>
                   מסלולי ניווט
+                </button>
+                <button onClick={() => navigate('/admin/trash')} style={styles.adminBtn}>
+                  פח אשפה
                 </button>
               </>
             )}
@@ -284,7 +298,9 @@ export default function Queue() {
                 onStatusChange={handleStatusChange}
                 onResetArrival={handleResetArrival}
                 onResendInvite={handleResendInvite}
+                onTrash={handleTrashPatient}
                 showDepartment={isAdmin && !filterDept}
+                isAdmin={isAdmin}
               />
             ))}
           </div>
@@ -319,14 +335,18 @@ function PatientCard({
   onStatusChange,
   onResetArrival,
   onResendInvite,
+  onTrash,
   showDepartment,
+  isAdmin,
 }: {
   patient: Patient;
   updating: boolean;
   onStatusChange: (id: string, status: Exclude<Patient['queue_status'], null>) => void;
   onResetArrival: (id: string) => void;
   onResendInvite: (id: string) => void;
+  onTrash: (id: string) => void;
   showDepartment: boolean;
+  isAdmin: boolean;
 }) {
   const navigate = useNavigate();
   const statusColor = patient.queue_status ? STATUS_COLORS[patient.queue_status] : '#9ca3af';
@@ -427,6 +447,16 @@ function PatientCard({
         >
           פרטים ←
         </button>
+        {isAdmin && (
+          <button
+            onClick={() => onTrash(patient.appointment_id)}
+            disabled={updating}
+            style={styles.deleteBtn}
+            title="העבר לפח"
+          >
+            🗑
+          </button>
+        )}
       </div>
     </div>
   );
@@ -687,5 +717,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     color: '#1b3a6b',
     fontWeight: 600,
+  },
+  deleteBtn: {
+    padding: '6px 10px',
+    background: 'transparent',
+    border: '1px solid #fca5a5',
+    borderRadius: 7,
+    cursor: 'pointer',
+    fontSize: 15,
+    color: '#ef4444',
+    lineHeight: 1,
+    minWidth: 34,
+    minHeight: 34,
   },
 };
