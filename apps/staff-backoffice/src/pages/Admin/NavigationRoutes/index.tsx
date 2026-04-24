@@ -134,10 +134,8 @@ export default function NavigationRoutes() {
     if (!editState.to_department_id) { setEditError('נא לבחור מחלקת יעד'); return; }
     if (editState.steps.length > 20) { setEditError('מקסימום 20 צעדים'); return; }
     for (const s of editState.steps) {
-      if (!s.instruction_text.trim()) {
-        setEditError('כל צעד חייב הוראה');
-        return;
-      }
+      if (!s.image_url) { setEditError('כל צעד חייב תמונה'); return; }
+      if (!s.instruction_text.trim()) { setEditError('כל צעד חייב הוראה'); return; }
     }
 
     setSaving(true);
