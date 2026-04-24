@@ -162,6 +162,11 @@ export default function Queue() {
           >
             + מטופל חדש
           </button>
+          {isAdmin && (
+            <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>
+              ניהול מסלולים
+            </button>
+          )}
           <span style={styles.userName}>{user?.name}</span>
           <button onClick={handleLogout} style={styles.logoutBtn}>יציאה</button>
         </div>
@@ -447,6 +452,16 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     padding: '10px 14px',
     marginBottom: 16,
+  },
+  adminBtn: {
+    background: 'transparent',
+    border: '1px solid rgba(255,255,255,0.4)',
+    color: '#fff',
+    borderRadius: 7,
+    padding: '7px 14px',
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 500,
   },
   userName: { fontSize: 14, opacity: 0.75 },
   logoutBtn: {
