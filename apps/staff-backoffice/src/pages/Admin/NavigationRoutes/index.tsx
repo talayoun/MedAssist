@@ -5,7 +5,7 @@ import {
   addNavigationStep, updateNavigationStep, deleteNavigationStep, reorderNavigationSteps,
   uploadNavigationStepImage, getDepartments, ApiError,
 } from '../../../services/api';
-import type { AdminRoute, AdminRouteStep, Department } from '@medassist/shared-types';
+import type { AdminRoute, Department } from '@medassist/shared-types';
 
 interface StepDraft {
   _key: string;
@@ -469,9 +469,9 @@ const s: Record<string, React.CSSProperties> = {
   archivedRow: { opacity: 0.5 },
   activeBadge: { background: '#d1fae5', color: '#065f46', borderRadius: 12, padding: '2px 8px', fontSize: 12, fontWeight: 600 },
   archivedBadge: { background: '#f3f4f6', color: '#6b7280', borderRadius: 12, padding: '2px 8px', fontSize: 12, fontWeight: 600 },
-  editBtn: { marginLeft: 6, padding: '4px 10px', background: '#eef2ff', color: '#4f46e5', border: '1px solid #a5b4fc', borderRadius: 6, fontSize: 12, cursor: 'pointer' },
+  editBtn: { marginLeft: 6, padding: '4px 10px', background: 'transparent', color: '#1b3a6b', border: '1.5px solid #1b3a6b', borderRadius: 6, fontSize: 12, cursor: 'pointer' },
   deleteBtn: { padding: '4px 10px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: 6, fontSize: 12, cursor: 'pointer' },
-  primaryBtn: { padding: '8px 16px', background: '#1a56db', color: '#fff', border: 'none', borderRadius: 7, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  primaryBtn: { padding: '8px 16px', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 7, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   cancelBtn: { padding: '8px 16px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 14, cursor: 'pointer' },
   dangerBtn: { padding: '8px 16px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 7, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   backdrop: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
@@ -486,7 +486,7 @@ const s: Record<string, React.CSSProperties> = {
   deptGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
   defaultLabel: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151', cursor: 'pointer' },
   itemsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  addBtn: { alignSelf: 'flex-start', background: '#eef2ff', color: '#4f46e5', border: '1px dashed #a5b4fc', borderRadius: 7, padding: '5px 10px', fontSize: 12, cursor: 'pointer' },
+  addBtn: { alignSelf: 'flex-start', background: 'rgba(59,196,196,0.08)', color: '#2a9b9b', border: '1px dashed #3bc4c4', borderRadius: 7, padding: '5px 10px', fontSize: 12, cursor: 'pointer' },
   moveBtn: { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 4, width: 22, height: 22, cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: 0 },
   removeBtn: { background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, width: 28, height: 28, cursor: 'pointer', color: '#b91c1c', fontSize: 16, lineHeight: 1, flexShrink: 0, alignSelf: 'flex-start' },
   errorMsg: { color: '#b91c1c', fontSize: 13, margin: 0 },

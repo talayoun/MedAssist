@@ -53,7 +53,7 @@ function AdminLayout() {
     borderRadius: 7, fontWeight: 500,
   };
   const activeStyle: React.CSSProperties = {
-    ...tabStyle, background: '#1a56db', color: '#fff', fontWeight: 600,
+    ...tabStyle, background: '#1b3a6b', color: '#fff', fontWeight: 600,
   };
   return (
     <div style={{ direction: 'rtl' }}>
