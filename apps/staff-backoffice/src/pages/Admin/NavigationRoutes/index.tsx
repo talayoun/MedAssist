@@ -3,7 +3,7 @@ import {
   listNavigationRoutes, getNavigationRoute,
   createNavigationRoute, updateNavigationRoute, deleteNavigationRoute,
   addNavigationStep, updateNavigationStep, deleteNavigationStep, reorderNavigationSteps,
-  getDepartments, ApiError,
+  uploadNavigationStepImage, getDepartments, ApiError,
 } from '../../../services/api';
 import type { AdminRoute, AdminRouteStep, Department } from '@medassist/shared-types';
 
@@ -134,14 +134,8 @@ export default function NavigationRoutes() {
     if (!editState.to_department_id) { setEditError('נא לבחור מחלקת יעד'); return; }
     if (editState.steps.length > 20) { setEditError('מקסימום 20 צעדים'); return; }
     for (const s of editState.steps) {
-      if (!s.image_url.trim() || !s.instruction_text.trim()) {
-        setEditError('כל צעד חייב URL תמונה והוראה');
-        return;
-      }
-      try { new URL(s.image_url); } catch {
-        setEditError(`URL לא תקין: ${s.image_url}`);
-        return;
-      }
+      if (!s.image_url) { setEditError('כל צעד חייב תמונה'); return; }
+      if (!s.instruction_text.trim()) { setEditError('כל צעד חייב הוראה'); return; }
     }
 
     setSaving(true);
@@ -380,12 +374,36 @@ export default function NavigationRoutes() {
                     <button type="button" disabled={idx === editState.steps.length - 1} onClick={() => moveStep(s_._key, 1)} style={s.moveBtn}>↓</button>
                   </div>
                   <div style={st.stepFields}>
-                    <input
-                      value={s_.image_url}
-                      onChange={(e) => updateStep(s_._key, { image_url: e.target.value })}
-                      placeholder="https://..."
-                      style={s.input}
-                    />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {s_.image_url && (
+                        <img
+                          src={s_.image_url}
+                          alt=""
+                          style={{ width: 56, height: 56, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb', flexShrink: 0 }}
+                        />
+                      )}
+                      <label style={{ flex: 1, cursor: 'pointer' }}>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            try {
+                              setEditError(null);
+                              const url = await uploadNavigationStepImage(file);
+                              updateStep(s_._key, { image_url: url });
+                            } catch {
+                              setEditError('שגיאה בהעלאת תמונה — נסה שוב');
+                            }
+                          }}
+                        />
+                        <div style={{ ...s.input, textAlign: 'center', color: '#6b7280', fontSize: 13, padding: '10px 12px' }}>
+                          {s_.image_url ? 'החלף תמונה' : 'בחר תמונה'}
+                        </div>
+                      </label>
+                    </div>
                     <textarea
                       value={s_.instruction_text}
                       onChange={(e) => updateStep(s_._key, { instruction_text: e.target.value })}

@@ -1,6 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import multer from 'multer';
 import { requireStaffAuth, requireAdmin } from '../../middleware/auth';
+import { uploadStepImage } from '../../services/s3';
 import {
   listRoutes,
   getRoute,
@@ -228,5 +230,35 @@ router.delete('/navigation-routes/:id/steps/:step_id', async (req: Request, res:
     res.json({ deleted: true });
   } catch (err) { next(err); }
 });
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+/** POST /api/admin/navigation-routes/upload-image — returns S3 URL without requiring a step_id */
+router.post(
+  '/navigation-routes/upload-image',
+  upload.single('image'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) { res.status(400).json({ error: 'no_file' }); return; }
+      const imageUrl = await uploadStepImage(req.file.buffer, req.file.mimetype);
+      res.json({ image_url: imageUrl });
+    } catch (err) { next(err); }
+  },
+);
+
+/** POST /api/admin/navigation-routes/:id/steps/:step_id/image */
+router.post(
+  '/navigation-routes/:id/steps/:step_id/image',
+  upload.single('image'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) { res.status(400).json({ error: 'no_file' }); return; }
+      const imageUrl = await uploadStepImage(req.file.buffer, req.file.mimetype);
+      const step = await updateStep(String(req.params.id), String(req.params.step_id), { image_url: imageUrl });
+      if (!step) { res.status(404).json({ error: 'not_found' }); return; }
+      res.json({ image_url: imageUrl, step: serializeStep(step) });
+    } catch (err) { next(err); }
+  },
+);
 
 export default router;

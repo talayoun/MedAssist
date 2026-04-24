@@ -321,6 +321,22 @@ export function reorderNavigationSteps(
   });
 }
 
+export async function uploadNavigationStepImage(file: File): Promise<string> {
+  const form = new FormData();
+  form.append('image', file);
+  const res = await fetch(`${BASE_URL}/api/admin/navigation-routes/upload-image`, {
+    method: 'POST',
+    credentials: 'include',
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new ApiError(res.status, 'upload_failed', text);
+  }
+  const data = await res.json();
+  return data.image_url as string;
+}
+
 export function listChecklists(includeArchived = false): Promise<{ templates: ChecklistTemplate[] }> {
   const qs = includeArchived ? '?include_archived=true' : '';
   return apiRequest(`/admin/checklists${qs}`);
