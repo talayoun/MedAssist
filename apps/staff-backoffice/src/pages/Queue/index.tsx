@@ -61,16 +61,13 @@ export default function Queue() {
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [filterDept, setFilterDept] = useState<string>('');
-  const [filterPhase, setFilterPhase] = useState<AppointmentPhase | ''>('');
+  const [filterPhases, setFilterPhases] = useState<Set<AppointmentPhase>>(new Set());
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [createResult, setCreateResult] = useState<string | null>(null);
 
   const fetchQueue = useCallback(async () => {
     try {
-      const data = await getQueue({
-        departmentId: filterDept || null,
-        phase: filterPhase || null,
-      });
+      const data = await getQueue({ departmentId: filterDept || null });
       setQueue(data);
       setLoadError(null);
     } catch (err) {
@@ -78,7 +75,7 @@ export default function Queue() {
         setLoadError('שגיאה בטעינת התור');
       }
     }
-  }, [filterDept, filterPhase]);
+  }, [filterDept]);
 
   useEffect(() => {
     fetchQueue();
@@ -148,6 +145,10 @@ export default function Queue() {
 
   const adminBroadcastDisabled = isAdmin && !filterDept;
 
+  const visiblePatients = filterPhases.size === 0
+    ? (queue?.patients ?? [])
+    : (queue?.patients ?? []).filter((p) => filterPhases.has(p.current_phase));
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -163,9 +164,14 @@ export default function Queue() {
             + מטופל חדש
           </button>
           {isAdmin && (
-            <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>
-              ניהול מסלולים
-            </button>
+            <>
+              <button onClick={() => navigate('/admin')} style={styles.adminBtn}>
+                תבניות צ׳קליסט
+              </button>
+              <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>
+                מסלולי ניווט
+              </button>
+            </>
           )}
           <span style={styles.userName}>{user?.name}</span>
           <button onClick={handleLogout} style={styles.logoutBtn}>יציאה</button>
@@ -190,19 +196,34 @@ export default function Queue() {
               </select>
             </label>
           )}
-          <label style={styles.filterLabel}>
-            שלב:
-            <select
-              value={filterPhase}
-              onChange={(e) => setFilterPhase(e.target.value as AppointmentPhase | '')}
-              style={styles.filterSelect}
-            >
-              <option value="">כל השלבים</option>
-              {PHASE_OPTIONS.map((p) => (
-                <option key={p} value={p}>{PHASE_LABELS[p]}</option>
-              ))}
-            </select>
-          </label>
+          <div style={styles.phaseCheckboxGroup}>
+            <span style={styles.filterLabel}>שלב:</span>
+            <label style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={filterPhases.size === 0}
+                onChange={() => setFilterPhases(new Set())}
+              />
+              כל השלבים
+            </label>
+            {PHASE_OPTIONS.map((p) => (
+              <label key={p} style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={filterPhases.has(p)}
+                  onChange={() => {
+                    setFilterPhases((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(p)) next.delete(p); else next.add(p);
+                      return next;
+                    });
+                  }}
+                />
+                <span style={{ ...styles.phaseDot, background: PHASE_COLORS[p] }} />
+                {PHASE_LABELS[p]}
+              </label>
+            ))}
+          </div>
         </div>
 
         <div style={styles.controlsRow}>
@@ -248,11 +269,11 @@ export default function Queue() {
 
         {!queue ? (
           <p style={styles.loading}>טוען תור...</p>
-        ) : queue.patients.length === 0 ? (
+        ) : visiblePatients.length === 0 ? (
           <p style={styles.emptyState}>אין מטופלים בתור כרגע</p>
         ) : (
           <div style={styles.patientList}>
-            {queue.patients.map((patient) => (
+            {visiblePatients.map((patient) => (
               <PatientCard
                 key={patient.appointment_id}
                 patient={patient}
@@ -496,6 +517,28 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     cursor: 'pointer',
     background: '#fff',
+  },
+  phaseCheckboxGroup: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '6px 14px',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    fontSize: 13,
+    color: '#374151',
+    cursor: 'pointer',
+    userSelect: 'none',
+  } as React.CSSProperties,
+  phaseDot: {
+    display: 'inline-block',
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    flexShrink: 0,
   },
   controlsRow: { display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' },
   controlBox: {

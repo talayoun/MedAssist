@@ -61,6 +61,8 @@ function AdminLayout() {
         display: 'flex', gap: 8, padding: '12px 24px', borderBottom: '1px solid #e5e7eb',
         background: '#fff',
       }}>
+        <NavLink to="/queue" style={tabStyle}>לוח בקרה</NavLink>
+        <span style={{ color: '#d1d5db', margin: '0 4px' }}>|</span>
         <NavLink to="/admin" end style={({ isActive }) => isActive ? activeStyle : tabStyle}>
           תבניות צ׳קליסט
         </NavLink>
