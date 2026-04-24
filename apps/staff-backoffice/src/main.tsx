@@ -59,7 +59,7 @@ function AdminLayout() {
   }
 
   const ghostBtn: React.CSSProperties = {
-    padding: '6px 14px',
+    padding: '7px 14px',
     background: 'transparent',
     border: '1px solid rgba(255,255,255,0.4)',
     color: '#fff',
@@ -84,8 +84,7 @@ function AdminLayout() {
       <header style={{
         background: '#1b3a6b',
         color: '#fff',
-        padding: '0 28px',
-        height: 56,
+        padding: '14px 28px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -111,7 +110,7 @@ function AdminLayout() {
             border: '1px solid rgba(255,255,255,0.3)',
             color: 'rgba(255,255,255,0.8)',
             borderRadius: 6,
-            padding: '6px 14px',
+            padding: '7px 14px',
             cursor: 'pointer',
             fontSize: 13,
           }}>יציאה</button>
