@@ -35,8 +35,11 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h1 style={styles.title}>MedAssist Staff</h1>
-        <p style={styles.subtitle}>כניסה לצוות רפואי</p>
+        <div style={styles.cardHeader}>
+          <h1 style={styles.title}>Med<span style={styles.titleAccent}>Assist</span> Staff</h1>
+          <p style={styles.subtitle}>כניסה לצוות רפואי</p>
+        </div>
+        <div style={styles.accentBar} />
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.label}>
@@ -76,6 +79,7 @@ export default function Login() {
       </div>
     </div>
   );
+
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -84,52 +88,67 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#f0f4f8',
-    fontFamily: 'system-ui, sans-serif',
+    background: '#eef2f7',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
     direction: 'rtl',
   },
   card: {
     background: '#fff',
-    borderRadius: 12,
-    padding: '40px 48px',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+    borderRadius: 16,
+    overflow: 'hidden',
+    boxShadow: '0 8px 40px rgba(27,58,107,0.15)',
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 420,
+  },
+  cardHeader: {
+    background: '#1b3a6b',
+    padding: '32px 40px 28px',
+    textAlign: 'center',
   },
   title: {
     margin: 0,
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: 700,
-    color: '#1a56db',
-    textAlign: 'center',
+    color: '#ffffff',
+    letterSpacing: '-0.3px',
+  },
+  titleAccent: {
+    color: '#3bc4c4',
   },
   subtitle: {
-    margin: '8px 0 28px',
-    color: '#6b7280',
-    textAlign: 'center',
-    fontSize: 15,
+    margin: '6px 0 0',
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 14,
+    fontWeight: 400,
+  },
+  accentBar: {
+    height: 3,
+    background: 'linear-gradient(to left, #3bc4c4, #2a9b9b)',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: 16,
+    padding: '32px 40px 36px',
   },
   label: {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
     color: '#374151',
+    letterSpacing: '0.2px',
   },
   input: {
-    padding: '10px 14px',
+    padding: '11px 14px',
     borderRadius: 8,
     border: '1.5px solid #d1d5db',
     fontSize: 15,
     outline: 'none',
     transition: 'border-color 0.15s',
     direction: 'ltr',
+    color: '#111827',
   },
   error: {
     margin: 0,
@@ -142,15 +161,16 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
   },
   button: {
-    marginTop: 8,
-    padding: '12px',
-    background: '#1a56db',
+    marginTop: 4,
+    padding: '13px',
+    background: '#3bc4c4',
     color: '#fff',
     border: 'none',
     borderRadius: 8,
     fontSize: 16,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: 'pointer',
     transition: 'background 0.15s',
+    letterSpacing: '0.3px',
   },
 };
