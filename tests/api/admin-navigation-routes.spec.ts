@@ -334,28 +334,48 @@ test.describe('Steps CRUD + reorder', () => {
 test.describe('Patient nav regression', () => {
   test.beforeEach(async ({ request }) => { await loginAs(request, ADMIN_EMAIL, ADMIN_PASSWORD); });
 
-  test('seeded patient GET /api/visit/:token/navigation still returns steps in order', async ({ request }) => {
-    // Use the staff re-issue flow: list seeded queue → get an elective appointment → resend invite → get token.
-    const q = await request.get('/api/staff/queue');
-    expect(q.status()).toBe(200);
-    const qBody = await q.json();
-    const pat = qBody.patients?.find((p: { track: string; current_phase: string }) =>
-      p.track === 'elective' && p.current_phase === 'link_sent');
-    if (!pat) {
-      test.skip(true, 'no seeded elective link_sent patient');
-      return;
-    }
+  test('patient GET /api/visit/:token/navigation resolves default route for dept', async ({ request }) => {
+    // Self-contained: install a fresh default route with steps for the dept,
+    // then create an appointment + magic link and assert nav resolves correctly.
+    const deptId = await getSeededDeptId(request);
 
-    const resend = await request.post(`/api/staff/queue/${pat.appointment_id}/resend-invite`);
-    expect(resend.status()).toBe(200);
-    const { token } = await resend.json();
+    const routeRes = await request.post('/api/admin/navigation-routes', {
+      data: {
+        name: `regression-default-${Date.now()}`,
+        from_department_id: null,
+        to_department_id: deptId,
+        is_default: true,
+        steps: [
+          { image_url: 'https://example.com/a.jpg', instruction_text: 'שלב א' },
+          { image_url: 'https://example.com/b.jpg', instruction_text: 'שלב ב' },
+        ],
+      },
+    });
+    expect(routeRes.status(), await routeRes.text()).toBe(201);
+    const route = await routeRes.json();
+
+    const visitAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
+    const createRes = await request.post('/api/staff/appointments', {
+      data: {
+        patient_name: 'Nav Regression',
+        phone_number: '+972500000001',
+        department_id: deptId,
+        procedure_type: 'pre-op-cardiac',
+        visit_datetime: visitAt,
+        custom_items: [],
+        suppressed_template_item_ids: [],
+        send_now: true,
+      },
+    });
+    expect(createRes.status(), await createRes.text()).toBe(201);
+    const { magic_link_token: token } = await createRes.json();
+    expect(token).toBeTruthy();
 
     const nav = await request.get(`/api/visit/${token}/navigation`);
     expect(nav.status()).toBe(200);
     const body = await nav.json();
-    expect(body).toHaveProperty('route_id');
-    expect(body.total_steps).toBeGreaterThan(0);
-    expect(Array.isArray(body.steps)).toBe(true);
+    expect(body.route_id).toBe(route.route_id);
+    expect(body.total_steps).toBe(2);
     expect(body.steps.length).toBeGreaterThan(0);
   });
 });

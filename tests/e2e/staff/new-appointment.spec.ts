@@ -28,19 +28,19 @@ test('staff can onboard a new elective patient via the UI', async ({ page }) => 
 
   await page.getByRole('button', { name: /מטופל חדש/ }).click();
 
-  const modal = page.locator('role=dialog').or(page.locator('h2:has-text("מטופל חדש")').locator('xpath=ancestor::div[2]'));
-  await expect(page.locator('h2:has-text("מטופל חדש")')).toBeVisible();
+  // Scope all further locators to the modal so we don't accidentally fill
+  // inputs that belong to the queue page's broadcast/wait-estimate forms.
+  const modal = page.locator('h2:has-text("מטופל חדש")').locator('xpath=ancestor::div[contains(@style,"background")][1]');
+  await expect(modal.locator('h2:has-text("מטופל חדש")')).toBeVisible();
 
   const uniquePhone = `+97259${Date.now().toString().slice(-7)}`;
   const uniqueName = `E2E Test ${Date.now()}`;
 
-  await page.locator('input').filter({ hasText: '' }).first().fill(uniqueName);
-  // Fall back to ordered inputs since labels are in Hebrew
-  const inputs = page.locator('form input');
+  const inputs = modal.locator('input[type="text"], input[type="tel"], input:not([type])');
   await inputs.nth(0).fill(uniqueName);
   await inputs.nth(1).fill(uniquePhone);
 
-  const departmentSelect = page.locator('form select').first();
+  const departmentSelect = modal.locator('select').first();
   await departmentSelect.selectOption({ label: 'קרדיולוגיה' });
 
   // procedure_type defaults to 'pre-op-cardiac' — leave it
