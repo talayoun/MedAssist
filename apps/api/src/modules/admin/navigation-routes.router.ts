@@ -233,6 +233,19 @@ router.delete('/navigation-routes/:id/steps/:step_id', async (req: Request, res:
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+/** POST /api/admin/navigation-routes/upload-image — returns S3 URL without requiring a step_id */
+router.post(
+  '/navigation-routes/upload-image',
+  upload.single('image'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.file) { res.status(400).json({ error: 'no_file' }); return; }
+      const imageUrl = await uploadStepImage(req.file.buffer, req.file.mimetype);
+      res.json({ image_url: imageUrl });
+    } catch (err) { next(err); }
+  },
+);
+
 /** POST /api/admin/navigation-routes/:id/steps/:step_id/image */
 router.post(
   '/navigation-routes/:id/steps/:step_id/image',
