@@ -152,9 +152,22 @@ export default function Queue() {
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <div>
-          <h1 style={styles.headerTitle}>MedAssist, לוח בקרה</h1>
-          {queue && <span style={styles.deptBadge}>{queue.department_label}</span>}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={styles.brandName}>MedAssist</span>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={styles.navBtnActive}>לוח בקרה</span>
+            {isAdmin && (
+              <>
+                <span style={styles.navDivider}>|</span>
+                <button onClick={() => navigate('/admin')} style={styles.adminBtn}>
+                  תבניות צ׳קליסט
+                </button>
+                <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>
+                  מסלולי ניווט
+                </button>
+              </>
+            )}
+          </nav>
         </div>
         <div style={styles.headerRight}>
           <button
@@ -163,16 +176,6 @@ export default function Queue() {
           >
             + מטופל חדש
           </button>
-          {isAdmin && (
-            <>
-              <button onClick={() => navigate('/admin')} style={styles.adminBtn}>
-                תבניות צ׳קליסט
-              </button>
-              <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>
-                מסלולי ניווט
-              </button>
-            </>
-          )}
           <span style={styles.userName}>{user?.name}</span>
           <button onClick={handleLogout} style={styles.logoutBtn}>יציאה</button>
         </div>
@@ -445,16 +448,18 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     boxShadow: '0 2px 8px rgba(27,58,107,0.18)',
   },
-  headerTitle: { margin: 0, fontSize: 20, fontWeight: 700, letterSpacing: '-0.2px' },
-  deptBadge: {
-    display: 'inline-block',
-    marginTop: 4,
-    background: 'rgba(59,196,196,0.25)',
-    borderRadius: 12,
-    padding: '2px 10px',
+  brandName: { fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '-0.2px', flexShrink: 0 },
+  navBtnActive: {
+    padding: '6px 14px',
+    background: '#fff',
+    border: '1px solid #fff',
+    color: '#1b3a6b',
+    borderRadius: 7,
     fontSize: 13,
-    color: '#a8eaea',
+    fontWeight: 700,
+    display: 'inline-block',
   },
+  navDivider: { color: 'rgba(255,255,255,0.25)', padding: '0 4px', fontSize: 16 },
   headerRight: { display: 'flex', alignItems: 'center', gap: 12 },
   newAppointmentBtn: {
     background: '#3bc4c4',

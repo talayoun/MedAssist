@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Routes, Route, Navigate, NavLink, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Queue from './pages/Queue';
 import PatientDetail from './pages/PatientDetail';
 import Admin from './pages/Admin';
 import NavigationRoutes from './pages/Admin/NavigationRoutes';
+import { logout } from './services/api';
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
 
@@ -45,31 +46,77 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-// ─── Admin Layout (tabs) ──────────────────────────────────────────────────────
+// ─── Admin Layout ─────────────────────────────────────────────────────────────
 
 function AdminLayout() {
-  const tabStyle: React.CSSProperties = {
-    padding: '8px 14px', textDecoration: 'none', color: '#374151', fontSize: 14,
-    borderRadius: 7, fontWeight: 500,
+  const { user, setUser } = useAuth();
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await logout().catch(() => {});
+    setUser(null);
+    navigate('/login', { replace: true });
+  }
+
+  const ghostBtn: React.CSSProperties = {
+    padding: '6px 14px',
+    background: 'transparent',
+    border: '1px solid rgba(255,255,255,0.4)',
+    color: '#fff',
+    borderRadius: 7,
+    cursor: 'pointer',
+    fontSize: 13,
+    fontWeight: 500,
+    textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
   };
-  const activeStyle: React.CSSProperties = {
-    ...tabStyle, background: '#1b3a6b', color: '#fff', fontWeight: 600,
+  const activeGhostBtn: React.CSSProperties = {
+    ...ghostBtn,
+    background: '#fff',
+    color: '#1b3a6b',
+    border: '1px solid #fff',
+    fontWeight: 700,
   };
+
   return (
     <div style={{ direction: 'rtl', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#eef2f7', minHeight: '100vh' }}>
-      <nav style={{
-        display: 'flex', gap: 8, padding: '12px 24px', borderBottom: '1px solid #e5e7eb',
-        background: '#fff',
+      <header style={{
+        background: '#1b3a6b',
+        color: '#fff',
+        padding: '0 28px',
+        height: 56,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        boxShadow: '0 2px 8px rgba(27,58,107,0.18)',
       }}>
-        <NavLink to="/queue" style={tabStyle}>לוח בקרה</NavLink>
-        <span style={{ color: '#d1d5db', margin: '0 4px' }}>|</span>
-        <NavLink to="/admin" end style={({ isActive }) => isActive ? activeStyle : tabStyle}>
-          תבניות צ׳קליסט
-        </NavLink>
-        <NavLink to="/admin/navigation-routes" style={({ isActive }) => isActive ? activeStyle : tabStyle}>
-          מסלולי ניווט
-        </NavLink>
-      </nav>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: '-0.2px' }}>MedAssist</span>
+          <nav style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <NavLink to="/queue" style={ghostBtn}>לוח בקרה</NavLink>
+            <span style={{ color: 'rgba(255,255,255,0.25)', padding: '0 4px' }}>|</span>
+            <NavLink to="/admin" end style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
+              תבניות צ׳קליסט
+            </NavLink>
+            <NavLink to="/admin/navigation-routes" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
+              מסלולי ניווט
+            </NavLink>
+          </nav>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 14, opacity: 0.75 }}>{user?.name}</span>
+          <button onClick={handleLogout} style={{
+            background: 'transparent',
+            border: '1px solid rgba(255,255,255,0.3)',
+            color: 'rgba(255,255,255,0.8)',
+            borderRadius: 6,
+            padding: '6px 14px',
+            cursor: 'pointer',
+            fontSize: 13,
+          }}>יציאה</button>
+        </div>
+      </header>
       <Outlet />
     </div>
   );
