@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+
+# Environment files (never commit real secrets)
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+dist/
+build/
+
+# Turbo cache
+.turbo/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test coverage
+coverage/
+
+# pnpm lock (keep pnpm-lock.yaml committed)
+
+# Claude Code — local-only data (not project tooling)
+# Keep: .claude/commands/ (project slash commands), .specify/ (constitution + templates)
+# Keep: docs/superpowers/ (design specs and plans are project artifacts)
+# Ignore: local settings and session state only
+.claude/settings.local.json
+.claude/todos/
+.claude/scheduled_tasks.lock
+
+# Playwright test artifacts
+.playwright-mcp/
+
+# Ad-hoc smoke test screenshots
+*-checklist-*.png
+*-smoke-*.png
