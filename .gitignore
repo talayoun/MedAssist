@@ -1,3 +1,6 @@
+# Temporary files (screenshots, scripts for dev use)
+.tmp/
+
 # Dependencies
 node_modules/
 
