@@ -336,10 +336,10 @@ function PatientCard({
     <div style={{ ...styles.card, borderRightColor: phaseColor }}>
       <div style={styles.cardHeader}>
         <div>
-          <span style={styles.patientName}>{patient.patient_name}</span>
           <span style={{ ...styles.phaseBadge, background: phaseColor }}>
             {PHASE_LABELS[patient.current_phase]}
           </span>
+          <span style={styles.patientName}>{patient.patient_name}</span>
           {patient.queue_status && (
             <span style={{ ...styles.statusBadge, background: statusColor }}>
               {STATUS_LABELS[patient.queue_status] ?? patient.queue_status}
@@ -606,7 +606,7 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
     gap: 8,
   },
-  patientName: { fontWeight: 700, fontSize: 16, color: '#111827', marginLeft: 10 },
+  patientName: { fontWeight: 700, fontSize: 16, color: '#111827', marginRight: 10 },
   phaseBadge: {
     display: 'inline-block',
     borderRadius: 20,
