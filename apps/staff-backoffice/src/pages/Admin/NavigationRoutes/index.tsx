@@ -5,7 +5,7 @@ import {
   addNavigationStep, updateNavigationStep, deleteNavigationStep, reorderNavigationSteps,
   uploadNavigationStepImage, getDepartments, ApiError,
 } from '../../../services/api';
-import type { AdminRoute, AdminRouteStep, Department } from '@medassist/shared-types';
+import type { AdminRoute, Department } from '@medassist/shared-types';
 
 interface StepDraft {
   _key: string;
@@ -59,7 +59,7 @@ export default function NavigationRoutes() {
 
   function deptName(id: string | null): string {
     if (!id) return 'כניסה ראשית / קבלה';
-    return departments.find((d) => d.id === id)?.name ?? '—';
+    return departments.find((d) => d.id === id)?.name ?? '-';
   }
 
   function openNew() {
@@ -236,7 +236,7 @@ export default function NavigationRoutes() {
 
   return (
     <div style={s.page}>
-      <h1 style={s.heading}>ניהול — מסלולי ניווט</h1>
+      <h1 style={s.heading}>ניהול: מסלולי ניווט</h1>
 
       <div style={s.toolbar}>
         <button onClick={openNew} style={s.primaryBtn}>+ מסלול חדש</button>
@@ -253,46 +253,48 @@ export default function NavigationRoutes() {
       ) : routes.length === 0 ? (
         <p style={s.hint}>אין מסלולים. לחץ "מסלול חדש" כדי ליצור.</p>
       ) : (
-        <table style={s.table}>
-          <thead>
-            <tr>
-              <th style={s.th}>מקור</th>
-              <th style={s.th}>יעד</th>
-              <th style={s.th}>שם</th>
-              <th style={s.th}>ברירת-מחדל</th>
-              <th style={s.th}>צעדים</th>
-              <th style={s.th}>סטטוס</th>
-              <th style={s.th}>פעולות</th>
-            </tr>
-          </thead>
-          <tbody>
-            {routes.map((r) => (
-              <tr key={r.route_id} style={r.archived ? s.archivedRow : undefined}>
-                <td style={s.td}>{deptName(r.from_department_id)}</td>
-                <td style={s.td}>{deptName(r.to_department_id)}</td>
-                <td style={s.td}>{r.name}</td>
-                <td style={s.td}>{r.is_default ? '✓' : ''}</td>
-                <td style={s.td}>{r.steps_count}</td>
-                <td style={s.td}>
-                  {r.archived
-                    ? <span style={s.archivedBadge}>בארכיון</span>
-                    : <span style={s.activeBadge}>פעיל</span>}
-                </td>
-                <td style={s.td}>
-                  {!r.archived && (
-                    <>
-                      <button onClick={() => openEdit(r.route_id)} style={s.editBtn}>עריכה</button>
-                      <button
-                        onClick={() => { setDeleteError(null); setConfirmDeleteId(r.route_id); }}
-                        style={s.deleteBtn}
-                      >מחיקה</button>
-                    </>
-                  )}
-                </td>
+        <div style={s.tableWrap}>
+          <table style={s.table}>
+            <thead>
+              <tr>
+                <th style={s.th}>מקור</th>
+                <th style={s.th}>יעד</th>
+                <th style={s.th}>שם</th>
+                <th style={s.th}>ברירת-מחדל</th>
+                <th style={s.th}>צעדים</th>
+                <th style={s.th}>סטטוס</th>
+                <th style={s.th}>פעולות</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {routes.map((r) => (
+                <tr key={r.route_id} style={r.archived ? s.archivedRow : undefined}>
+                  <td style={s.td}>{deptName(r.from_department_id)}</td>
+                  <td style={s.td}>{deptName(r.to_department_id)}</td>
+                  <td style={s.td}>{r.name}</td>
+                  <td style={s.td}>{r.is_default ? '✓' : ''}</td>
+                  <td style={s.td}>{r.steps_count}</td>
+                  <td style={s.td}>
+                    {r.archived
+                      ? <span style={s.archivedBadge}>בארכיון</span>
+                      : <span style={s.activeBadge}>פעיל</span>}
+                  </td>
+                  <td style={s.td}>
+                    {!r.archived && (
+                      <>
+                        <button onClick={() => openEdit(r.route_id)} style={s.editBtn}>עריכה</button>
+                        <button
+                          onClick={() => { setDeleteError(null); setConfirmDeleteId(r.route_id); }}
+                          style={s.deleteBtn}
+                        >מחיקה</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {/* Edit / Create modal */}
@@ -339,7 +341,7 @@ export default function NavigationRoutes() {
                     onChange={(e) => setEditState((p) => p && ({ ...p, to_department_id: e.target.value }))}
                     style={s.input}
                   >
-                    <option value="" disabled>— בחר —</option>
+                    <option value="" disabled>בחר מחלקה</option>
                     {departments.map((d) => (
                       <option key={d.id} value={d.id}>{d.name}</option>
                     ))}
@@ -395,7 +397,7 @@ export default function NavigationRoutes() {
                               const url = await uploadNavigationStepImage(file);
                               updateStep(s_._key, { image_url: url });
                             } catch {
-                              setEditError('שגיאה בהעלאת תמונה — נסה שוב');
+                              setEditError('שגיאה בהעלאת תמונה, נסה שוב');
                             }
                           }}
                         />
@@ -463,15 +465,16 @@ const s: Record<string, React.CSSProperties> = {
   archiveToggle: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#6b7280', cursor: 'pointer' },
   hint: { color: '#6b7280', fontSize: 14 },
   errorBanner: { background: '#fee2e2', color: '#b91c1c', padding: '8px 12px', borderRadius: 7, fontSize: 13, marginBottom: 12 },
+  tableWrap: { background: '#fff', borderRadius: 12, boxShadow: '0 1px 6px rgba(27,58,107,0.08)', border: '1px solid #e5e7eb', overflow: 'hidden' },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: { textAlign: 'right', padding: '8px 12px', borderBottom: '2px solid #e5e7eb', fontSize: 13, fontWeight: 700, color: '#374151' },
   td: { padding: '10px 12px', borderBottom: '1px solid #f3f4f6', fontSize: 14, verticalAlign: 'middle' },
   archivedRow: { opacity: 0.5 },
   activeBadge: { background: '#d1fae5', color: '#065f46', borderRadius: 12, padding: '2px 8px', fontSize: 12, fontWeight: 600 },
   archivedBadge: { background: '#f3f4f6', color: '#6b7280', borderRadius: 12, padding: '2px 8px', fontSize: 12, fontWeight: 600 },
-  editBtn: { marginLeft: 6, padding: '4px 10px', background: '#eef2ff', color: '#4f46e5', border: '1px solid #a5b4fc', borderRadius: 6, fontSize: 12, cursor: 'pointer' },
+  editBtn: { marginLeft: 6, padding: '4px 10px', background: 'transparent', color: '#1b3a6b', border: '1.5px solid #1b3a6b', borderRadius: 6, fontSize: 12, cursor: 'pointer' },
   deleteBtn: { padding: '4px 10px', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fca5a5', borderRadius: 6, fontSize: 12, cursor: 'pointer' },
-  primaryBtn: { padding: '8px 16px', background: '#1a56db', color: '#fff', border: 'none', borderRadius: 7, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
+  primaryBtn: { padding: '8px 16px', background: '#1b3a6b', color: '#fff', border: 'none', borderRadius: 7, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   cancelBtn: { padding: '8px 16px', background: '#f3f4f6', border: '1px solid #d1d5db', borderRadius: 7, fontSize: 14, cursor: 'pointer' },
   dangerBtn: { padding: '8px 16px', background: '#dc2626', color: '#fff', border: 'none', borderRadius: 7, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   backdrop: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
@@ -486,7 +489,7 @@ const s: Record<string, React.CSSProperties> = {
   deptGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
   defaultLabel: { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151', cursor: 'pointer' },
   itemsHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  addBtn: { alignSelf: 'flex-start', background: '#eef2ff', color: '#4f46e5', border: '1px dashed #a5b4fc', borderRadius: 7, padding: '5px 10px', fontSize: 12, cursor: 'pointer' },
+  addBtn: { alignSelf: 'flex-start', background: 'rgba(59,196,196,0.08)', color: '#2a9b9b', border: '1px dashed #3bc4c4', borderRadius: 7, padding: '5px 10px', fontSize: 12, cursor: 'pointer' },
   moveBtn: { background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 4, width: 22, height: 22, cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: 0 },
   removeBtn: { background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 6, width: 28, height: 28, cursor: 'pointer', color: '#b91c1c', fontSize: 16, lineHeight: 1, flexShrink: 0, alignSelf: 'flex-start' },
   errorMsg: { color: '#b91c1c', fontSize: 13, margin: 0 },

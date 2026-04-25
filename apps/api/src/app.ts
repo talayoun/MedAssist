@@ -10,6 +10,8 @@ import departmentsRouter from './modules/staff/departments.router';
 import appointmentsRouter from './modules/staff/appointments.router';
 import adminChecklistsRouter from './modules/admin/checklists.router';
 import adminNavigationRoutesRouter from './modules/admin/navigation-routes.router';
+import adminTrashRouter from './modules/admin/trash.router';
+import { startTrashPurgeScheduler } from './modules/admin/trash.scheduler';
 
 const app = express();
 
@@ -48,6 +50,7 @@ app.use('/api/staff', departmentsRouter);
 app.use('/api/staff', appointmentsRouter);
 app.use('/api/admin', adminChecklistsRouter);
 app.use('/api/admin', adminNavigationRoutesRouter);
+app.use('/api/admin', adminTrashRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -68,6 +71,7 @@ export default app;
 
 // Start server when run directly
 if (require.main === module) {
+  startTrashPurgeScheduler();
   const PORT = parseInt(process.env.PORT ?? '3000', 10);
   app.listen(PORT, () => {
     console.log(`API listening on port ${PORT}`);

@@ -40,7 +40,7 @@ export async function getQueue(filter: QueueFilter): Promise<QueueResponse> {
   await expireStaleLinkSentAppointments();
 
   const params: (string | null)[] = [];
-  const where: string[] = [];
+  const where: string[] = ['a.deleted_at IS NULL'];
 
   if (filter.departmentId) {
     params.push(filter.departmentId);

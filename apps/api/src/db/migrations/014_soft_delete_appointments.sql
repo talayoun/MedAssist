@@ -1,0 +1,2 @@
+ALTER TABLE appointments
+  ADD COLUMN deleted_at TIMESTAMPTZ DEFAULT NULL;

@@ -379,6 +379,39 @@ export function deleteChecklist(
   return apiRequest(`/admin/checklists/${templateId}`, { method: 'DELETE' });
 }
 
+export interface TrashEntry {
+  appointment_id: string;
+  patient_name: string;
+  phone_number: string;
+  department_name: string;
+  procedure_type: string;
+  track: 'elective' | 'er';
+  deleted_at: string;
+  days_until_purge: number;
+}
+
+export function getTrash(): Promise<{ trash: TrashEntry[] }> {
+  return apiRequest('/admin/trash');
+}
+
+export function softDeleteAppointment(
+  appointmentId: string
+): Promise<{ deleted: boolean }> {
+  return apiRequest(`/admin/appointments/${appointmentId}`, { method: 'DELETE' });
+}
+
+export function restoreAppointment(
+  appointmentId: string
+): Promise<{ restored: boolean }> {
+  return apiRequest(`/admin/trash/${appointmentId}/restore`, { method: 'POST' });
+}
+
+export function hardDeleteAppointment(
+  appointmentId: string
+): Promise<{ deleted: boolean }> {
+  return apiRequest(`/admin/trash/${appointmentId}`, { method: 'DELETE' });
+}
+
 export function listTimingRules(): Promise<{ rules: TimingRule[] }> {
   return apiRequest('/admin/timing-rules');
 }
