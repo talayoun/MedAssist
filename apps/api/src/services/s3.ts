@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 
@@ -33,4 +34,29 @@ export async function uploadStepImage(buffer: Buffer, mimeType: string): Promise
   }));
 
   return `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+}
+
+export async function presignGet(
+  key: string | null | undefined,
+  ttlSeconds = 900,
+): Promise<string | null> {
+  if (!key) return null;
+  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+  return getSignedUrl(s3, cmd, { expiresIn: ttlSeconds });
+}
+
+export async function uploadEncrypted(
+  key: string,
+  buffer: Buffer,
+  contentType: string,
+  contentDisposition: 'attachment' | 'inline' = 'attachment',
+): Promise<void> {
+  await s3.send(new PutObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    Body: buffer,
+    ContentType: contentType,
+    ContentDisposition: contentDisposition,
+    ServerSideEncryption: 'AES256',
+  }));
 }
