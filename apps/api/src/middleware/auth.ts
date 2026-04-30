@@ -82,10 +82,16 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 
 // ─── Magic Link token auth ────────────────────────────────────────────────────
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function requireMagicLinkToken(req: Request, res: Response, next: NextFunction): void {
   const token = req.params.token as string;
   if (!token) {
     res.status(400).json({ error: 'missing_token' });
+    return;
+  }
+  if (!UUID_RE.test(token)) {
+    res.status(401).json({ error: 'link_not_found' });
     return;
   }
 
@@ -108,7 +114,7 @@ export function requireMagicLinkToken(req: Request, res: Response, next: NextFun
   )
     .then(({ rows }) => {
       if (rows.length === 0) {
-        res.status(404).json({ error: 'link_not_found' });
+        res.status(401).json({ error: 'link_not_found' });
         return;
       }
       const row = rows[0];

@@ -61,7 +61,12 @@ app.use((_req: Request, res: Response) => {
 
 // Global error handler
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status ?? 500;
+  if (status < 500) {
+    res.status(status).json({ error: err.message });
+    return;
+  }
   console.error(err);
   res.status(500).json({
     error: 'server_error',

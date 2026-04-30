@@ -1,5 +1,5 @@
 import multer from 'multer';
-import { fileTypeFromBuffer } from 'file-type';
+import { fromBuffer } from 'file-type';
 import type { RequestHandler } from 'express';
 
 const IMAGE_MAX_BYTES = 5 * 1024 * 1024;   // 5 MB per spec
@@ -15,7 +15,7 @@ function makeMimeCheckMiddleware(allowedMimes: string[]): RequestHandler {
       res.status(400).json({ error: 'No file uploaded' });
       return;
     }
-    const detected = await fileTypeFromBuffer(file.buffer);
+    const detected = await fromBuffer(file.buffer);
     if (!detected || !allowedMimes.includes(detected.mime)) {
       res.status(415).json({ error: `Unsupported file type: ${detected?.mime ?? 'unknown'}` });
       return;

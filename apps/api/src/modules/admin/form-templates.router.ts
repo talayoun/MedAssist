@@ -28,7 +28,7 @@ router.delete('/form-templates/:id', async (req, res, next) => {
 
 router.post('/form-templates/:id/blank', ...pdfUpload, async (req, res, next) => {
   try {
-    res.json(await svc.uploadBlankForm(req.params.id, req.file!.buffer, req.file!.mimetype));
+    res.json(await svc.uploadBlankForm(req.params.id as string, req.file!.buffer, req.file!.mimetype as string));
   }
   catch (err) { next(err); }
 });

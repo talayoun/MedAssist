@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { requireStaffAuth } from '../../middleware/auth';
 import { createElectiveAppointment } from './appointments.service';
+import { generateToken } from '../magic-links/magic-links.service';
+import { query } from '../../db/db';
 
 const router = Router();
 
@@ -45,6 +47,60 @@ router.post('/appointments', requireStaffAuth, async (req: Request, res: Respons
     if (e.status === 400) { res.status(400).json({ error: 'invalid_request', message: e.message }); return; }
     next(err);
   }
+});
+
+/** GET /api/staff/appointments */
+router.get('/appointments', requireStaffAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT a.id, a.status, a.procedure_type, a.visit_datetime,
+              p.name AS patient_name, d.name AS department_name,
+              a.created_at
+       FROM appointments a
+       JOIN patients p ON p.id = a.patient_id
+       JOIN departments d ON d.id = a.department_id
+       ORDER BY a.visit_datetime DESC NULLS LAST
+       LIMIT 100`,
+    );
+    res.json({ appointments: rows });
+  } catch (err) { next(err); }
+});
+
+/** GET /api/staff/appointments/:id */
+router.get('/appointments/:id', requireStaffAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT a.id, a.status, a.procedure_type, a.visit_datetime,
+              p.name AS patient_name, d.name AS department_name,
+              ml.token AS magic_link_token
+       FROM appointments a
+       JOIN patients p ON p.id = a.patient_id
+       JOIN departments d ON d.id = a.department_id
+       LEFT JOIN magic_links ml
+         ON ml.appointment_id = a.id
+         AND ml.expires_at > NOW()
+         AND ml.link_type = 'patient'
+       WHERE a.id = $1
+       ORDER BY ml.expires_at DESC NULLS LAST
+       LIMIT 1`,
+      [req.params.id],
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'not_found' }); return; }
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
+/** POST /api/staff/appointments/:id/magic-link — generate a fresh token */
+router.post('/appointments/:id/magic-link', requireStaffAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT a.id, a.status FROM appointments a WHERE a.id = $1`,
+      [req.params.id],
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'not_found' }); return; }
+    const token = await generateToken(req.params.id as string, 'elective', 72);
+    res.status(201).json({ token });
+  } catch (err) { next(err); }
 });
 
 export default router;
