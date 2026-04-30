@@ -12,6 +12,7 @@ import adminChecklistsRouter from './modules/admin/checklists.router';
 import adminNavigationRoutesRouter from './modules/admin/navigation-routes.router';
 import adminTrashRouter from './modules/admin/trash.router';
 import adminFormTemplatesRouter from './modules/admin/form-templates.router';
+import staffFormsRouter from './modules/forms/forms.staff.router';
 import { startTrashPurgeScheduler } from './modules/admin/trash.scheduler';
 
 const app = express();
@@ -53,6 +54,7 @@ app.use('/api/admin', adminChecklistsRouter);
 app.use('/api/admin', adminNavigationRoutesRouter);
 app.use('/api/admin', adminTrashRouter);
 app.use('/api/admin', adminFormTemplatesRouter);
+app.use('/api/staff', staffFormsRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {

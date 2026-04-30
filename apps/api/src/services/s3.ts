@@ -1,4 +1,5 @@
 import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import type { Readable } from 'stream';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
@@ -43,6 +44,18 @@ export async function presignGet(
   if (!key) return null;
   const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   return getSignedUrl(s3, cmd, { expiresIn: ttlSeconds });
+}
+
+export async function getObjectBuffer(key: string): Promise<Buffer> {
+  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+  const { Body } = await s3.send(cmd);
+  const readable = Body as Readable;
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    readable.on('data', (chunk: Buffer) => chunks.push(chunk));
+    readable.on('end', () => resolve(Buffer.concat(chunks)));
+    readable.on('error', reject);
+  });
 }
 
 export async function uploadEncrypted(
