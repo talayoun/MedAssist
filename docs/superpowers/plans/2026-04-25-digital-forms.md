@@ -33,10 +33,10 @@ These skills are installed and ready. Use them whenever they fit — don't wait 
 | `apps/api/src/services/s3.ts` | MODIFY | Add presignGet + uploadEncrypted |
 | `apps/api/src/modules/admin/form-templates.service.ts` | CREATE | CRUD + blank PDF upload |
 | `apps/api/src/modules/admin/form-templates.router.ts` | CREATE | Admin form-template endpoints |
-| `apps/api/src/modules/forms/forms.service.ts` | CREATE | List, upload, sign, staff summary |
-| `apps/api/src/modules/forms/forms.router.ts` | CREATE | Patient-facing form endpoints |
+| `apps/api/src/modules/forms/forms.service.ts` | CREATE | List, upload, sign, staff summary — **Apply B2: FOR UPDATE + S3 last inside transaction** |
+| `apps/api/src/modules/forms/forms.router.ts` | CREATE | Patient-facing form endpoints — **Apply B4: VisitRequest interface + guard on all handlers** |
 | `apps/api/src/modules/forms/forms.staff.router.ts` | CREATE | Staff form endpoints + PDF export |
-| `apps/api/src/modules/forms/pdf-export.service.ts` | CREATE | buildExport, computeLayout (30-item cap) |
+| `apps/api/src/modules/forms/pdf-export.service.ts` | CREATE | buildExport, computeLayout (30-item cap) — **Apply B3: route buildExport through computeLayout** |
 | `apps/api/src/modules/visit.router.ts` | MODIFY | Mount `/:token/forms` router |
 | `apps/api/src/app.ts` | MODIFY | Mount staff forms + admin form-templates routers |
 | `apps/api/src/modules/staff/appointments.service.ts` | MODIFY | Snapshot form templates at appointment creation |
@@ -51,12 +51,122 @@ These skills are installed and ready. Use them whenever they fit — don't wait 
 | `apps/staff-backoffice/src/pages/Admin/FormTemplates/index.tsx` | CREATE | Admin form template management |
 | `apps/staff-backoffice/src/services/api.ts` | MODIFY | Staff + admin form API functions |
 | `apps/staff-backoffice/src/main.tsx` | MODIFY | form-templates route + NavLink |
-| `tests/api/admin-form-templates.spec.ts` | CREATE | Template CRUD contract tests |
-| `tests/api/visit-forms.spec.ts` | CREATE | Patient form endpoints |
-| `tests/api/staff-forms-export.spec.ts` | CREATE | Staff upload + PDF export |
-| `tests/e2e/patient-pwa-mobile/forms.spec.ts` | CREATE | Upload + RTL/tap-target assertions |
-| `tests/e2e/staff-backoffice-desktop/forms-export.spec.ts` | CREATE | Documents card + PDF download |
+| `tests/api/admin-form-templates.spec.ts` | CREATE | Template CRUD contract tests — **Apply test-cleanup rule** |
+| `tests/api/visit-forms.spec.ts` | CREATE | Patient form endpoints — **Apply test-cleanup rule** |
+| `tests/api/staff-forms-export.spec.ts` | CREATE | Staff upload + PDF export — **Apply test-cleanup rule** |
+| `tests/e2e/patient-pwa-mobile/forms.spec.ts` | CREATE | Upload + RTL/tap-target assertions — **Apply test-cleanup rule** |
+| `tests/e2e/staff-backoffice-desktop/forms-export.spec.ts` | CREATE | Documents card + PDF download — **Apply test-cleanup rule** |
 | `apps/api/src/modules/forms/__tests__/pdf-export.unit.spec.ts` | CREATE | Vitest: computeLayout pure unit |
+| `apps/api/src/db/migrations/017_departments_unique_name.sql` | CREATE | Dedup departments + UNIQUE constraint (Phase 0) |
+
+---
+
+## Cross-Cutting Rule: Test Data Cleanup
+
+Every test file that seeds data must clean it up. Pattern:
+
+```typescript
+const createdIds: string[] = [];
+
+test.afterAll(async ({ request }) => {
+  await loginAs(request, 'admin');
+  for (const id of [...createdIds].reverse()) {
+    await request.delete(`/api/admin/form-templates/${id}`);
+  }
+});
+```
+
+- Collect created IDs in a `const createdIds: string[] = []` at spec scope
+- Push each `id` from create-responses into it
+- Delete in `afterAll` in reverse order (children before parents)
+- Applies to: Tasks 7, 8, 10, 19, 20 — any spec that creates templates, appointments, or checklist items
+
+---
+
+## Spec Overrides (spec wins over plan on all conflicts)
+
+Read `docs/superpowers/specs/2026-04-25-digital-forms-design.md` before implementing each task. Critical deviations where following the plan verbatim produces wrong behavior:
+
+1. **Signature endpoint — JSON body, not multipart** (Task 9): `POST /:itemId/signature` body is `{ signature_data: string }` (base64 PNG), parsed by `express.json({ limit: '150kb' })`. Remove `signatureUpload` middleware. Decode base64, validate PNG magic bytes, reject >100 KB with 413.
+
+2. **IDOR protection required on every patient write** (Task 8/9): verify `patient_form_items.appointment_id = token.appointmentId` via DB before any write. Return 403 on mismatch.
+
+3. **`denyCompanionWrite` middleware required** (Task 9): mount after `requireMagicLinkToken` on `/upload` and `/signature`. Companion tokens must not upload IDs or forge signatures.
+
+4. **409 on sign before staff upload** (Task 8/9): in `submitSignature`, verify `status = 'staff_uploaded'` before proceeding. Return 409 with `{ error: 'ממתין להעלאת מסמך מהצוות' }` if not ready.
+
+5. **`procedure_type` nullable in `form_template_items`** (Task 1): drop NOT NULL. Snapshot query: `WHERE procedure_type = $1 OR procedure_type IS NULL`.
+
+6. **Staff API URL is `/patients/` not `/appointments/`** (Task 10): `GET /api/staff/patients/:appointmentId/forms`. Fix mount path in `app.ts` and all route strings in `forms.staff.router.ts`.
+
+7. **422 on export cap, not silent truncation** (Task 10): count items first; return 422 if count > 30.
+
+8. **`SELECT FOR UPDATE` on re-upload** (Tasks 8/9): first statement inside `withTransaction` must be `SELECT id FROM patient_form_items WHERE id = $1 FOR UPDATE`.
+
+9. **PDF embeds consent PDF pages** (Task 10): use `PDFDocument.load(buf).copyPages(...)` for staff consent PDFs. Add header page (patient name, procedure, department, timestamp) and footer page.
+
+10. **`staff_id` column in migration 015** (Task 1): add `staff_id UUID REFERENCES staff(id) ON DELETE SET NULL` to `patient_form_items`.
+
+---
+
+## Phase 0: Bug Fixes
+
+Run these before (or alongside) Phase 1. They are independent.
+
+### Task B1: Departments — duplicate name (systemic fix)
+
+**Root cause:** `departments` table has no UNIQUE constraint on `name`. Two rows with identical name both appear in the Queue filter dropdown.
+
+**File to create:** `apps/api/src/db/migrations/017_departments_unique_name.sql`
+
+- [ ] **Step 1: Write migration**
+
+```sql
+-- apps/api/src/db/migrations/017_departments_unique_name.sql
+
+DO $$
+DECLARE
+  dup RECORD;
+  canonical_id UUID;
+BEGIN
+  FOR dup IN (
+    SELECT name FROM departments GROUP BY name HAVING COUNT(*) > 1
+  ) LOOP
+    SELECT id INTO canonical_id
+      FROM departments WHERE name = dup.name ORDER BY created_at ASC LIMIT 1;
+
+    UPDATE appointments SET department_id = canonical_id
+      WHERE department_id IN (
+        SELECT id FROM departments WHERE name = dup.name AND id <> canonical_id
+      );
+
+    UPDATE magic_link_timing_rules SET department_id = canonical_id
+      WHERE department_id IN (
+        SELECT id FROM departments WHERE name = dup.name AND id <> canonical_id
+      );
+
+    DELETE FROM departments WHERE name = dup.name AND id <> canonical_id;
+  END LOOP;
+END;
+$$;
+
+ALTER TABLE departments ADD CONSTRAINT departments_name_unique UNIQUE (name);
+```
+
+- [ ] **Step 2: Run + verify**
+
+```bash
+pnpm --filter api db:migrate
+```
+
+Expected: constraint applied, duplicate rows gone.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add apps/api/src/db/migrations/017_departments_unique_name.sql
+git commit -m "fix(db): deduplicate departments and add unique constraint on name"
+```
 
 ---
 
