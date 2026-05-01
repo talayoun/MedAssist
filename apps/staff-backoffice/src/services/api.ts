@@ -1,6 +1,7 @@
 import type {
   StaffUser, QueueResponse, PatientStationDTO, AppointmentPhase, Department,
-  TimingRule, AdminRoute, AdminRouteStep, ChecklistTemplate
+  TimingRule, AdminRoute, AdminRouteStep, ChecklistTemplate,
+  FormItemDTO, StaffFormsResponseDTO, FormTemplateItemDTO,
 } from '@medassist/shared-types';
 import type { z } from 'zod';
 
@@ -414,6 +415,71 @@ export function hardDeleteAppointment(
 
 export function listTimingRules(): Promise<{ rules: TimingRule[] }> {
   return apiRequest('/admin/timing-rules');
+}
+
+// ─── Staff — Forms ────────────────────────────────────────────────────────────
+
+export function getStaffForms(appointmentId: string): Promise<StaffFormsResponseDTO> {
+  return apiRequest(`/staff/patients/${appointmentId}/forms`);
+}
+
+export async function staffUploadConsent(appointmentId: string, itemId: string, file: File): Promise<FormItemDTO> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE_URL}/api/staff/patients/${appointmentId}/forms/${itemId}/consent`, {
+    method: 'POST',
+    credentials: 'include',
+    body: fd,
+  });
+  if (res.status === 401) { window.location.href = '/login'; throw new ApiError(401, 'not_authenticated', 'Session expired'); }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
+  return body as FormItemDTO;
+}
+
+export function exportForms(appointmentId: string): Promise<{ pdf_url: string; generated_at: string; item_count: number }> {
+  return apiRequest(`/staff/patients/${appointmentId}/forms/export`, { method: 'POST' });
+}
+
+// ─── Admin — Form Templates ───────────────────────────────────────────────────
+
+export function listFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
+  return apiRequest('/admin/form-templates');
+}
+
+export function createFormTemplate(body: {
+  procedure_type?: string | null;
+  label: string;
+  item_type: 'patient_upload' | 'staff_upload_sign';
+  required: boolean;
+  order_index: number;
+}): Promise<FormTemplateItemDTO> {
+  return apiRequest('/admin/form-templates', { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function patchFormTemplate(
+  id: string,
+  patch: Partial<{ label: string; required: boolean; order_index: number; is_active: boolean }>
+): Promise<FormTemplateItemDTO> {
+  return apiRequest(`/admin/form-templates/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
+}
+
+export function deleteFormTemplate(id: string): Promise<void> {
+  return apiRequest(`/admin/form-templates/${id}`, { method: 'DELETE' });
+}
+
+export async function uploadFormTemplateBlank(id: string, file: File): Promise<FormTemplateItemDTO> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE_URL}/api/admin/form-templates/${id}/blank`, {
+    method: 'POST',
+    credentials: 'include',
+    body: fd,
+  });
+  if (res.status === 401) { window.location.href = '/login'; throw new ApiError(401, 'not_authenticated', 'Session expired'); }
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
+  return body as FormTemplateItemDTO;
 }
 
 export { ApiError };

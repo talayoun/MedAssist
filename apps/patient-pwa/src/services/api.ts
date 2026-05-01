@@ -1,4 +1,4 @@
-import type { VisitContext, ChecklistResponse, NavigationRoute, WaitingResponse, FormSummary, FormDetail } from '@medassist/shared-types';
+import type { VisitContext, ChecklistResponse, NavigationRoute, WaitingResponse, FormItemDTO } from '@medassist/shared-types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -84,41 +84,27 @@ export function sendContactMessage(
 
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
-export function listForms(token: string): Promise<{ forms: FormSummary[] }> {
+export function getForms(token: string): Promise<{ items: FormItemDTO[] }> {
   return apiRequest(`/visit/${token}/forms`);
 }
 
-export function getForm(token: string, formId: string): Promise<FormDetail> {
-  return apiRequest<FormDetail>(`/visit/${token}/forms/${formId}`);
-}
-
-export function saveFormDraft(
-  token: string,
-  formId: string,
-  fieldData: Record<string, unknown>
-): Promise<{ saved: boolean; updated_at: string }> {
-  return apiRequest(`/visit/${token}/forms/${formId}`, {
-    method: 'PUT',
-    body: JSON.stringify({ field_data: fieldData }),
+export async function uploadFormImage(token: string, itemId: string, file: File): Promise<FormItemDTO> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE_URL}/api/visit/${token}/forms/${itemId}/upload`, {
+    method: 'POST',
+    body: fd,
   });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
+  return body as FormItemDTO;
 }
 
-export function submitSignature(
-  token: string,
-  formId: string,
-  signatureData: string
-): Promise<{ saved: boolean }> {
-  return apiRequest(`/visit/${token}/forms/${formId}/signature`, {
+export function submitFormSignature(token: string, itemId: string, signatureData: string): Promise<FormItemDTO> {
+  return apiRequest(`/visit/${token}/forms/${itemId}/signature`, {
     method: 'POST',
     body: JSON.stringify({ signature_data: signatureData }),
   });
-}
-
-export function submitForm(
-  token: string,
-  formId: string
-): Promise<{ submitted: boolean; submitted_at: string }> {
-  return apiRequest(`/visit/${token}/forms/${formId}/submit`, { method: 'POST', body: '{}' });
 }
 
 export { ApiError };

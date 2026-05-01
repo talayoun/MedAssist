@@ -7,6 +7,7 @@ import PatientDetail from './pages/PatientDetail';
 import Admin from './pages/Admin';
 import NavigationRoutes from './pages/Admin/NavigationRoutes';
 import Trash from './pages/Admin/Trash';
+import { FormTemplates } from './pages/Admin/FormTemplates';
 import { logout } from './services/api';
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
@@ -102,6 +103,9 @@ function AdminLayout() {
             <NavLink to="/admin/navigation-routes" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
               מסלולי ניווט
             </NavLink>
+            <NavLink to="/admin/form-templates" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
+              תבניות טפסים
+            </NavLink>
             <NavLink to="/admin/trash" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
               פח אשפה
             </NavLink>
@@ -162,6 +166,7 @@ function App() {
             <Route index element={<Navigate to="checklists" replace />} />
             <Route path="checklists" element={<Admin />} />
             <Route path="navigation-routes" element={<NavigationRoutes />} />
+            <Route path="form-templates" element={<FormTemplates />} />
             <Route path="trash" element={<Trash />} />
           </Route>
           <Route path="*" element={<Navigate to="/queue" replace />} />

@@ -6,6 +6,7 @@ import Checklist from './pages/Checklist';
 import Navigation from './pages/Navigation';
 import Waiting from './pages/Waiting';
 import Forms from './pages/Forms';
+import { SignaturePage } from './pages/Forms/SignaturePage';
 import ErrorPage from './pages/Error';
 
 // Hebrew RTL for all patient-facing content
@@ -21,6 +22,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/visit/:token/navigation" element={<Navigation />} />
         <Route path="/visit/:token/waiting" element={<Waiting />} />
         <Route path="/visit/:token/forms" element={<Forms />} />
+        <Route path="/visit/:token/forms/:itemId" element={<SignaturePage />} />
         <Route path="/error/:type" element={<ErrorPage />} />
         <Route path="*" element={<Navigate to="/error/not_found" replace />} />
       </Routes>
