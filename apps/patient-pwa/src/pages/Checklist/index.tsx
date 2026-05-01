@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getChecklist, saveChecklistProgress, ApiError } from '../../services/api';
-import type { ChecklistResponse, ChecklistItem } from '@medassist/shared-types';
+import { getChecklist, saveChecklistProgress, getForms, uploadFormImage, ApiError } from '../../services/api';
+import type { ChecklistResponse, ChecklistItem, FormItemDTO } from '@medassist/shared-types';
 
 const styles = {
   page: {
@@ -65,12 +65,130 @@ const styles = {
   } as React.CSSProperties,
 };
 
+function FormDocumentItem({
+  item,
+  token,
+  onUpdate,
+}: {
+  item: FormItemDTO;
+  token: string;
+  onUpdate: (updated: FormItemDTO) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const updated = await uploadFormImage(token, item.id, file);
+      onUpdate(updated as unknown as FormItemDTO);
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.message : 'שגיאה בהעלאה');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const statusLabel = {
+    pending: 'ממתין',
+    staff_uploaded: 'ממתין לחתימה',
+    patient_submitted: 'הועלה',
+  }[item.status];
+
+  const isComplete = item.status === 'patient_submitted';
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        background: isComplete ? '#f0fdf4' : '#fff',
+        border: `1px solid ${isComplete ? '#86efac' : '#e5e7eb'}`,
+        borderRadius: '12px',
+        minHeight: '44px',
+        gap: '8px',
+      }}
+    >
+      <span style={{ fontWeight: 600, flex: 1 }}>{item.label}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {uploadError && <span style={{ fontSize: '12px', color: '#c00' }}>{uploadError}</span>}
+        <span style={{ fontSize: '13px', color: isComplete ? '#16a34a' : '#6b7280', whiteSpace: 'nowrap' }}>
+          {statusLabel}
+        </span>
+        {item.item_type === 'patient_upload' && !isComplete && (
+          <>
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+              style={{
+                minWidth: '44px',
+                minHeight: '44px',
+                padding: '0 12px',
+                background: '#2563eb',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                cursor: uploading ? 'not-allowed' : 'pointer',
+                opacity: uploading ? 0.6 : 1,
+              }}
+            >
+              {uploading ? '...' : 'העלה'}
+            </button>
+          </>
+        )}
+        {item.item_type === 'staff_upload_sign' && item.status === 'staff_uploaded' && (
+          <a
+            href={`/visit/${token}/forms/${item.id}`}
+            style={{
+              minWidth: '44px',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              padding: '0 12px',
+              background: '#7c3aed',
+              color: '#fff',
+              borderRadius: '8px',
+              fontSize: '14px',
+              textDecoration: 'none',
+            }}
+          >
+            חתום
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Checklist() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<ChecklistResponse | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [formItems, setFormItems] = useState<FormItemDTO[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    getForms(token)
+      .then(({ items }) => setFormItems(items))
+      .catch(() => {/* non-fatal */});
+  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -167,6 +285,25 @@ export default function Checklist() {
           </div>
         );
       })}
+
+      {formItems.length > 0 && (
+        <section style={{ marginTop: '24px' }}>
+          <h2 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '12px' }}>מסמכים</h2>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {formItems.map((item) => (
+              <li key={item.id} style={{ marginBottom: '12px' }}>
+                <FormDocumentItem
+                  item={item}
+                  token={token!}
+                  onUpdate={(updated) =>
+                    setFormItems((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))
+                  }
+                />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }
