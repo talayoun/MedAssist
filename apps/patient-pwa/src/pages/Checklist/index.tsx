@@ -132,6 +132,7 @@ function FormDocumentItem({
             />
             <button
               type="button"
+              data-testid="form-action-btn"
               disabled={uploading}
               onClick={() => inputRef.current?.click()}
               style={{
@@ -154,6 +155,7 @@ function FormDocumentItem({
         {item.item_type === 'staff_upload_sign' && item.status === 'staff_uploaded' && (
           <a
             href={`/visit/${token}/forms/${item.id}`}
+            data-testid="form-action-btn"
             style={{
               minWidth: '44px',
               minHeight: '44px',

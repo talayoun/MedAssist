@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
@@ -133,6 +133,18 @@ function AdminLayout() {
 
 function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+    fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => { if (body?.user) setUser(body.user as AuthUser); })
+      .catch(() => {})
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  if (!authChecked) return null;
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>

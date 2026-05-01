@@ -1,9 +1,21 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import { randomUUID } from 'crypto';
+import { readFileSync } from 'fs';
 import { query, withTransaction } from '../../db/db';
 import { getObjectBuffer, uploadEncrypted, presignGet } from '../../services/s3';
 
 export const MAX_EXPORT_ITEMS = 30;
+
+const HEBREW_RE = /[֐-׿יִ-ﭏ]/;
+
+// Load font bytes once at module initialization (avoids repeated disk I/O)
+/* eslint-disable @typescript-eslint/no-require-imports */
+const FONT_HE_400 = readFileSync(require.resolve('@fontsource/heebo/files/heebo-hebrew-400-normal.woff2'));
+const FONT_HE_700 = readFileSync(require.resolve('@fontsource/heebo/files/heebo-hebrew-700-normal.woff2'));
+const FONT_LA_400 = readFileSync(require.resolve('@fontsource/heebo/files/heebo-latin-400-normal.woff2'));
+const FONT_LA_700 = readFileSync(require.resolve('@fontsource/heebo/files/heebo-latin-700-normal.woff2'));
+/* eslint-enable */
 
 export function computeLayout<T>(items: T[]): T[] {
   if (items.length > MAX_EXPORT_ITEMS) {
@@ -11,9 +23,30 @@ export function computeLayout<T>(items: T[]): T[] {
   }
   return items;
 }
-const PAGE_WIDTH = 595;   // A4 pt
-const PAGE_HEIGHT = 842;  // A4 pt
+
+const PAGE_WIDTH = 595;
+const PAGE_HEIGHT = 842;
 const MARGIN = 50;
+
+type PdfFont = import('pdf-lib').PDFFont;
+
+type PdfLine = {
+  text: string;
+  size: number;
+  bold?: boolean;
+  hebrew?: boolean;
+};
+
+// Splits a label+value pair so a Hebrew value gets its own line (separate font)
+function splitField(label: string, value: string, opts: { size: number; bold?: boolean } = { size: 12 }): PdfLine[] {
+  if (HEBREW_RE.test(value)) {
+    return [
+      { text: label, ...opts },
+      { text: value, ...opts, hebrew: true },
+    ];
+  }
+  return [{ text: `${label} ${value}`, ...opts }];
+}
 
 export async function buildExport(appointmentId: string, staffId: string) {
   // 1. Fetch items with current documents
@@ -52,35 +85,46 @@ export async function buildExport(appointmentId: string, staffId: string) {
     department_name: string;
   };
 
-  // 3. Build PDF
+  // 3. Build PDF with separate Hebrew and Latin fonts to handle bilingual content
   const pdf = await PDFDocument.create();
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdf.embedFont(StandardFonts.HelveticaBold);
+  pdf.registerFontkit(fontkit);
+  const heFont: PdfFont = await pdf.embedFont(FONT_HE_400);
+  const heBoldFont: PdfFont = await pdf.embedFont(FONT_HE_700);
+  const laFont: PdfFont = await pdf.embedFont(FONT_LA_400);
+  const laBoldFont: PdfFont = await pdf.embedFont(FONT_LA_700);
   const now = new Date();
 
-  // Helper to add a text page
-  function addTextPage(lines: Array<{ text: string; size: number; bold?: boolean }>) {
+  function pickFont(line: PdfLine): PdfFont {
+    const useHebrew = line.hebrew ?? HEBREW_RE.test(line.text);
+    return useHebrew
+      ? (line.bold ? heBoldFont : heFont)
+      : (line.bold ? laBoldFont : laFont);
+  }
+
+  function addTextPage(lines: PdfLine[]) {
     const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     let y = PAGE_HEIGHT - MARGIN - 30;
-    for (const { text, size, bold } of lines) {
-      page.drawText(text, {
-        x: MARGIN,
-        y,
-        size,
-        font: bold ? boldFont : font,
-        color: rgb(0, 0, 0),
-      });
-      y -= size + 8;
+    for (const line of lines) {
+      if (line.text) {
+        page.drawText(line.text, {
+          x: MARGIN,
+          y,
+          size: line.size,
+          font: pickFont(line),
+          color: rgb(0, 0, 0),
+        });
+      }
+      y -= line.size + 8;
     }
   }
 
   // Header page
   addTextPage([
-    { text: 'MedAssist — Patient Forms Export', size: 18, bold: true },
+    { text: 'MedAssist - Patient Forms Export', size: 18, bold: true },
     { text: '', size: 8 },
-    { text: `Patient: ${patient_name}`, size: 13, bold: true },
-    { text: `Procedure: ${procedure_type ?? '—'}`, size: 12 },
-    { text: `Department: ${department_name}`, size: 12 },
+    ...splitField('Patient:', patient_name, { size: 13, bold: true }),
+    ...splitField('Department:', department_name, { size: 12 }),
+    { text: `Procedure: ${procedure_type ?? '-'}`, size: 12 },
     { text: `Generated: ${now.toISOString()}`, size: 11 },
   ]);
 
@@ -92,7 +136,7 @@ export async function buildExport(appointmentId: string, staffId: string) {
 
     // Section header page
     addTextPage([
-      { text: `Section: ${item.label}`, size: 14, bold: true },
+      ...splitField('Section:', item.label as string, { size: 14, bold: true }),
       { text: `Type: ${item.item_type}  Status: ${item.status}`, size: 10 },
     ]);
 
@@ -113,7 +157,6 @@ export async function buildExport(appointmentId: string, staffId: string) {
       if ((item.patient_doc_type as string) === 'signature') {
         embeddedImage = await pdf.embedPng(imgBytes);
       } else {
-        // Try JPEG first; fall back to PNG
         try {
           embeddedImage = await pdf.embedJpg(imgBytes);
         } catch {
@@ -134,7 +177,7 @@ export async function buildExport(appointmentId: string, staffId: string) {
 
   // Footer page
   addTextPage([
-    { text: `MedAssist — Generated ${now.toISOString()}`, size: 11 },
+    { text: `MedAssist - Generated ${now.toISOString()}`, size: 11 },
   ]);
 
   const pdfBytes = await pdf.save();
@@ -145,7 +188,7 @@ export async function buildExport(appointmentId: string, staffId: string) {
   const key = `forms/appointments/${appointmentId}/exports/${ts}-${randomUUID()}.pdf`;
 
   await withTransaction(async (client) => {
-    await uploadEncrypted(key, pdfBuffer, 'application/pdf', 'attachment');
+    await uploadEncrypted(key, pdfBuffer, 'application/pdf', 'inline');
     await client.query(
       `INSERT INTO patient_pdf_exports
          (appointment_id, pdf_key, item_count, generated_by_staff_id)
