@@ -104,6 +104,24 @@ export async function createElectiveAppointment(
     input.suppressed_template_item_ids
   );
 
+  // Snapshot active form templates for this procedure type (and global ones)
+  const { rows: formTemplates } = await query(
+    `SELECT id, label, item_type, required, order_index
+     FROM form_template_items
+     WHERE (procedure_type = $1 OR procedure_type IS NULL) AND is_active = true
+     ORDER BY order_index`,
+    [input.procedure_type],
+  );
+  for (const tmpl of formTemplates) {
+    await query(
+      `INSERT INTO patient_form_items
+         (appointment_id, form_template_item_id, label, item_type, required, order_index)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (appointment_id, form_template_item_id) WHERE form_template_item_id IS NOT NULL DO NOTHING`,
+      [appointmentId, tmpl.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index],
+    );
+  }
+
   if (input.send_now) {
     const ttlHours = parseInt(process.env.ELECTIVE_LINK_TTL_HOURS ?? '72', 10);
     const token = await generateToken(appointmentId, 'elective', ttlHours);

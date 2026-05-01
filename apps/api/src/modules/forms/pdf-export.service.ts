@@ -3,7 +3,14 @@ import { randomUUID } from 'crypto';
 import { query, withTransaction } from '../../db/db';
 import { getObjectBuffer, uploadEncrypted, presignGet } from '../../services/s3';
 
-const MAX_EXPORT_ITEMS = 30;
+export const MAX_EXPORT_ITEMS = 30;
+
+export function computeLayout<T>(items: T[]): T[] {
+  if (items.length > MAX_EXPORT_ITEMS) {
+    throw Object.assign(new Error('Too many items for export'), { status: 422 });
+  }
+  return items;
+}
 const PAGE_WIDTH = 595;   // A4 pt
 const PAGE_HEIGHT = 842;  // A4 pt
 const MARGIN = 50;
@@ -27,12 +34,7 @@ export async function buildExport(appointmentId: string, staffId: string) {
     [appointmentId],
   );
 
-  if (items.length > MAX_EXPORT_ITEMS) {
-    throw Object.assign(
-      new Error('Too many items for export'),
-      { status: 422 },
-    );
-  }
+  computeLayout(items);
 
   // 2. Fetch patient / appointment metadata
   const { rows: apptRows } = await query(

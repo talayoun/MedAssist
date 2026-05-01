@@ -1,19 +1,34 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, CreateBucketCommand, HeadBucketCommand } from '@aws-sdk/client-s3';
 import type { Readable } from 'stream';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 
+const endpoint = process.env.AWS_ENDPOINT_URL;
+
 const s3 = new S3Client({
-  region: process.env.AWS_REGION!,
+  region: process.env.AWS_REGION ?? 'eu-west-1',
+  ...(endpoint ? { endpoint, forcePathStyle: true } : {}),
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
   },
 });
 
-const BUCKET = process.env.AWS_S3_BUCKET!;
+const BUCKET = (process.env.AWS_S3_BUCKET ?? process.env.AWS_BUCKET_NAME)!;
 const MAX_BYTES = 200 * 1024;
+const isLocalStack = !!endpoint;
+
+let bucketEnsured = false;
+async function ensureBucket() {
+  if (bucketEnsured || !isLocalStack) return;
+  try {
+    await s3.send(new HeadBucketCommand({ Bucket: BUCKET }));
+  } catch {
+    await s3.send(new CreateBucketCommand({ Bucket: BUCKET }));
+  }
+  bucketEnsured = true;
+}
 
 export async function uploadStepImage(buffer: Buffer, mimeType: string): Promise<string> {
   const compressed = await sharp(buffer)
@@ -26,14 +41,16 @@ export async function uploadStepImage(buffer: Buffer, mimeType: string): Promise
     : await sharp(compressed).jpeg({ quality: Math.floor(80 * MAX_BYTES / compressed.length) }).toBuffer();
 
   const key = `nav-steps/${randomUUID()}.jpg`;
+  await ensureBucket();
   await s3.send(new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: finalBuffer,
     ContentType: 'image/jpeg',
-    ACL: 'public-read',
+    ...(isLocalStack ? {} : { ACL: 'public-read' }),
   }));
 
+  if (isLocalStack) return `${endpoint}/${BUCKET}/${key}`;
   return `https://${BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 }
 
@@ -42,11 +59,13 @@ export async function presignGet(
   ttlSeconds = 900,
 ): Promise<string | null> {
   if (!key) return null;
+  await ensureBucket();
   const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   return getSignedUrl(s3, cmd, { expiresIn: ttlSeconds });
 }
 
 export async function getObjectBuffer(key: string): Promise<Buffer> {
+  await ensureBucket();
   const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
   const { Body } = await s3.send(cmd);
   const readable = Body as Readable;
@@ -64,12 +83,13 @@ export async function uploadEncrypted(
   contentType: string,
   contentDisposition: 'attachment' | 'inline' = 'attachment',
 ): Promise<void> {
+  await ensureBucket();
   await s3.send(new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     Body: buffer,
     ContentType: contentType,
     ContentDisposition: contentDisposition,
-    ServerSideEncryption: 'AES256',
+    ...(isLocalStack ? {} : { ServerSideEncryption: 'AES256' }),
   }));
 }

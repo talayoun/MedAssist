@@ -86,11 +86,20 @@ async function seed() {
     const { rows: [route] } = await client.query<{ id: string }>(`
       INSERT INTO navigation_routes
         (from_department_id, to_department_id, name, is_default, archived, steps_count)
-      VALUES (NULL, $1, 'חניון מרכזי → קרדיולוגיה', TRUE, FALSE, 5)
+      SELECT NULL, $1, 'חניון מרכזי → קרדיולוגיה', TRUE, FALSE, 5
+      WHERE NOT EXISTS (
+        SELECT 1 FROM navigation_routes
+        WHERE from_department_id IS NULL AND to_department_id = $1 AND is_default = TRUE AND archived = FALSE
+      )
       RETURNING id
     `, [deptId]);
 
-    const routeId = route.id;
+    const routeId: string = route?.id ?? (
+      await client.query<{ id: string }>(
+        `SELECT id FROM navigation_routes WHERE from_department_id IS NULL AND to_department_id = $1 AND is_default = TRUE AND archived = FALSE LIMIT 1`,
+        [deptId],
+      )
+    ).rows[0].id;
 
     const steps = [
       { order: 1, instruction: 'צא מהחניון לכיוון הכניסה הראשית' },
@@ -104,6 +113,7 @@ async function seed() {
       await client.query(`
         INSERT INTO route_steps (route_id, step_order, image_url, instruction_text)
         VALUES ($1, $2, $3, $4)
+        ON CONFLICT (route_id, step_order) DO NOTHING
       `, [routeId, step.order, `https://placeholder.example.com/step-${step.order}.jpg`, step.instruction]);
     }
 
@@ -119,6 +129,35 @@ async function seed() {
       VALUES ('pre-op-cardiac', $1, $2)
       ON CONFLICT (procedure_type, hospital_id) DO NOTHING
     `, [HOSPITAL_ID, JSON.stringify(items)]);
+
+    // ─── Form template items ───────────────────────────────────────────────────
+    const formTemplates = [
+      { procedure_type: 'pre-op-cardiac', label: 'תעודת זהות', item_type: 'patient_upload', required: true, order_index: 0 },
+      { procedure_type: 'pre-op-cardiac', label: 'הסכמה לניתוח', item_type: 'staff_upload_sign', required: true, order_index: 1 },
+      { procedure_type: null, label: 'טופס הסכמה כללי', item_type: 'staff_upload_sign', required: false, order_index: 99 },
+    ] as const;
+
+    for (const tmpl of formTemplates) {
+      const { rows: [fti] } = await client.query<{ id: string }>(`
+        INSERT INTO form_template_items (procedure_type, label, item_type, required, order_index)
+        SELECT $1, $2, $3, $4, $5
+        WHERE NOT EXISTS (
+          SELECT 1 FROM form_template_items
+          WHERE (procedure_type IS NOT DISTINCT FROM $1) AND label = $2
+        )
+        RETURNING id
+      `, [tmpl.procedure_type, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index]);
+
+      if (!fti) continue;
+
+      // Snapshot to the seeded appointment
+      await client.query(`
+        INSERT INTO patient_form_items
+          (appointment_id, form_template_item_id, label, item_type, required, order_index)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (appointment_id, form_template_item_id) WHERE form_template_item_id IS NOT NULL DO NOTHING
+      `, [appointmentId, fti.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index]);
+    }
 
     await client.query('COMMIT');
 
