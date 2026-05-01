@@ -5,6 +5,7 @@ import { isTokenRevoked } from '../db/redis';
 
 export interface StaffJwtPayload {
   sub: string;      // staff_user id
+  name: string;
   role: 'staff' | 'admin';
   departmentId: string | null;
   email: string;

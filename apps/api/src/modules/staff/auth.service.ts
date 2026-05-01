@@ -10,6 +10,7 @@ import { redisClient } from '../../db/redis';
 
 export interface StaffJwtPayload {
   sub: string; // staff user id
+  name: string;
   email: string;
   role: 'staff' | 'admin';
   departmentId: string | null;
@@ -77,6 +78,7 @@ export async function login(email: string, password: string) {
   const token = jwt.sign(
     {
       sub: user.id,
+      name: user.name,
       email: user.email,
       role: user.role,
       departmentId: user.department_id,
@@ -91,7 +93,7 @@ export async function login(email: string, password: string) {
       name: user.name,
       email: user.email,
       role: user.role,
-      departmentId: user.department_id,
+      department_id: user.department_id,
     },
     token,
   };
