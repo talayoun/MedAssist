@@ -194,6 +194,15 @@ export const CompanionLinkRequestDTO = z.object({
   phone_number: E164PhoneSchema,
 });
 
+/**
+ * Authorization context passed to service functions.
+ * Constructed exclusively from a verified JWT by auth middleware.
+ * departmentId is departments.id — never staff_users.id.
+ */
+export type StaffAuthContext =
+  | { role: 'admin' }
+  | { role: 'staff'; departmentId: string };
+
 export type StaffUser = z.infer<typeof StaffUserDTO>;
 export type StaffRole = z.infer<typeof StaffRoleSchema>;
 export type AppointmentPhase = z.infer<typeof AppointmentPhaseSchema>;

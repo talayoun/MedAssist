@@ -5,6 +5,7 @@ import { scheduleMagicLinkForAppointment } from '../magic-links/magic-links.sche
 import { enqueueNotification } from '../notifications/notifications.producer';
 import { seedProgressForAppointment } from '../checklist/checklist.service';
 import type { ChecklistCategory, ChecklistCustomItem } from '../checklist/merge';
+import type { StaffAuthContext } from '@medassist/shared-types';
 
 export interface CreateAppointmentInput {
   patient_name: string;
@@ -35,9 +36,9 @@ export interface CreateAppointmentResult {
  */
 export async function createElectiveAppointment(
   input: CreateAppointmentInput,
-  staffDepartmentScope: string | null
+  caller: StaffAuthContext
 ): Promise<CreateAppointmentResult> {
-  if (staffDepartmentScope && input.department_id !== staffDepartmentScope) {
+  if (caller.role === 'staff' && input.department_id !== caller.departmentId) {
     throw Object.assign(new Error('forbidden'), { status: 403 });
   }
 

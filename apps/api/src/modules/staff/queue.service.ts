@@ -1,6 +1,7 @@
 import { query } from '../../db/db';
 import { advanceAppointmentPhase, AppointmentPhase } from '../appointments/phase.service';
 import { expireStaleLinkSentAppointments } from '../appointments/expiry.service';
+import type { StaffAuthContext } from '@medassist/shared-types';
 
 export type QueuePhase = AppointmentPhase;
 
@@ -159,12 +160,12 @@ async function lookupDepartmentName(departmentId: string): Promise<string> {
 export async function updatePatientStatus(
   appointmentId: string,
   status: 'waiting' | 'in_treatment' | 'done',
-  departmentScope: string | null
+  caller: StaffAuthContext
 ): Promise<{ appointment_id: string; status: string; updated_at: string }> {
-  const scopeParams: (string | null)[] = [status, appointmentId];
+  const scopeParams: (string)[] = [status, appointmentId];
   let scopeClause = '';
-  if (departmentScope) {
-    scopeParams.push(departmentScope);
+  if (caller.role === 'staff') {
+    scopeParams.push(caller.departmentId);
     scopeClause = ' AND department_id = $3';
   }
   const { rows } = await query<{ appointment_id: string; updated_at: Date }>(`
@@ -217,12 +218,12 @@ export async function broadcastMessage(
 
 export async function resetArrivalToNow(
   appointmentId: string,
-  departmentScope: string | null
+  caller: StaffAuthContext
 ): Promise<{ appointment_id: string; arrival_time: string }> {
   const scopeParams: string[] = [appointmentId];
   let scopeClause = '';
-  if (departmentScope) {
-    scopeParams.push(departmentScope);
+  if (caller.role === 'staff') {
+    scopeParams.push(caller.departmentId);
     scopeClause = ' AND department_id = $2';
   }
   const { rows } = await query<{ appointment_id: string; arrival_time: Date }>(`

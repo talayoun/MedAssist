@@ -4,6 +4,12 @@ import { requireStaffAuth } from '../../middleware/auth';
 import { createElectiveAppointment } from './appointments.service';
 import { generateToken } from '../magic-links/magic-links.service';
 import { query } from '../../db/db';
+import type { StaffAuthContext } from '@medassist/shared-types';
+
+function callerCtx(req: Request): StaffAuthContext {
+  const deptId = req.staffAuth!.departmentId;
+  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
+}
 
 const router = Router();
 
@@ -37,7 +43,7 @@ router.post('/appointments', requireStaffAuth, async (req: Request, res: Respons
 
     const result = await createElectiveAppointment(
       parsed.data,
-      req.staffAuth!.departmentId ?? null
+      callerCtx(req)
     );
     res.status(201).json(result);
   } catch (err: unknown) {
