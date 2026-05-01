@@ -26,7 +26,7 @@ export default function NewAppointment({
   onCreated,
 }: Props) {
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('+972');
+  const [phone, setPhone] = useState('');
   const [departmentId, setDepartmentId] = useState(defaultDepartmentId ?? '');
   const [procedureType, setProcedureType] = useState('pre-op-cardiac');
   const [visitDatetime, setVisitDatetime] = useState(defaultVisitDateTime());
@@ -55,7 +55,8 @@ export default function NewAppointment({
     setError(null);
 
     if (!name.trim()) { setError('נא להזין שם מטופל'); return; }
-    if (!/^\+[1-9]\d{6,14}$/.test(phone)) { setError('מספר טלפון לא תקין (E.164, למשל +972501234567)'); return; }
+    const normalizedPhone = normalizeIsraeliPhone(phone.trim());
+    if (!normalizedPhone) { setError('מספר טלפון לא תקין (למשל 0526068400)'); return; }
     if (!departmentId) { setError('נא לבחור מחלקה'); return; }
     if (!procedureType.trim()) { setError('נא להזין סוג פרוצדורה'); return; }
     if (!visitDatetime) { setError('נא לבחור מועד ביקור'); return; }
@@ -66,7 +67,7 @@ export default function NewAppointment({
 
     const body: CreateAppointmentBody = {
       patient_name: name.trim(),
-      phone_number: phone.trim(),
+      phone_number: normalizedPhone,
       department_id: departmentId,
       procedure_type: procedureType.trim(),
       visit_datetime: new Date(visitDatetime).toISOString(),
@@ -110,11 +111,12 @@ export default function NewAppointment({
           </label>
 
           <label style={styles.field}>
-            <span style={styles.label}>טלפון (E.164)</span>
+            <span style={styles.label}>טלפון</span>
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+972501234567"
+              placeholder="0526068400"
+              inputMode="tel"
               style={styles.input}
             />
           </label>
@@ -216,6 +218,18 @@ export default function NewAppointment({
       </div>
     </div>
   );
+}
+
+/** Accepts 05XXXXXXX or +97205XXXXXXX, returns E.164 +972XXXXXXXXX or null if invalid. */
+function normalizeIsraeliPhone(raw: string): string | null {
+  const digits = raw.replace(/\D/g, '');
+  // Local format: 0XXXXXXXXX (10 digits starting with 0)
+  if (/^0\d{9}$/.test(digits)) return `+972${digits.slice(1)}`;
+  // Already E.164 without +: 972XXXXXXXXX
+  if (/^972\d{9}$/.test(digits)) return `+${digits}`;
+  // Full E.164 with +
+  if (/^\+972\d{9}$/.test(raw.trim())) return raw.trim();
+  return null;
 }
 
 function defaultVisitDateTime(): string {
