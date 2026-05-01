@@ -115,7 +115,7 @@ export default function NewAppointment({
             <input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="0526068400"
+              placeholder="0521234567"
               inputMode="tel"
               style={styles.input}
             />
