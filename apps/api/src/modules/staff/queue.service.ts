@@ -101,8 +101,8 @@ export async function getQueue(filter: QueueFilter): Promise<QueueResponse> {
 
       const { rows: formRows } = await query<{ total: string; submitted: string }>(`
         SELECT COUNT(*) AS total,
-               COUNT(submitted_at) AS submitted
-        FROM digital_forms WHERE appointment_id = $1
+               COUNT(*) FILTER (WHERE status = 'patient_submitted') AS submitted
+        FROM patient_form_items WHERE appointment_id = $1
       `, [row.appointment_id]);
 
       const arrivalIso = row.arrival_time ? new Date(row.arrival_time).toISOString() : null;
