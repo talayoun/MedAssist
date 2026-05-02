@@ -43,7 +43,7 @@ router.post(
       return;
     }
     if (signature_data.length > 140_000) {
-      res.status(400).json({ error: 'signature_too_large' });
+      res.status(413).json({ error: 'signature_too_large' });
       return;
     }
     try {
