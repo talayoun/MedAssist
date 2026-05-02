@@ -238,3 +238,57 @@ git merge feat/telegram-notification-consumer
 - No desktop patient interface; no mobile staff backoffice
 - No features beyond the MVP Must-Have list without a constitution amendment
 - Do not skip the `docs/superpowers/` spec → plan → tasks workflow for new features
+
+---
+
+## Environment Variables — Doppler
+
+Project is developed across multiple machines. All secrets managed via **Doppler** — no `.env` files exist or should be created.
+
+`.env.example` files are fine and encouraged as documentation of required variables (no real values).
+
+### Running the project
+
+Always prefix with `doppler run --`:
+
+```bash
+doppler run -- pnpm dev
+doppler run -- pnpm test
+```
+
+Never suggest running without `doppler run --`.
+
+### New machine setup
+
+```bash
+doppler login
+doppler setup   # connects to dev environment
+```
+
+### Add or update a secret
+
+```bash
+# Preferred: interactive prompt — value never appears in shell history
+doppler secrets set VARIABLE_NAME
+
+# Avoid: value visible in shell history
+# doppler secrets set VARIABLE_NAME=value
+```
+
+Never create `.env` files. Never suggest `export VAR=value` as a permanent fix. If a secret is missing, the answer is always `doppler secrets set`.
+
+When adding code that requires a new env var, always suggest the matching `doppler secrets set VARIABLE_NAME` command (interactive form).
+
+### View existing secrets
+
+```bash
+doppler secrets              # all vars
+doppler secrets get VAR_NAME # single var
+```
+
+### Environments
+
+| Environment   | Use                          |
+|---------------|------------------------------|
+| `dev`         | Local development            |
+| `production`  | Production (if applicable)   |
