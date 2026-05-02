@@ -86,7 +86,8 @@ function AdminLayout() {
       <header style={{
         background: '#1b3a6b',
         color: '#fff',
-        padding: '14px 28px',
+        padding: '0 28px',
+        minHeight: 60,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
