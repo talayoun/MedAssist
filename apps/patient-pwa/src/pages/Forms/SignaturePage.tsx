@@ -28,18 +28,19 @@ export function SignaturePage() {
         setSubmitting(false);
         return;
       }
-      try {
-        const reader = new FileReader();
-        reader.onloadend = async () => {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
           const base64 = (reader.result as string).split(',')[1];
           await submitFormSignature(token, itemId, base64);
           navigate(`/visit/${token}/checklist`);
-        };
-        reader.readAsDataURL(blob);
-      } catch (err) {
-        setError((err as Error).message || 'שגיאה בשליחת החתימה');
-        setSubmitting(false);
-      }
+        } catch {
+          setError('שגיאה בשמירת החתימה');
+        } finally {
+          setSubmitting(false);
+        }
+      };
+      reader.readAsDataURL(blob);
     }, 'image/png');
   };
 
