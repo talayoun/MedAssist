@@ -65,6 +65,57 @@ pnpm --filter api worker           # run BullMQ notification worker (separate pr
 
 ---
 
+## Dev Server Restart Sequence
+
+Run in this order. Skip steps that haven't changed.
+
+### Step 1 — Kill stale port 3000 process (Windows)
+
+```powershell
+# Find PID holding port 3000:
+netstat -ano | findstr :3000
+# Kill it (replace 12345 with actual PID):
+taskkill /PID 12345 /F
+```
+
+> `pnpm dev` uses `tsx watch` (hot-reload on .ts changes). If a stale `node` process
+> from a previous session holds port 3000, the new dev server silently fails to bind
+> and old code keeps running. Always kill first.
+
+### Step 2 — Start Docker (PostgreSQL + Redis)
+
+```bash
+docker compose up -d
+```
+
+### Step 3 — Run migrations (only if schema changed)
+
+```bash
+pnpm --filter api db:migrate
+```
+
+### Step 4 — Start all apps (Terminal 1)
+
+```bash
+pnpm dev
+```
+
+Starts in parallel via Turborepo:
+
+- API: `tsx watch` → `http://localhost:3000`
+- Patient PWA: Vite → `http://localhost:5173`
+- Staff backoffice: Vite → `http://localhost:5174`
+
+### Step 5 — Start worker (Terminal 2, optional)
+
+```bash
+pnpm --filter api worker
+```
+
+Required only for SMS/notification delivery (BullMQ). Not needed for most dev work.
+
+---
+
 ## Environment Variables
 
 **API (`apps/api/.env`):**
