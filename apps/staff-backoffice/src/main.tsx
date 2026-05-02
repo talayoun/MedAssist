@@ -8,7 +8,7 @@ import Admin from './pages/Admin';
 import NavigationRoutes from './pages/Admin/NavigationRoutes';
 import Trash from './pages/Admin/Trash';
 import { FormTemplates } from './pages/Admin/FormTemplates';
-import { logout } from './services/api';
+import { logout, getMe } from './services/api';
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
 
@@ -136,10 +136,8 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
-    fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body) => { if (body?.user) setUser(body.user as AuthUser); })
+    getMe()
+      .then(({ user }) => setUser(user as AuthUser))
       .catch(() => {})
       .finally(() => setAuthChecked(true));
   }, []);
