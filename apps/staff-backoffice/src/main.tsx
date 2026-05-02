@@ -8,7 +8,7 @@ import Admin from './pages/Admin';
 import NavigationRoutes from './pages/Admin/NavigationRoutes';
 import Trash from './pages/Admin/Trash';
 import { FormTemplates } from './pages/Admin/FormTemplates';
-import { logout, getMe } from './services/api';
+import { logout, getSessionUser } from './services/api';
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
 
@@ -136,8 +136,8 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    getMe()
-      .then(({ user }) => setUser(user as AuthUser))
+    getSessionUser()
+      .then((user) => { if (user) setUser(user as AuthUser); })
       .catch(() => {})
       .finally(() => setAuthChecked(true));
   }, []);

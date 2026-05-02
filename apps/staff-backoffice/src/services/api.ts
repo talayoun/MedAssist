@@ -63,6 +63,13 @@ export function getMe(): Promise<{ user: StaffUser }> {
   return apiRequest('/auth/me');
 }
 
+export async function getSessionUser(): Promise<StaffUser | null> {
+  const res = await fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' });
+  if (!res.ok) return null;
+  const body = await res.json().catch(() => null);
+  return body?.user ?? null;
+}
+
 // ─── Queue ────────────────────────────────────────────────────────────────────
 
 export function getQueue(
