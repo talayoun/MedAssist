@@ -33,6 +33,9 @@ declare global {
   }
 }
 
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET env var is required');
+const JWT_SECRET = process.env.JWT_SECRET;
+
 // ─── Staff JWT auth ───────────────────────────────────────────────────────────
 
 export function requireStaffAuth(req: Request, res: Response, next: NextFunction): void {
@@ -44,7 +47,7 @@ export function requireStaffAuth(req: Request, res: Response, next: NextFunction
 
   let payload: StaffJwtPayload;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET!) as StaffJwtPayload;
+    payload = jwt.verify(token, JWT_SECRET) as StaffJwtPayload;
   } catch {
     res.status(401).json({ error: 'invalid_session' });
     return;
