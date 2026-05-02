@@ -200,7 +200,7 @@ export default function PatientDetail() {
           marginBottom: '16px',
         }}
       >
-        {'חזרה לתור →'}
+{'חזרה לתור ←'}
       </button>
 
       {/* Patient info header */}
