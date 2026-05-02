@@ -184,12 +184,13 @@ export default function Checklist() {
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [formItems, setFormItems] = useState<FormItemDTO[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [formsLoadErr, setFormsLoadErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
     getForms(token)
       .then(({ items }) => setFormItems(items))
-      .catch(() => {/* non-fatal */});
+      .catch(() => setFormsLoadErr('שגיאה בטעינת מסמכים'));
   }, [token]);
 
   useEffect(() => {
@@ -288,9 +289,12 @@ export default function Checklist() {
         );
       })}
 
-      {formItems.length > 0 && (
+      {(formItems.length > 0 || formsLoadErr) && (
         <section style={{ marginTop: '24px' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '12px' }}>מסמכים</h2>
+          {formsLoadErr && (
+            <p style={{ color: '#b91c1c', fontSize: '0.875rem', marginBottom: '8px' }}>{formsLoadErr}</p>
+          )}
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {formItems.map((item) => (
               <li key={item.id} style={{ marginBottom: '12px' }}>
