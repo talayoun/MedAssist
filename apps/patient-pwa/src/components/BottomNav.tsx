@@ -213,7 +213,7 @@ export default function BottomNav() {
                 fontWeight: isActive ? 600 : 400,
                 lineHeight: 1.1,
                 letterSpacing: isActive ? '-0.01em' : '0',
-                transition: 'font-weight 180ms ease',
+                transition: 'color 180ms ease',
                 position: 'relative',
                 textAlign: 'center',
                 maxWidth: '72px',
