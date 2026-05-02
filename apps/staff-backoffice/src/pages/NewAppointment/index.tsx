@@ -148,9 +148,23 @@ export default function NewAppointment({
             <input
               value={procedureType}
               onChange={(e) => setProcedureType(e.target.value)}
+              list="procedure-type-options"
               placeholder="pre-op-cardiac"
               style={styles.input}
+              autoComplete="off"
             />
+            <datalist id="procedure-type-options">
+              <option value="pre-op-cardiac" />
+              <option value="pre-op-orthopedic" />
+              <option value="pre-op-general" />
+              <option value="pre-op-gastro" />
+              <option value="pre-op-neuro" />
+              <option value="colonoscopy" />
+              <option value="gastroscopy" />
+              <option value="cataract" />
+              <option value="mri" />
+              <option value="biopsy" />
+            </datalist>
           </label>
 
           <label style={styles.field}>
