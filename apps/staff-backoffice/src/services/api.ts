@@ -35,6 +35,8 @@ async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
     throw new ApiError(401, 'not_authenticated', 'Session expired');
   }
 
+  if (res.status === 204) return {} as T;
+
   const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
