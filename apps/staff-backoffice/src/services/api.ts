@@ -491,4 +491,18 @@ export async function uploadFormTemplateBlank(id: string, file: File): Promise<F
   return body as FormTemplateItemDTO;
 }
 
+export interface AppointmentDetail {
+  id: string;
+  patient_name: string;
+  department_name: string;
+  procedure_type: string | null;
+  visit_datetime: string;
+  status: string;
+  magic_link_token: string | null;
+}
+
+export function getAppointment(id: string): Promise<AppointmentDetail> {
+  return apiRequest(`/staff/appointments/${id}`);
+}
+
 export { ApiError };
