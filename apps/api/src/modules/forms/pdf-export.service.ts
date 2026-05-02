@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { query, withTransaction } from '../../db/db';
 import { getObjectBuffer, uploadEncrypted, presignGet } from '../../services/s3';
+import type { StaffAuthContext } from '@medassist/shared-types';
+import { verifyAppointmentDept } from './forms.service';
 
 export const MAX_EXPORT_ITEMS = 30;
 
@@ -48,7 +50,9 @@ function splitField(label: string, value: string, opts: { size: number; bold?: b
   return [{ text: `${label} ${value}`, ...opts }];
 }
 
-export async function buildExport(appointmentId: string, staffId: string) {
+export async function buildExport(appointmentId: string, staffId: string, ctx: StaffAuthContext) {
+  await verifyAppointmentDept(appointmentId, ctx);
+
   // 1. Fetch items with current documents
   const { rows: items } = await query(
     `SELECT

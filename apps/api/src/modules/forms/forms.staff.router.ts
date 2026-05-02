@@ -3,13 +3,19 @@ import { requireStaffAuth } from '../../middleware/auth';
 import { pdfUpload } from './upload.middleware';
 import * as svc from './forms.service';
 import { buildExport } from './pdf-export.service';
+import type { StaffAuthContext } from '@medassist/shared-types';
+
+function callerCtx(req: Request): StaffAuthContext {
+  const deptId = req.staffAuth!.departmentId;
+  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
+}
 
 const router = Router();
 router.use(requireStaffAuth);
 
 router.get('/patients/:appointmentId/forms', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const summary = await svc.getStaffSummary(req.params.appointmentId as string);
+    const summary = await svc.getStaffSummary(req.params.appointmentId as string, callerCtx(req));
     res.json(summary);
   } catch (err) { next(err); }
 });
@@ -25,6 +31,7 @@ router.post(
         req.file!.buffer,
         req.file!.mimetype as string,
         req.staffAuth!.sub,
+        callerCtx(req),
       );
       res.json(result);
     } catch (err) { next(err); }
@@ -33,7 +40,7 @@ router.post(
 
 router.post('/patients/:appointmentId/forms/export', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await buildExport(req.params.appointmentId as string, req.staffAuth!.sub);
+    const result = await buildExport(req.params.appointmentId as string, req.staffAuth!.sub, callerCtx(req));
     res.status(201).json(result);
   } catch (err) { next(err); }
 });

@@ -3,12 +3,30 @@ import { randomUUID } from 'crypto';
 import { query, withTransaction } from '../../db/db';
 import { presignGet, uploadEncrypted } from '../../services/s3';
 import type { PoolClient } from 'pg';
+import type { StaffAuthContext } from '@medassist/shared-types';
 
 const MAX_IMAGE_BYTES = 200 * 1024;
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-// ─── Shared helpers ──────────────────────────────────────────────────────────
+// ─── Staff auth helpers ───────────────────────────────────────────────────────
+
+export async function verifyAppointmentDept(
+  appointmentId: string,
+  ctx: StaffAuthContext,
+): Promise<void> {
+  if (ctx.role === 'admin') return;
+  const { rows } = await query(
+    `SELECT department_id FROM appointments WHERE id = $1`,
+    [appointmentId],
+  );
+  if (!rows[0]) throw Object.assign(new Error('Not found'), { status: 404 });
+  if (rows[0].department_id !== ctx.departmentId) {
+    throw Object.assign(new Error('Forbidden'), { status: 403 });
+  }
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
 
 async function hydrateItem(row: Record<string, unknown>) {
   return {
@@ -192,7 +210,9 @@ export async function staffUploadConsent(
   buffer: Buffer,
   mime: string,
   staffId: string,
+  ctx: StaffAuthContext,
 ): Promise<Record<string, unknown>> {
+  await verifyAppointmentDept(appointmentId, ctx);
   const key = `forms/appointments/${appointmentId}/consent/${itemId}.pdf`;
 
   let updatedRow: Record<string, unknown> = {};
@@ -223,7 +243,8 @@ export async function staffUploadConsent(
   return updatedRow;
 }
 
-export async function getStaffSummary(appointmentId: string) {
+export async function getStaffSummary(appointmentId: string, ctx: StaffAuthContext) {
+  await verifyAppointmentDept(appointmentId, ctx);
   const [itemsResult, exportResult] = await Promise.all([
     query(
       `SELECT
