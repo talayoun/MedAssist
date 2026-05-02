@@ -143,7 +143,7 @@ function FormDocumentItem({
                 color: '#fff',
                 border: 'none',
                 borderRadius: '8px',
-                fontSize: '14px',
+                fontSize: '1rem',
                 cursor: uploading ? 'not-allowed' : 'pointer',
                 opacity: uploading ? 0.6 : 1,
               }}
@@ -165,7 +165,7 @@ function FormDocumentItem({
               background: '#7c3aed',
               color: '#fff',
               borderRadius: '8px',
-              fontSize: '14px',
+              fontSize: '1rem',
               textDecoration: 'none',
             }}
           >
