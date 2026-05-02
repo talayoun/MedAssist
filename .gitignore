@@ -1,6 +1,9 @@
 # Temporary files (screenshots, scripts for dev use)
 .tmp/
 
+# Git worktrees
+.worktrees/
+
 # Dependencies
 node_modules/
 
