@@ -50,6 +50,10 @@ coverage/
 
 # Playwright test artifacts
 .playwright-mcp/
+test-results/
+
+# Windows device name artifact (bash redirect to /dev/null on WSL creates this ghost)
+nul
 
 # Ad-hoc smoke test screenshots
 *-checklist-*.png
