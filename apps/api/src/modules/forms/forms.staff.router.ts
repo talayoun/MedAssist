@@ -6,8 +6,9 @@ import { buildExport } from './pdf-export.service';
 import type { StaffAuthContext } from '@medassist/shared-types';
 
 function callerCtx(req: Request): StaffAuthContext {
-  const deptId = req.staffAuth!.departmentId;
-  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
+  return req.staffAuth!.role === 'admin'
+    ? { role: 'admin' }
+    : { role: 'staff', departmentId: req.staffAuth!.departmentId! };
 }
 
 const router = Router();
