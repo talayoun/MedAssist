@@ -184,6 +184,7 @@ export default function PatientDetail() {
                 fontWeight: 600,
                 cursor: exporting ? 'not-allowed' : 'pointer',
                 opacity: exporting ? 0.6 : 1,
+                whiteSpace: 'nowrap',
               }}
             >
               {exporting ? 'מייצא...' : 'ייצא PDF'}

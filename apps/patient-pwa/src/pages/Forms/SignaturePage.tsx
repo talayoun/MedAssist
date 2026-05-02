@@ -40,6 +40,7 @@ export function SignaturePage() {
           setSubmitting(false);
         }
       };
+      reader.onerror = () => { setError('שגיאה בקריאת הקובץ'); setSubmitting(false); };
       reader.readAsDataURL(blob);
     }, 'image/png');
   };

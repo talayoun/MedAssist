@@ -293,7 +293,7 @@ export default function Checklist() {
         <section style={{ marginTop: '24px' }}>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 700, marginBottom: '12px' }}>מסמכים</h2>
           {formsLoadErr && (
-            <p style={{ color: '#b91c1c', fontSize: '0.875rem', marginBottom: '8px' }}>{formsLoadErr}</p>
+            <p style={{ color: '#b91c1c', fontSize: '1rem', marginBottom: '8px' }}>{formsLoadErr}</p>
           )}
           <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
             {formItems.map((item) => (
