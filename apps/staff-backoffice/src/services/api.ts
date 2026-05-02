@@ -35,6 +35,8 @@ async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
     throw new ApiError(401, 'not_authenticated', 'Session expired');
   }
 
+  if (res.status === 204) return {} as T;
+
   const body = await res.json().catch(() => ({}));
 
   if (!res.ok) {
@@ -59,6 +61,13 @@ export function logout(): Promise<{ logged_out: boolean }> {
 
 export function getMe(): Promise<{ user: StaffUser }> {
   return apiRequest('/auth/me');
+}
+
+export async function getSessionUser(): Promise<StaffUser | null> {
+  const res = await fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' });
+  if (!res.ok) return null;
+  const body = await res.json().catch(() => null);
+  return body?.user ?? null;
 }
 
 // ─── Queue ────────────────────────────────────────────────────────────────────

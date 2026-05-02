@@ -86,7 +86,7 @@ test.describe('POST /api/staff/appointments — department scope', () => {
     // Fetch own staff id from /me
     const meRes = await request.get(`${API_URL}/api/auth/me`);
     expect(meRes.status()).toBe(200);
-    const { id: staffId } = await meRes.json() as { id: string };
+    const { user: { id: staffId } } = await meRes.json() as { user: { id: string } };
 
     // staffId !== ownDeptId, so scope check fires 403 before any DB lookup
     const res = await request.post(`${API_URL}/api/staff/appointments`, {

@@ -43,6 +43,7 @@ export function FormTemplates() {
   const [draft, setDraft] = useState<NewItemDraft>(defaultDraft);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [deleteErr, setDeleteErr] = useState<string | null>(null);
   const uploadRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const load = async () => {
@@ -93,11 +94,12 @@ export function FormTemplates() {
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('למחוק תבנית זו?')) return;
+    setDeleteErr(null);
     try {
       await deleteFormTemplate(id);
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch {
-      // non-fatal
+      setDeleteErr('שגיאה במחיקת התבנית');
     }
   };
 
@@ -220,6 +222,8 @@ export function FormTemplates() {
           </form>
         </div>
       )}
+
+      {deleteErr && <p style={{ color: '#dc2626', marginBottom: '16px' }}>{deleteErr}</p>}
 
       {loading ? (
         <p style={{ color: '#64748b' }}>טוען...</p>

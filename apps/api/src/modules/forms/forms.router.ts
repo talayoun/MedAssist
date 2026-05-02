@@ -42,6 +42,10 @@ router.post(
       res.status(400).json({ error: 'signature_data required' });
       return;
     }
+    if (signature_data.length > 140_000) {
+      res.status(413).json({ error: 'signature_too_large' });
+      return;
+    }
     try {
       const result = await svc.submitSignature(
         req.params.itemId as string,

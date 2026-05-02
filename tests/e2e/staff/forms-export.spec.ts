@@ -13,20 +13,33 @@ async function loginAndNavigateToPatient(
   await page.getByRole('button', { name: /login|התחבר|כניסה/i }).click();
   await expect(page).toHaveURL(/\/queue/, { timeout: 10_000 });
 
-  // Get appointment ID via API (page.request shares cookies with the browser context)
+  // Get appointment ID via API — pick first appointment that has form items.
+  // Scope tests may create appointments without form items that sort first
+  // (visit_datetime tomorrow > seed appointment 3 days from now).
   const resp = await page.request.get(`${API_URL}/api/staff/appointments`);
   expect(resp.status()).toBe(200);
   const { appointments } = await resp.json();
   expect(appointments.length).toBeGreaterThan(0);
-  const appointmentId = appointments[0].id as string;
+
+  let appointmentId: string | undefined;
+  for (const appt of appointments as Array<{ id: string }>) {
+    const formsResp = await page.request.get(`${API_URL}/api/staff/patients/${appt.id}/forms`);
+    if (formsResp.status() !== 200) continue;
+    const { items } = await formsResp.json();
+    if (Array.isArray(items) && items.length > 0) {
+      appointmentId = appt.id;
+      break;
+    }
+  }
+  expect(appointmentId, 'No appointment with form items found — check seed data').toBeTruthy();
 
   // Navigate within SPA (no full page reload — auth React state preserved)
   await page.evaluate((path: string) => {
     window.history.pushState({}, '', path);
     window.dispatchEvent(new PopStateEvent('popstate'));
-  }, `/patients/${appointmentId}`);
+  }, `/patients/${appointmentId as string}`);
 
-  return appointmentId;
+  return appointmentId as string;
 }
 
 test.describe('staff: forms export', () => {

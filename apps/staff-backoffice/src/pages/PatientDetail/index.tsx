@@ -111,6 +111,7 @@ export default function PatientDetail() {
   const [formsData, setFormsData] = useState<StaffFormsResponseDTO | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [exportErr, setExportErr] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!appointmentId) return;
@@ -120,7 +121,8 @@ export default function PatientDetail() {
   }, [appointmentId]);
 
   const handleExport = async () => {
-    if (!appointmentId) return;
+    if (!appointmentId || exporting) return;
+    setExporting(true);
     setExportErr(null);
     const newTab = window.open('about:blank', '_blank');
     try {
@@ -129,6 +131,8 @@ export default function PatientDetail() {
     } catch {
       newTab?.close();
       setExportErr('שגיאה בייצוא');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -169,6 +173,7 @@ export default function PatientDetail() {
             <button
               type="button"
               onClick={handleExport}
+              disabled={exporting}
               style={{
                 padding: '8px 16px',
                 background: '#1b3a6b',
@@ -177,10 +182,12 @@ export default function PatientDetail() {
                 borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                opacity: exporting ? 0.6 : 1,
+                whiteSpace: 'nowrap',
               }}
             >
-              ייצא PDF
+              {exporting ? 'מייצא...' : 'ייצא PDF'}
             </button>
           </div>
         </div>

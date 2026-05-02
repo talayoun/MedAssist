@@ -18,7 +18,8 @@ export interface StaffJwtPayload {
   exp: number;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET env var is required');
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY = 3600; // 1 hour in seconds
 
 /**
