@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom';
-import { getStaffForms, staffUploadConsent, exportForms, ApiError } from '../../services/api';
+import { useParams, useNavigate } from 'react-router-dom';
+import {
+  getStaffForms, staffUploadConsent, exportForms, getAppointment, ApiError,
+  type AppointmentDetail,
+} from '../../services/api';
 import type { StaffFormsResponseDTO, FormItemDTO } from '@medassist/shared-types';
 
 const card: React.CSSProperties = {
@@ -102,12 +105,33 @@ function FormItemRow({ item, appointmentId, onUpdate }: {
           {uploadErr && <span style={{ fontSize: '12px', color: '#dc2626' }}>{uploadErr}</span>}
         </div>
       )}
+      {item.item_type === 'staff_upload_sign' && item.status === 'staff_uploaded' && item.staff_file_url && (
+        <a
+          href={item.staff_file_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            padding: '6px 14px',
+            background: '#0f172a',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '13px',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          צפה
+        </a>
+      )}
     </div>
   );
 }
 
 export default function PatientDetail() {
   const { appointmentId } = useParams<{ appointmentId: string }>();
+  const navigate = useNavigate();
+  const [apptData, setApptData] = useState<AppointmentDetail | null>(null);
   const [formsData, setFormsData] = useState<StaffFormsResponseDTO | null>(null);
   const [loadErr, setLoadErr] = useState<string | null>(null);
   const [exportErr, setExportErr] = useState<string | null>(null);
@@ -115,9 +139,15 @@ export default function PatientDetail() {
 
   useEffect(() => {
     if (!appointmentId) return;
-    getStaffForms(appointmentId)
-      .then(setFormsData)
-      .catch((err) => setLoadErr(err instanceof ApiError ? err.message : 'שגיאה בטעינת טפסים'));
+    Promise.all([
+      getAppointment(appointmentId),
+      getStaffForms(appointmentId),
+    ]).then(([appt, forms]) => {
+      setApptData(appt);
+      setFormsData(forms);
+    }).catch((err) => {
+      setLoadErr(err instanceof ApiError ? err.message : 'שגיאה בטעינת נתונים');
+    });
   }, [appointmentId]);
 
   const handleExport = async () => {
@@ -152,8 +182,50 @@ export default function PatientDetail() {
       fontFamily: 'system-ui, -apple-system, sans-serif',
       direction: 'rtl',
     }}>
-      <h1 style={{ fontSize: '1.375rem', fontWeight: 700, marginBottom: '24px' }}>פרטי מטופל</h1>
+      {/* Back button */}
+      <button
+        type="button"
+        onClick={() => navigate('/queue')}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: '#1b3a6b',
+          fontSize: '14px',
+          fontWeight: 600,
+          padding: '4px 0',
+          marginBottom: '16px',
+        }}
+      >
+{'חזרה לתור ←'}
+      </button>
 
+      {/* Patient info header */}
+      {apptData && (
+        <div style={{ ...card, marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '2px' }}>שם מטופל</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>{apptData.patient_name}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '2px' }}>מחלקה</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>{apptData.department_name}</div>
+            </div>
+            {apptData.procedure_type && (
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '2px' }}>פרוצדורה</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>{apptData.procedure_type}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Documents card */}
       <div style={card}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, margin: 0 }}>מסמכים</h2>

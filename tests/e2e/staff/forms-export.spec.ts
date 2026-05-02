@@ -60,4 +60,22 @@ test.describe('staff: forms export', () => {
     await newTab.waitForURL(/^https?:\/\/(?!about)/, { timeout: 20_000 }).catch(() => {});
     expect(newTab.url()).toMatch(/^https?:\/\//);
   });
+
+  test('patient info header shows name and department', async ({ page }) => {
+    const appointmentId = await loginAndNavigateToPatient(page);
+
+    const resp = await page.request.get(`${API_URL}/api/staff/appointments/${appointmentId}`);
+    expect(resp.status()).toBe(200);
+    const appt = await resp.json();
+
+    await expect(page.getByText(appt.patient_name)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(appt.department_name)).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('back button navigates to queue', async ({ page }) => {
+    await loginAndNavigateToPatient(page);
+    await expect(page.getByText('חזרה לתור ←')).toBeVisible({ timeout: 10_000 });
+    await page.getByText('חזרה לתור ←').click();
+    await expect(page).toHaveURL(/\/queue/, { timeout: 5_000 });
+  });
 });
