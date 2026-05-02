@@ -112,13 +112,41 @@ export default function NewAppointment({
 
           <label style={styles.field}>
             <span style={styles.label}>טלפון</span>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="0521234567"
-              inputMode="tel"
-              style={styles.input}
-            />
+            <div style={{
+              display: 'flex',
+              border: '1.5px solid #d1d5db',
+              borderRadius: 7,
+              overflow: 'hidden',
+              direction: 'ltr',
+            }}>
+              <span style={{
+                padding: '8px 10px',
+                background: '#f3f4f6',
+                borderLeft: '1px solid #d1d5db',
+                fontSize: 14,
+                color: '#374151',
+                whiteSpace: 'nowrap',
+                userSelect: 'none',
+              }}>
+                {'🇮🇱 +972'}
+              </span>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0521234567"
+                inputMode="tel"
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  border: 'none',
+                  fontSize: 14,
+                  direction: 'ltr',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  minWidth: 0,
+                }}
+              />
+            </div>
           </label>
 
           <label style={styles.field}>
@@ -148,10 +176,24 @@ export default function NewAppointment({
             <input
               value={procedureType}
               onChange={(e) => setProcedureType(e.target.value)}
+              list="procedure-type-options"
               placeholder="pre-op-cardiac"
               style={styles.input}
+              autoComplete="off"
             />
           </label>
+          <datalist id="procedure-type-options">
+            <option value="pre-op-cardiac" />
+            <option value="pre-op-orthopedic" />
+            <option value="pre-op-general" />
+            <option value="pre-op-gastro" />
+            <option value="pre-op-neuro" />
+            <option value="colonoscopy" />
+            <option value="gastroscopy" />
+            <option value="cataract" />
+            <option value="mri" />
+            <option value="biopsy" />
+          </datalist>
 
           <label style={styles.field}>
             <span style={styles.label}>מועד ביקור</span>
