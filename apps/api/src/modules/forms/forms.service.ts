@@ -240,7 +240,7 @@ export async function staffUploadConsent(
     await uploadEncrypted(key, buffer, mime, 'inline');
   });
 
-  return updatedRow;
+  return hydrateItem(updatedRow);
 }
 
 export async function getStaffSummary(appointmentId: string, ctx: StaffAuthContext) {
