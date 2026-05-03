@@ -41,7 +41,7 @@ function VisitLayout() {
     fetchPhase();
     const id = setInterval(fetchPhase, 30_000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [token, navigate]);
+  }, [token]);
 
   return (
     <VisitPhaseContext.Provider value={phase}>
