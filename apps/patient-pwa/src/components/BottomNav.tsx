@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation, useParams } from 'react-router-dom';
+import { useVisitPhase } from '../context/VisitPhaseContext';
 
 // ─── Icon components (thin-stroke SVG, 24×24 viewBox) ─────────────────────────
 
@@ -106,6 +107,16 @@ export default function BottomNav() {
   const navigate = useNavigate();
   const location = useLocation();
   const { token } = useParams<{ token: string }>();
+  const phase = useVisitPhase();
+
+  function isTabUnlocked(tabId: string): boolean {
+    // Checklist always accessible — must come before null guard (no flash on load)
+    if (tabId === 'checklist') return true;
+    if (!phase) return false;
+    if (tabId === 'navigation') return phase === 'navigation' || phase === 'waiting';
+    if (tabId === 'waiting') return phase === 'waiting';
+    return false;
+  }
 
   return (
     <nav
@@ -132,13 +143,14 @@ export default function BottomNav() {
       {TABS.map((tab) => {
         const fullPath = token && tab.pathSuffix ? `/visit/${token}/${tab.pathSuffix}` : null;
         const isActive = fullPath ? location.pathname === fullPath : false;
+        const isEnabled = tab.enabled && isTabUnlocked(tab.id);
 
         return (
           <button
             key={tab.id}
             type="button"
             onClick={() => {
-              if (tab.enabled && fullPath) navigate(fullPath);
+              if (isEnabled && fullPath) navigate(fullPath);
             }}
             aria-label={tab.label}
             aria-current={isActive ? 'page' : undefined}
@@ -153,11 +165,11 @@ export default function BottomNav() {
               padding: '8px 2px 10px',
               background: 'transparent',
               border: 'none',
-              cursor: tab.enabled ? 'pointer' : 'default',
+              cursor: isEnabled ? 'pointer' : 'default',
               color: isActive ? TEAL : '#94a3b8',
-              opacity: tab.enabled ? 1 : 0.38,
+              opacity: isEnabled ? 1 : 0.38,
               position: 'relative',
-              transition: 'color 180ms ease, opacity 180ms ease',
+              transition: 'color 180ms ease, opacity 250ms ease',
               WebkitTapHighlightColor: 'transparent',
               touchAction: 'manipulation',
             }}
