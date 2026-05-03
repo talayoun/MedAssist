@@ -458,7 +458,7 @@ function PatientCard({
           onClick={() => navigate(`/patients/${patient.appointment_id}`)}
           style={styles.detailBtn}
         >
-          {'פרטים →'}
+          {'פרטים ←'}
         </button>
       </div>
     </div>

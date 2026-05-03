@@ -147,7 +147,7 @@ export default function Navigation() {
 
         {data.current_step > 1 && (
           <button style={styles.backBtn} onClick={handleBack} disabled={loading}>
-            ← שלב קודם
+            שלב קודם ←
           </button>
         )}
 
