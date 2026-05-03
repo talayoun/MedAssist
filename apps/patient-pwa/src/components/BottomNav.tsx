@@ -154,6 +154,7 @@ export default function BottomNav() {
             }}
             aria-label={tab.label}
             aria-current={isActive ? 'page' : undefined}
+            aria-disabled={!isEnabled}
             style={{
               flex: 1,
               display: 'flex',
