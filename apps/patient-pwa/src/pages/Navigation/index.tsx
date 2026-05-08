@@ -65,11 +65,15 @@ export default function Navigation() {
   const [data, setData] = useState<NavigationRoute | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reviewStep, setReviewStep] = useState<number | null>(null);
 
   const loadNavigation = useCallback(() => {
     if (!token) return;
     getNavigation(token)
-      .then(setData)
+      .then(d => {
+        setData(d);
+        if (d.completed) setReviewStep(d.total_steps);
+      })
       .catch((err: unknown) => {
         if (err instanceof ApiError) setError(err.message || 'שגיאה בטעינת הניווט.');
         else setError('שגיאה בטעינת הניווט.');
@@ -80,6 +84,7 @@ export default function Navigation() {
 
   const handleConfirm = useCallback(async () => {
     if (!token || !data || loading) return;
+    if (data.completed) return;
     const currentStep = data.steps.find((s) => s.is_current);
     if (!currentStep) return;
     setLoading(true);
@@ -119,45 +124,58 @@ export default function Navigation() {
   }
 
   if (data?.completed) {
+    const step = reviewStep ?? data.total_steps;
+    const displayStep = data.steps.find(s => s.order === step) ?? data.steps[data.steps.length - 1];
+
     return (
-      <section
-        style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
-        aria-label="ניווט הושלם - תצוגה לעיון בלבד"
-      >
-        <div
-          role="status"
-          style={{
-            background: '#d1fae5',
-            color: '#065f46',
-            borderRadius: 12,
-            padding: '1rem 1.25rem',
-            fontSize: '1.25rem',
-            fontWeight: 700,
-            textAlign: 'center',
-          }}
-        >
-          הגעת ליעד ✓
+      <div style={styles.page}>
+        <div style={{
+          background: '#d1fae5',
+          color: '#065f46',
+          padding: '10px 16px',
+          fontSize: '1rem',
+          fontWeight: 700,
+          textAlign: 'center',
+        }}>
+          הגעת ליעד
         </div>
-        <p style={{ color: '#6b7280', fontSize: '1rem', margin: 0, textAlign: 'center' }}>
-          {data.route_name}
-        </p>
-        <button
-          onClick={() => navigate(`/visit/${token}/waiting`)}
-          style={{
-            width: '100%',
-            minHeight: 44,
-            fontSize: '1rem',
-            fontWeight: 600,
-            background: '#1a73e8',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            cursor: 'pointer',
-          }}
-        >
-          חזרה להמתנה
-        </button>
-      </section>
+
+        <img
+          src={displayStep.image_url}
+          alt={`שלב ${displayStep.order} — ${displayStep.instruction}`}
+          style={styles.photo}
+        />
+
+        <div style={styles.content}>
+          <p style={styles.progress}>
+            שלב {step} מתוך {data.total_steps}
+          </p>
+          <p style={styles.instruction}>{displayStep.instruction}</p>
+
+          {step < data.total_steps && (
+            <button style={styles.confirmBtn} onClick={() => setReviewStep(s => (s ?? data.total_steps) + 1)}>
+              שלב הבא →
+            </button>
+          )}
+
+          <button style={styles.confirmBtn} onClick={handleConfirm} disabled={loading}>
+            {loading ? 'מעבד...' : '✓ אני כאן'}
+          </button>
+
+          {step > 1 && (
+            <button style={styles.backBtn} onClick={() => setReviewStep(s => (s ?? 1) - 1)}>
+              שלב קודם ←
+            </button>
+          )}
+
+          <button
+            style={{ ...styles.backBtn, borderColor: '#1a73e8', color: '#1a73e8' }}
+            onClick={() => navigate(`/visit/${token}/waiting`)}
+          >
+            חזרה להמתנה
+          </button>
+        </div>
+      </div>
     );
   }
 

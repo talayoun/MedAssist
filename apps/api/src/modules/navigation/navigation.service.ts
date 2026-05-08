@@ -79,15 +79,30 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
     [appointmentId]
   );
 
-  // Patient already in waiting queue — return completed read-only view instead of erroring
+  // Patient already in waiting queue — return full route for review (read-only, no confirm)
   if (queueRows.length > 0) {
+    const { rows: allSteps } = await query<StepRow>(`
+      SELECT id, step_order, image_url, instruction_text
+      FROM route_steps
+      WHERE route_id = $1
+      ORDER BY step_order ASC
+    `, [routeRow.route_id]);
+
+    const responseSteps: NavigationStepResponse[] = allSteps.map(s => ({
+      step_id: s.id,
+      order: s.step_order,
+      image_url: s.image_url,
+      instruction: s.instruction_text,
+      is_current: s.step_order === routeRow.steps_count,
+    }));
+
     return {
       route_id: routeRow.route_id,
       route_name: routeRow.route_name,
       total_steps: routeRow.steps_count,
       current_step: routeRow.steps_count,
       parking_coordinates: null,
-      steps: [],
+      steps: responseSteps,
       completed: true,
     };
   }
