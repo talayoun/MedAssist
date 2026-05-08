@@ -118,6 +118,49 @@ export default function Navigation() {
     );
   }
 
+  if (data?.completed) {
+    return (
+      <section
+        style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
+        aria-label="ניווט הושלם - תצוגה לעיון בלבד"
+      >
+        <div
+          role="status"
+          style={{
+            background: '#d1fae5',
+            color: '#065f46',
+            borderRadius: 12,
+            padding: '1rem 1.25rem',
+            fontSize: '1.25rem',
+            fontWeight: 700,
+            textAlign: 'center',
+          }}
+        >
+          הגעת ליעד ✓
+        </div>
+        <p style={{ color: '#6b7280', fontSize: '1rem', margin: 0, textAlign: 'center' }}>
+          {data.route_name}
+        </p>
+        <button
+          onClick={() => navigate(`/visit/${token}/waiting`)}
+          style={{
+            width: '100%',
+            minHeight: 44,
+            fontSize: '1rem',
+            fontWeight: 600,
+            background: '#1a73e8',
+            color: '#fff',
+            border: 'none',
+            borderRadius: 8,
+            cursor: 'pointer',
+          }}
+        >
+          חזרה להמתנה
+        </button>
+      </section>
+    );
+  }
+
   if (!data || data.steps.length === 0) {
     return (
       <div style={{ ...styles.page, justifyContent: 'center', alignItems: 'center' }}>

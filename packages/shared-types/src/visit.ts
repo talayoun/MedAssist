@@ -46,6 +46,7 @@ export const NavigationRouteDTO = z.object({
   current_step: z.number().int().positive(),
   parking_coordinates: ParkingCoordinatesDTO.nullable(),
   steps: z.array(NavigationStepDTO),
+  completed: z.boolean().optional(),
 });
 
 export const StepConfirmResponseDTO = z.union([
