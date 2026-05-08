@@ -72,6 +72,17 @@ export async function hardDeleteAppointment(id: string): Promise<{ deleted: bool
   return { deleted: true };
 }
 
+export async function bulkSoftDeleteByDepartment(
+  departmentId: string,
+): Promise<{ deleted_count: number }> {
+  const { rowCount } = await query(
+    `UPDATE appointments SET deleted_at = NOW()
+     WHERE department_id = $1 AND deleted_at IS NULL`,
+    [departmentId],
+  );
+  return { deleted_count: rowCount ?? 0 };
+}
+
 export async function purgeExpiredTrash(): Promise<void> {
   await query(
     `DELETE FROM appointments WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '7 days'`,

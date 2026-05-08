@@ -5,6 +5,7 @@ import {
   softDeleteAppointment,
   restoreAppointment,
   hardDeleteAppointment,
+  bulkSoftDeleteByDepartment,
 } from './trash.service';
 
 const router = Router();
@@ -53,6 +54,18 @@ router.delete('/trash/:id', async (req: Request, res: Response, next: NextFuncti
     if (e.status === 404) { res.status(404).json({ error: 'not_found' }); return; }
     next(err);
   }
+});
+
+/** POST /api/admin/trash/bulk-clear */
+router.post('/trash/bulk-clear', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { department_id } = req.body as { department_id?: unknown };
+    if (!department_id || typeof department_id !== 'string') {
+      res.status(400).json({ error: 'missing_department_id' }); return;
+    }
+    const result = await bulkSoftDeleteByDepartment(department_id);
+    res.json(result);
+  } catch (err) { next(err); }
 });
 
 export default router;

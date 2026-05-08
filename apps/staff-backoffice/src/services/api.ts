@@ -422,6 +422,15 @@ export function hardDeleteAppointment(
   return apiRequest(`/admin/trash/${appointmentId}`, { method: 'DELETE' });
 }
 
+export function clearDepartmentQueue(
+  departmentId: string,
+): Promise<{ deleted_count: number }> {
+  return apiRequest('/admin/trash/bulk-clear', {
+    method: 'POST',
+    body: JSON.stringify({ department_id: departmentId }),
+  });
+}
+
 export function listTimingRules(): Promise<{ rules: TimingRule[] }> {
   return apiRequest('/admin/timing-rules');
 }
