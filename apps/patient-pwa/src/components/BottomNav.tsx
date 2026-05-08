@@ -109,6 +109,8 @@ export default function BottomNav() {
   const { token } = useParams<{ token: string }>();
   const phase = useVisitPhase();
 
+  if (!phase) return null;
+
   function isTabUnlocked(tabId: string): boolean {
     // Checklist always accessible — must come before null guard (no flash on load)
     if (tabId === 'checklist') return true;
@@ -167,6 +169,7 @@ export default function BottomNav() {
               padding: '8px 2px 10px',
               background: 'transparent',
               border: 'none',
+              fontSize: '1rem',
               cursor: isEnabled ? 'pointer' : 'default',
               color: isActive ? TEAL : '#94a3b8',
               opacity: isEnabled ? 1 : 0.38,
