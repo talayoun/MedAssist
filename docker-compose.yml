@@ -36,7 +36,7 @@ services:
     container_name: medassist_localstack
     restart: unless-stopped
     ports:
-      - "4566:4566"
+      - "5566:4566"
     environment:
       - SERVICES=s3
       - DEFAULT_REGION=eu-west-1

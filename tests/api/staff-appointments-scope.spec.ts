@@ -21,7 +21,7 @@ async function getScopedStaffDeptId(request: APIRequestContext): Promise<string>
 
 function appointmentPayload(departmentId: string) {
   return {
-    patient_name: 'Scope Test Patient',
+    patient_name: 'מרים גולדברג',
     phone_number: `+97250${Date.now().toString().slice(-7)}`,
     department_id: departmentId,
     procedure_type: 'pre-op-cardiac',
