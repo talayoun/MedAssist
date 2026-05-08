@@ -31,8 +31,9 @@ export async function verifyAppointmentDept(
 async function hydrateItem(row: Record<string, unknown>) {
   return {
     ...row,
-    staff_file_url:   await presignGet(row.staff_file_url as string | null),
-    patient_file_url: await presignGet(row.patient_file_url as string | null),
+    staff_file_url:            await presignGet(row.staff_file_url as string | null),
+    patient_file_url:          await presignGet(row.patient_file_url as string | null),
+    patient_file_download_url: await presignGet(row.patient_file_url as string | null, 900, 'attachment'),
   };
 }
 

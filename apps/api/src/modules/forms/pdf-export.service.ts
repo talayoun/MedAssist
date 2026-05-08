@@ -1,5 +1,6 @@
 import { PDFDocument, rgb } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
+import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { query, withTransaction } from '../../db/db';
@@ -155,17 +156,15 @@ export async function buildExport(appointmentId: string, staffId: string, ctx: S
 
     // Embed patient document (image or signature)
     if (hasPatientFile) {
-      const imgBytes = await getObjectBuffer(item.patient_file_url as string);
+      const rawBytes = await getObjectBuffer(item.patient_file_url as string);
       const page = pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
       let embeddedImage;
       if ((item.patient_doc_type as string) === 'signature') {
-        embeddedImage = await pdf.embedPng(imgBytes);
+        embeddedImage = await pdf.embedPng(rawBytes);
       } else {
-        try {
-          embeddedImage = await pdf.embedJpg(imgBytes);
-        } catch {
-          embeddedImage = await pdf.embedPng(imgBytes);
-        }
+        // Re-encode via sharp to guarantee pdf-lib JPEG compatibility
+        const imgBytes = await sharp(rawBytes).jpeg({ quality: 85 }).toBuffer();
+        embeddedImage = await pdf.embedJpg(imgBytes);
       }
       const dims = embeddedImage.scale(
         Math.min(1, (PAGE_WIDTH - 2 * MARGIN) / embeddedImage.width),

@@ -57,10 +57,17 @@ export async function uploadStepImage(buffer: Buffer, mimeType: string): Promise
 export async function presignGet(
   key: string | null | undefined,
   ttlSeconds = 900,
+  disposition: 'inline' | 'attachment' = 'inline',
 ): Promise<string | null> {
   if (!key) return null;
   await ensureBucket();
-  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
+  const cmd = new GetObjectCommand({
+    Bucket: BUCKET,
+    Key: key,
+    ...(disposition === 'attachment' ? {
+      ResponseContentDisposition: `attachment; filename="${key.split('/').pop() ?? 'download'}"`,
+    } : {}),
+  });
   return getSignedUrl(s3, cmd, { expiresIn: ttlSeconds });
 }
 

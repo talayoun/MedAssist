@@ -138,8 +138,9 @@ export const FormItemDTOSchema = z.object({
   status: z.enum(['pending', 'staff_uploaded', 'patient_submitted']),
   required: z.boolean(),
   order_index: z.number().int(),
-  staff_file_url: z.string().url().nullable(),    // presigned S3 URL of blank/staff consent PDF
-  patient_file_url: z.string().url().nullable(),   // presigned S3 URL of latest patient doc
+  staff_file_url: z.string().url().nullable(),
+  patient_file_url: z.string().url().nullable(),
+  patient_file_download_url: z.string().url().nullable(),
   patient_submitted_at: z.string().datetime().nullable(),
 });
 

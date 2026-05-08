@@ -34,6 +34,7 @@ function FormItemRow({ item, appointmentId, onUpdate }: {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const colors = statusColors[item.status] ?? statusColors.pending;
 
   const handleConsentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -123,6 +124,72 @@ function FormItemRow({ item, appointmentId, onUpdate }: {
         >
           צפה
         </a>
+      )}
+      {item.item_type === 'patient_upload' && item.patient_file_url && (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            style={{
+              padding: '6px 14px',
+              background: '#0f172a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            תצוגה מקדימה
+          </button>
+          {item.patient_file_download_url && (
+            <a
+              href={item.patient_file_download_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '6px 14px',
+                background: '#475569',
+                color: '#fff',
+                borderRadius: '6px',
+                fontSize: '13px',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              הורד
+            </a>
+          )}
+        </div>
+      )}
+      {previewOpen && item.patient_file_url && (
+        <div
+          onClick={() => setPreviewOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={item.patient_file_url}
+            alt={item.label}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              objectFit: 'contain',
+              borderRadius: 8,
+              cursor: 'default',
+            }}
+          />
+        </div>
       )}
     </div>
   );
