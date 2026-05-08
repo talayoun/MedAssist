@@ -43,7 +43,7 @@ test.describe('POST /api/staff/appointments', () => {
 
     const res = await request.post('/api/staff/appointments', {
       data: {
-        patient_name: 'Playwright Test Patient',
+        patient_name: 'דוד לוי',
         phone_number: phone,
         department_id: departmentId,
         procedure_type: 'pre-op-cardiac',
