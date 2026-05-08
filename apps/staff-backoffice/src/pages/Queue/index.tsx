@@ -2,7 +2,8 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getQueue, getDepartments, updatePatientStatus, setWaitEstimate,
-  sendBroadcast, resetArrivalToNow, resendInvite, logout, softDeleteAppointment, ApiError,
+  sendBroadcast, resetArrivalToNow, resendInvite, logout, softDeleteAppointment,
+  clearDepartmentQueue, ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
 import NewAppointment from '../NewAppointment';
@@ -61,6 +62,7 @@ export default function Queue() {
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [filterDept, setFilterDept] = useState<string>('');
+  const [clearing, setClearing] = useState(false);
   const [filterPhases, setFilterPhases] = useState<Set<AppointmentPhase>>(new Set());
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [createResult, setCreateResult] = useState<string | null>(null);
@@ -106,6 +108,20 @@ export default function Queue() {
       await fetchQueue();
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  async function handleClearDepartment() {
+    if (!filterDept) return;
+    const dept = departments.find((d) => d.id === filterDept);
+    if (!window.confirm(`למחוק את כל המטופלים במחלקה "${dept?.name ?? filterDept}"?\nהפעולה ניתנת לביטול מהפח תוך 7 ימים.`)) return;
+    setClearing(true);
+    try {
+      const { deleted_count } = await clearDepartmentQueue(filterDept);
+      await fetchQueue();
+      if (deleted_count === 0) window.alert('אין מטופלים פעילים במחלקה זו.');
+    } finally {
+      setClearing(false);
     }
   }
 
@@ -199,19 +215,42 @@ export default function Queue() {
         {createResult && <p style={styles.successBanner}>{createResult}</p>}
         <div style={styles.filtersRow}>
           {isAdmin && (
-            <label style={styles.filterLabel}>
-              מחלקה:
-              <select
-                value={filterDept}
-                onChange={(e) => setFilterDept(e.target.value)}
-                style={styles.filterSelect}
-              >
-                <option value="">כל המחלקות</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </label>
+            <>
+              <label style={styles.filterLabel}>
+                מחלקה:
+                <select
+                  value={filterDept}
+                  onChange={(e) => setFilterDept(e.target.value)}
+                  style={styles.filterSelect}
+                >
+                  <option value="">כל המחלקות</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </label>
+              {filterDept && (
+                <button
+                  type="button"
+                  onClick={handleClearDepartment}
+                  disabled={clearing}
+                  style={{
+                    padding: '5px 12px',
+                    background: clearing ? '#9f1239' : '#dc2626',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: clearing ? 'not-allowed' : 'pointer',
+                    opacity: clearing ? 0.7 : 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {clearing ? 'מוחק...' : 'נקה מחלקה'}
+                </button>
+              )}
+            </>
           )}
           <div style={styles.phaseCheckboxGroup}>
             <span style={styles.filterLabel}>שלב:</span>
