@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import Login from './pages/Login';
@@ -7,7 +7,8 @@ import PatientDetail from './pages/PatientDetail';
 import Admin from './pages/Admin';
 import NavigationRoutes from './pages/Admin/NavigationRoutes';
 import Trash from './pages/Admin/Trash';
-import { logout } from './services/api';
+import { FormTemplates } from './pages/Admin/FormTemplates';
+import { logout, getSessionUser } from './services/api';
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
 
@@ -85,7 +86,8 @@ function AdminLayout() {
       <header style={{
         background: '#1b3a6b',
         color: '#fff',
-        padding: '14px 28px',
+        padding: '0 28px',
+        minHeight: 60,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -101,6 +103,9 @@ function AdminLayout() {
             </NavLink>
             <NavLink to="/admin/navigation-routes" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
               מסלולי ניווט
+            </NavLink>
+            <NavLink to="/admin/form-templates" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
+              תבניות טפסים
             </NavLink>
             <NavLink to="/admin/trash" style={({ isActive }) => isActive ? activeGhostBtn : ghostBtn}>
               פח אשפה
@@ -129,6 +134,16 @@ function AdminLayout() {
 
 function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    getSessionUser()
+      .then((user) => { if (user) setUser(user as AuthUser); })
+      .catch(() => {})
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  if (!authChecked) return null;
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
@@ -162,6 +177,7 @@ function App() {
             <Route index element={<Navigate to="checklists" replace />} />
             <Route path="checklists" element={<Admin />} />
             <Route path="navigation-routes" element={<NavigationRoutes />} />
+            <Route path="form-templates" element={<FormTemplates />} />
             <Route path="trash" element={<Trash />} />
           </Route>
           <Route path="*" element={<Navigate to="/queue" replace />} />

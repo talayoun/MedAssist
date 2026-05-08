@@ -1,8 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
-const API_URL = process.env.API_URL ?? 'http://localhost:3000';
-const PATIENT_PWA_URL = process.env.PATIENT_PWA_URL ?? 'http://localhost:5173';
-const STAFF_APP_URL = process.env.STAFF_APP_URL ?? 'http://localhost:5174';
+const API_URL = process.env.API_URL || 'http://localhost:3000';
+const PATIENT_PWA_URL = process.env.PATIENT_PWA_URL || 'http://localhost:5173';
+const STAFF_APP_URL = process.env.STAFF_APP_URL || 'http://localhost:5174';
 
 export default defineConfig({
   testDir: './tests',

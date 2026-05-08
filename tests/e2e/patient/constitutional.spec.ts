@@ -77,6 +77,47 @@ test.describe('Patient PWA constitutional requirements', () => {
     }
   });
 
+  test('bottom nav appears on visit pages and is absent on entry page', async ({ page }) => {
+    // Nav should be present on the three main visit phases
+    await page.goto(`/visit/${token}/checklist`);
+    await page.waitForSelector('[role="checkbox"]');
+    await expect(page.getByRole('navigation', { name: 'ניווט ראשי' })).toBeVisible();
+
+    await page.goto(`/visit/${token}/navigation`);
+    await expect(page.getByRole('navigation', { name: 'ניווט ראשי' })).toBeVisible({ timeout: 5_000 });
+
+    await page.goto(`/visit/${token}/waiting`);
+    await expect(page.getByRole('navigation', { name: 'ניווט ראשי' })).toBeVisible({ timeout: 5_000 });
+
+    // Nav should NOT appear on the magic-link entry page
+    await page.goto(`/visit/${token}`);
+    await expect(page.getByRole('navigation', { name: 'ניווט ראשי' })).not.toBeAttached();
+  });
+
+  test('bottom nav tabs meet minimum tap target (44×44px)', async ({ page }) => {
+    await page.goto(`/visit/${token}/checklist`);
+    await page.waitForSelector('[role="checkbox"]');
+
+    const tabs = page.getByRole('navigation', { name: 'ניווט ראשי' }).getByRole('button');
+    const count = await tabs.count();
+    expect(count, 'four nav tabs').toBe(4);
+
+    for (let i = 0; i < count; i++) {
+      const box = await tabs.nth(i).boundingBox();
+      expect(box, `tab ${i} must be visible`).not.toBeNull();
+      expect(box!.width, `tab ${i} width ≥${MIN_TAP_PX}px`).toBeGreaterThanOrEqual(MIN_TAP_PX);
+      expect(box!.height, `tab ${i} height ≥${MIN_TAP_PX}px`).toBeGreaterThanOrEqual(MIN_TAP_PX);
+    }
+  });
+
+  test('bottom nav active tab matches current route', async ({ page }) => {
+    await page.goto(`/visit/${token}/navigation`);
+    await expect(page.getByRole('navigation', { name: 'ניווט ראשי' })).toBeVisible({ timeout: 5_000 });
+
+    const activeTab = page.getByRole('button', { name: 'ניווט' });
+    await expect(activeTab).toHaveAttribute('aria-current', 'page');
+  });
+
   test('primary body text on checklist meets minimum font size (≥16px)', async ({ page }) => {
     await page.goto(`/visit/${token}/checklist`);
     await page.waitForSelector('[role="checkbox"]');

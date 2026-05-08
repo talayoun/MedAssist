@@ -458,7 +458,7 @@ function PatientCard({
           onClick={() => navigate(`/patients/${patient.appointment_id}`)}
           style={styles.detailBtn}
         >
-          פרטים ←
+          {'פרטים ←'}
         </button>
       </div>
     </div>
@@ -475,7 +475,8 @@ const styles: Record<string, React.CSSProperties> = {
   header: {
     background: '#1b3a6b',
     color: '#fff',
-    padding: '14px 28px',
+    padding: '0 28px',
+    minHeight: 60,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -532,7 +533,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontSize: 13,
   },
-  body: { padding: '24px 28px', maxWidth: 960, margin: '0 auto' },
+  body: { padding: '24px 40px', maxWidth: 1400, margin: '0 auto' },
   filtersRow: {
     display: 'flex',
     gap: 16,

@@ -16,6 +16,7 @@ export interface NavigationRouteResponse {
   current_step: number;
   parking_coordinates: { lat: number; lng: number } | null;
   steps: NavigationStepResponse[];
+  completed?: boolean;
 }
 
 export interface StepConfirmResult {
@@ -78,13 +79,34 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
     [appointmentId]
   );
 
-  // If already arrived, nothing to navigate
+  // Patient already in waiting queue — return full route for review (read-only, no confirm)
   if (queueRows.length > 0) {
-    throw Object.assign(new Error('already_arrived'), { status: 409 });
+    const { rows: allSteps } = await query<StepRow>(`
+      SELECT id, step_order, image_url, instruction_text
+      FROM route_steps
+      WHERE route_id = $1
+      ORDER BY step_order ASC
+    `, [routeRow.route_id]);
+
+    const responseSteps: NavigationStepResponse[] = allSteps.map(s => ({
+      step_id: s.id,
+      order: s.step_order,
+      image_url: s.image_url,
+      instruction: s.instruction_text,
+      is_current: s.step_order === routeRow.steps_count,
+    }));
+
+    return {
+      route_id: routeRow.route_id,
+      route_name: routeRow.route_name,
+      total_steps: routeRow.steps_count,
+      current_step: routeRow.steps_count,
+      parking_coordinates: null,
+      steps: responseSteps,
+      completed: true,
+    };
   }
 
-  // Get current navigation step from appointment metadata (use magic_link_send_time as a proxy)
-  // In production this would be a dedicated nav_progress column; for MVP use the last confirmed step
   const currentStepOrder = await getCurrentStepOrder(appointmentId);
 
   await advanceAppointmentPhase(appointmentId, 'navigation');

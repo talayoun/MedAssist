@@ -17,10 +17,6 @@ router.get('/', requireMagicLinkToken, async (req: Request, res: Response, next:
       res.status(404).json({ error: 'route_not_found' });
       return;
     }
-    if (e.status === 409) {
-      res.status(409).json({ error: 'already_arrived' });
-      return;
-    }
     next(err);
   }
 });

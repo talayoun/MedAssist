@@ -40,4 +40,6 @@ export async function transaction<T>(
   }
 }
 
+export const withTransaction = transaction;
+
 export default pool;

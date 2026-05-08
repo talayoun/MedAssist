@@ -46,6 +46,7 @@ export const NavigationRouteDTO = z.object({
   current_step: z.number().int().positive(),
   parking_coordinates: ParkingCoordinatesDTO.nullable(),
   steps: z.array(NavigationStepDTO),
+  completed: z.boolean().optional(),
 });
 
 export const StepConfirmResponseDTO = z.union([
@@ -127,3 +128,50 @@ export type WaitingResponse = z.infer<typeof WaitingResponseDTO>;
 export type WaitingStatus = z.infer<typeof WaitingStatusSchema>;
 export type FormSummary = z.infer<typeof FormSummaryDTO>;
 export type FormDetail = z.infer<typeof FormDetailDTO>;
+
+// ─── Digital Forms v2 ─────────────────────────────────────────────────────────
+
+export const FormItemDTOSchema = z.object({
+  id: z.string().uuid(),
+  label: z.string(),
+  item_type: z.enum(['patient_upload', 'staff_upload_sign']),
+  status: z.enum(['pending', 'staff_uploaded', 'patient_submitted']),
+  required: z.boolean(),
+  order_index: z.number().int(),
+  staff_file_url: z.string().url().nullable(),    // presigned S3 URL of blank/staff consent PDF
+  patient_file_url: z.string().url().nullable(),   // presigned S3 URL of latest patient doc
+  patient_submitted_at: z.string().datetime().nullable(),
+});
+
+export type FormItemDTO = z.infer<typeof FormItemDTOSchema>;
+
+export const FormsListResponseDTOSchema = z.object({
+  items: z.array(FormItemDTOSchema),
+});
+
+export type FormsListResponseDTO = z.infer<typeof FormsListResponseDTOSchema>;
+
+export const StaffFormsResponseDTOSchema = z.object({
+  items: z.array(FormItemDTOSchema),
+  latest_export: z.object({
+    pdf_url: z.string().url(),
+    generated_at: z.string().datetime(),
+    item_count: z.number().int(),
+  }).nullable(),
+  new_since_last_export: z.number().int(),
+});
+
+export type StaffFormsResponseDTO = z.infer<typeof StaffFormsResponseDTOSchema>;
+
+export const FormTemplateItemDTOSchema = z.object({
+  id: z.string().uuid(),
+  procedure_type: z.string().nullable(),
+  label: z.string(),
+  item_type: z.enum(['patient_upload', 'staff_upload_sign']),
+  blank_form_url: z.string().url().nullable(),
+  required: z.boolean(),
+  order_index: z.number().int(),
+  is_active: z.boolean(),
+});
+
+export type FormTemplateItemDTO = z.infer<typeof FormTemplateItemDTOSchema>;
