@@ -1,4 +1,4 @@
-import { query } from '../../db/db';
+import { query, transaction } from '../../db/db';
 
 export interface TrashEntry {
   appointment_id: string;
@@ -64,12 +64,22 @@ export async function restoreAppointment(id: string): Promise<{ restored: boolea
 }
 
 export async function hardDeleteAppointment(id: string): Promise<{ deleted: boolean }> {
-  const { rowCount } = await query(
-    `DELETE FROM appointments WHERE id = $1 AND deleted_at IS NOT NULL`,
-    [id]
-  );
-  if (!rowCount) throw Object.assign(new Error('not_found'), { status: 404 });
-  return { deleted: true };
+  return transaction(async (client) => {
+    const check = await client.query(
+      `SELECT id FROM appointments WHERE id = $1 AND deleted_at IS NOT NULL`,
+      [id]
+    );
+    if (!check.rowCount) throw Object.assign(new Error('not_found'), { status: 404 });
+    await client.query(`DELETE FROM magic_links        WHERE appointment_id = $1`, [id]);
+    await client.query(`DELETE FROM checklist_progress WHERE appointment_id = $1`, [id]);
+    await client.query(`DELETE FROM companions         WHERE appointment_id = $1`, [id]);
+    await client.query(`DELETE FROM notifications      WHERE appointment_id = $1`, [id]);
+    await client.query(`DELETE FROM nav_progress       WHERE appointment_id = $1`, [id]);
+    await client.query(`DELETE FROM waiting_queue      WHERE appointment_id = $1`, [id]);
+    await client.query(`DELETE FROM patient_stations   WHERE appointment_id = $1`, [id]);
+    await client.query(`DELETE FROM appointments       WHERE id = $1`, [id]);
+    return { deleted: true };
+  });
 }
 
 export async function bulkSoftDeleteByDepartment(
@@ -84,8 +94,20 @@ export async function bulkSoftDeleteByDepartment(
 }
 
 export async function purgeExpiredTrash(): Promise<void> {
-  await query(
-    `DELETE FROM appointments WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '7 days'`,
-    []
-  );
+  await transaction(async (client) => {
+    const { rows } = await client.query<{ id: string }>(
+      `SELECT id FROM appointments WHERE deleted_at IS NOT NULL AND deleted_at < NOW() - INTERVAL '7 days'`,
+      []
+    );
+    if (!rows.length) return;
+    const ids = rows.map((r) => r.id);
+    await client.query(`DELETE FROM magic_links        WHERE appointment_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM checklist_progress WHERE appointment_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM companions         WHERE appointment_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM notifications      WHERE appointment_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM nav_progress       WHERE appointment_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM waiting_queue      WHERE appointment_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM patient_stations   WHERE appointment_id = ANY($1)`, [ids]);
+    await client.query(`DELETE FROM appointments       WHERE id = ANY($1)`, [ids]);
+  });
 }
