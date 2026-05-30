@@ -34,6 +34,7 @@ export function FormTemplates() {
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
+  const draftFileRef = useRef<HTMLInputElement | null>(null);
   const uploadRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const load = async () => {
@@ -53,6 +54,10 @@ export function FormTemplates() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!draftFile) {
+      setSaveErr('יש להעלות קובץ PDF');
+      return;
+    }
     setSaving(true);
     setSaveErr(null);
     try {
@@ -109,7 +114,7 @@ export function FormTemplates() {
         <h1 style={{ fontSize: '1.375rem', fontWeight: 700, margin: 0 }}>תבניות טפסים</h1>
         <button
           type="button"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => { setShowForm((v) => !v); setDraftFile(null); if (draftFileRef.current) draftFileRef.current.value = ''; }}
           style={{
             padding: '8px 18px',
             background: '#1b3a6b',
@@ -143,15 +148,30 @@ export function FormTemplates() {
               </label>
             </div>
             <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontWeight: 600 }}>
-                קובץ PDF (אופציונלי)
-                <input
-                  type="file"
-                  accept="application/pdf"
-                  onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
-                  style={{ fontSize: '13px', marginTop: '4px' }}
-                />
-              </label>
+              <span style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>קובץ PDF</span>
+              <input
+                ref={draftFileRef}
+                type="file"
+                accept="application/pdf"
+                style={{ display: 'none' }}
+                onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
+              />
+              <button
+                type="button"
+                onClick={() => draftFileRef.current?.click()}
+                style={{
+                  padding: '8px 16px',
+                  background: draftFile ? '#dbeafe' : '#f8fafc',
+                  color: draftFile ? '#1d4ed8' : '#1b3a6b',
+                  border: `1px solid ${draftFile ? '#bfdbfe' : '#cbd5e1'}`,
+                  borderRadius: '6px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {draftFile ? draftFile.name : 'בחר קובץ PDF'}
+              </button>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
               <input
