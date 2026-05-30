@@ -36,9 +36,12 @@ export default function NewAppointment({
   const [error, setError] = useState<string | null>(null);
   const [formTemplates, setFormTemplates] = useState<FormTemplateItemDTO[]>([]);
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [templateLoadError, setTemplateLoadError] = useState(false);
 
   useEffect(() => {
-    listStaffFormTemplates().then(({ items }) => setFormTemplates(items)).catch(() => {/* non-fatal */});
+    listStaffFormTemplates()
+      .then(({ items }) => setFormTemplates(items))
+      .catch(() => setTemplateLoadError(true));
   }, []);
 
   function addCustomItem() {
@@ -255,9 +258,13 @@ export default function NewAppointment({
             שלח SMS עכשיו (ולא לפי הזמנון)
           </label>
 
-          {formTemplates.length > 0 && (
-            <div style={styles.field}>
-              <span style={styles.label}>טפסים לשליחה למטופל (אופציונלי)</span>
+          <div style={styles.field}>
+            <span style={styles.label}>טפסים לשליחה למטופל (אופציונלי)</span>
+            {templateLoadError ? (
+              <p style={{ fontSize: 13, color: '#b91c1c', margin: 0 }}>לא ניתן לטעון טפסים</p>
+            ) : formTemplates.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#9ca3af', margin: 0 }}>אין טפסים זמינים</p>
+            ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {formTemplates.map((tpl) => (
                   <label key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#374151' }}>
@@ -275,8 +282,8 @@ export default function NewAppointment({
                   </label>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {error && <p style={styles.errorMsg}>{error}</p>}
 
