@@ -65,54 +65,86 @@ pnpm --filter api worker           # run BullMQ notification worker (separate pr
 
 ---
 
-## Dev Server Restart Sequence
+## Dev Server Startup Sequence
 
-Run in this order. Skip steps that haven't changed.
+Run **every command with `doppler run --`**. Secrets come from Doppler only — no `.env` files.
 
-### Step 1 — Kill stale port 3001 process (Windows)
+### Step 0 — Kill stale node processes (Windows)
 
 ```powershell
-# Find PID holding port 3001:
-netstat -ano | findstr :3001
-# Kill it (replace 12345 with actual PID):
-taskkill /PID 12345 /F
+# Kill all stale node processes from previous sessions:
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Stop the Turborepo daemon:
+doppler run -- pnpm exec turbo daemon stop
+
+# Confirm port 3000 is free (expect: no output):
+netstat -ano | findstr :3000
 ```
 
-> `pnpm dev` uses `tsx watch` (hot-reload on .ts changes). If a stale `node` process
-> from a previous session holds port 3001, the new dev server silently fails to bind
-> and old code keeps running. Always kill first.
+> If port 3000 shows EACCES with nothing listening, Hyper-V/WinNAT reserved it.
+> Fix: run `netsh int ipv4 set dynamicport tcp start=49152 num=16384` as admin, then reboot.
+> See: "Windows Hyper-V port exclusion fix" below.
 
-### Step 2 — Start Docker (PostgreSQL + Redis)
+### Step 1 — Start Docker (PostgreSQL + Redis)
 
-```bash
+```powershell
 docker compose up -d
 ```
 
-### Step 3 — Run migrations (only if schema changed)
+### Step 2 — Run migrations (only if schema changed)
 
-```bash
-pnpm --filter api db:migrate
+```powershell
+doppler run -- pnpm --filter api db:migrate
+```
+
+### Step 3 — Seed dev data (only on fresh DB or after wipe)
+
+```powershell
+doppler run -- pnpm --filter api db:seed
 ```
 
 ### Step 4 — Start all apps (Terminal 1)
 
-```bash
-pnpm dev
+```powershell
+doppler run -- pnpm dev
 ```
 
 Starts in parallel via Turborepo:
 
-- API: `tsx watch` → `http://localhost:3001`
+- API: `tsx watch` → `http://localhost:3000`
 - Patient PWA: Vite → `http://localhost:5173`
 - Staff backoffice: Vite → `http://localhost:5174`
 
-### Step 5 — Start worker (Terminal 2, optional)
+### Step 5 — Start notification worker (Terminal 2)
 
-```bash
-pnpm --filter api worker
+```powershell
+doppler run -- pnpm --filter api worker
 ```
 
-Required only for SMS/notification delivery (BullMQ). Not needed for most dev work.
+Required for SMS/notification delivery (BullMQ). Not needed for most dev work.
+
+---
+
+## Windows Hyper-V Port Exclusion Fix
+
+If port 3000 shows `EACCES: permission denied` and nothing is listening on it, Windows Hyper-V reserved it. This happens after a reboot — the range shifts randomly.
+
+**Permanent fix (run once as Administrator, then reboot):**
+
+```powershell
+netsh int ipv4 set dynamicport tcp start=49152 num=16384
+netsh int ipv6 set dynamicport tcp start=49152 num=16384
+```
+
+This confines WinNAT to ports ≥49152, so it can never steal port 3000 again.
+
+**Verify after reboot:**
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+# port 3000 should no longer appear in the list
+```
 
 ---
 
