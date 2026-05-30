@@ -173,6 +173,11 @@ export function FormTemplates() {
         <p style={{ color: '#64748b' }}>טוען...</p>
       ) : error ? (
         <p style={{ color: '#dc2626' }}>{error}</p>
+      ) : items.length === 0 ? (
+        <div style={{ ...card, textAlign: 'center', padding: '40px 24px', color: '#64748b' }}>
+          <p style={{ fontSize: '15px', marginBottom: 8 }}>אין תבניות טפסים עדיין.</p>
+          <p style={{ fontSize: '13px' }}>לחץ על &quot;+ תבנית חדשה&quot; כדי להוסיף את הטופס הראשון.</p>
+        </div>
       ) : (
         <div style={card}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
