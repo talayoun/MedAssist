@@ -191,11 +191,11 @@ export function FormTemplates() {
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>{item.required ? '✓' : ''}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>
                     <input
-                      ref={(el) => { uploadRefs.current[item.id] = el; }}
+                      ref={(el) => { if (el) uploadRefs.current[item.id] = el; }}
                       type="file"
                       accept="application/pdf"
                       style={{ display: 'none' }}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBlankUpload(item, f); }}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) { handleBlankUpload(item, f); e.target.value = ''; } }}
                     />
                     <button
                       type="button"
