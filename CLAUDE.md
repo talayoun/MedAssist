@@ -69,17 +69,17 @@ pnpm --filter api worker           # run BullMQ notification worker (separate pr
 
 Run in this order. Skip steps that haven't changed.
 
-### Step 1 — Kill stale port 3000 process (Windows)
+### Step 1 — Kill stale port 3001 process (Windows)
 
 ```powershell
-# Find PID holding port 3000:
-netstat -ano | findstr :3000
+# Find PID holding port 3001:
+netstat -ano | findstr :3001
 # Kill it (replace 12345 with actual PID):
 taskkill /PID 12345 /F
 ```
 
 > `pnpm dev` uses `tsx watch` (hot-reload on .ts changes). If a stale `node` process
-> from a previous session holds port 3000, the new dev server silently fails to bind
+> from a previous session holds port 3001, the new dev server silently fails to bind
 > and old code keeps running. Always kill first.
 
 ### Step 2 — Start Docker (PostgreSQL + Redis)
@@ -102,7 +102,7 @@ pnpm dev
 
 Starts in parallel via Turborepo:
 
-- API: `tsx watch` → `http://localhost:3000`
+- API: `tsx watch` → `http://localhost:3001`
 - Patient PWA: Vite → `http://localhost:5173`
 - Staff backoffice: Vite → `http://localhost:5174`
 
