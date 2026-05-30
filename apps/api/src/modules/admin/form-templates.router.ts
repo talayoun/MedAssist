@@ -7,7 +7,7 @@ const router = Router();
 router.use(requireAdmin);
 
 router.get('/form-templates', async (_req, res, next) => {
-  try { res.json(await svc.listTemplateItems()); }
+  try { res.json({ items: await svc.listTemplateItems() }); }
   catch (err) { next(err); }
 });
 

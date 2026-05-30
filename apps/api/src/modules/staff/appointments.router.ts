@@ -30,6 +30,20 @@ const CreateAppointmentSchema = z.object({
   custom_items: z.array(CustomItemSchema).max(50).default([]),
   suppressed_template_item_ids: z.array(z.string().uuid()).max(50).default([]),
   send_now: z.boolean().default(false),
+  form_template_ids: z.array(z.string().uuid()).max(50).optional(),
+});
+
+/** GET /api/staff/form-templates — lightweight list for the new-appointment modal */
+router.get('/form-templates', requireStaffAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, label, item_type, required, order_index, procedure_type
+       FROM form_template_items
+       WHERE is_active = true
+       ORDER BY procedure_type NULLS FIRST, order_index`,
+    );
+    res.json({ items: rows });
+  } catch (err) { next(err); }
 });
 
 /** POST /api/staff/appointments */
@@ -42,7 +56,7 @@ router.post('/appointments', requireStaffAuth, async (req: Request, res: Respons
     }
 
     const result = await createElectiveAppointment(
-      parsed.data,
+      { ...parsed.data, form_template_ids: parsed.data.form_template_ids },
       callerCtx(req)
     );
     res.status(201).json(result);
