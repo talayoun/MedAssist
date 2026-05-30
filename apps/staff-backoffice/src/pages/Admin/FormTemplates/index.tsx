@@ -30,6 +30,7 @@ export function FormTemplates() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [draft, setDraft] = useState<NewItemDraft>(defaultDraft);
+  const [draftFile, setDraftFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
@@ -55,15 +56,19 @@ export function FormTemplates() {
     setSaving(true);
     setSaveErr(null);
     try {
-      const created = await createFormTemplate({
+      let created = await createFormTemplate({
         procedure_type: null,
         label: draft.label.trim(),
         item_type: 'patient_upload',
         required: draft.required,
         order_index: 0,
       });
+      if (draftFile) {
+        created = await uploadFormTemplateBlank(created.id, draftFile);
+      }
       setItems((prev) => [...prev, created]);
       setDraft(defaultDraft);
+      setDraftFile(null);
       setShowForm(false);
     } catch (err) {
       setSaveErr(err instanceof ApiError ? err.message : 'שגיאה ביצירת תבנית');
@@ -137,13 +142,24 @@ export function FormTemplates() {
                 />
               </label>
             </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontWeight: 600 }}>
+                קובץ PDF (אופציונלי)
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
+                  style={{ fontSize: '13px', marginTop: '4px' }}
+                />
+              </label>
+            </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
               <input
                 type="checkbox"
                 checked={draft.required}
                 onChange={(e) => setDraft((d) => ({ ...d, required: e.target.checked }))}
               />
-              חובה
+              טופס/מסמך חובה במילוי
             </label>
             {saveErr && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '8px' }}>{saveErr}</p>}
             <button
@@ -195,28 +211,48 @@ export function FormTemplates() {
                   <td style={{ padding: '10px 4px', fontWeight: 600 }}>{item.label}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>{item.required ? '✓' : ''}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                    <input
-                      ref={(el) => { if (el) uploadRefs.current[item.id] = el; }}
-                      type="file"
-                      accept="application/pdf"
-                      style={{ display: 'none' }}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) { handleBlankUpload(item, f); e.target.value = ''; } }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => uploadRefs.current[item.id]?.click()}
-                      style={{
-                        padding: '3px 10px',
-                        background: item.blank_form_url ? '#dbeafe' : '#f8fafc',
-                        color: item.blank_form_url ? '#1d4ed8' : '#94a3b8',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {item.blank_form_url ? 'החלף PDF' : 'העלה PDF'}
-                    </button>
+                    {item.blank_form_url ? (
+                      <button
+                        type="button"
+                        onClick={() => window.open(item.blank_form_url!, '_blank')}
+                        style={{
+                          padding: '3px 10px',
+                          background: '#dbeafe',
+                          color: '#1d4ed8',
+                          border: '1px solid #bfdbfe',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        צפה ב-PDF
+                      </button>
+                    ) : (
+                      <>
+                        <input
+                          ref={(el) => { if (el) uploadRefs.current[item.id] = el; }}
+                          type="file"
+                          accept="application/pdf"
+                          style={{ display: 'none' }}
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) { handleBlankUpload(item, f); e.target.value = ''; } }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => uploadRefs.current[item.id]?.click()}
+                          style={{
+                            padding: '3px 10px',
+                            background: '#f8fafc',
+                            color: '#94a3b8',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          העלה PDF
+                        </button>
+                      </>
+                    )}
                   </td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>
                     <button
