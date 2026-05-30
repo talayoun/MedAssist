@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { createAppointment, CreateAppointmentBody, ApiError } from '../../services/api';
-import type { Department } from '@medassist/shared-types';
+import React, { useState, useEffect } from 'react';
+import { createAppointment, listStaffFormTemplates, CreateAppointmentBody, ApiError } from '../../services/api';
+import type { Department, FormTemplateItemDTO } from '@medassist/shared-types';
 
 type Category = 'bring' | 'fast' | 'medication' | 'other';
 
@@ -34,6 +34,12 @@ export default function NewAppointment({
   const [sendNow, setSendNow] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formTemplates, setFormTemplates] = useState<FormTemplateItemDTO[]>([]);
+  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    listStaffFormTemplates().then(({ items }) => setFormTemplates(items)).catch(() => {/* non-fatal */});
+  }, []);
 
   function addCustomItem() {
     setCustomItems((prev) => [
@@ -74,6 +80,7 @@ export default function NewAppointment({
       custom_items: cleanedCustomItems,
       suppressed_template_item_ids: [],
       send_now: sendNow,
+      form_template_ids: selectedFormIds,
     };
 
     setSubmitting(true);
@@ -247,6 +254,29 @@ export default function NewAppointment({
             />
             שלח SMS עכשיו (ולא לפי הזמנון)
           </label>
+
+          {formTemplates.length > 0 && (
+            <div style={styles.field}>
+              <span style={styles.label}>טפסים לשליחה למטופל (אופציונלי)</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {formTemplates.map((tpl) => (
+                  <label key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedFormIds.includes(tpl.id)}
+                      onChange={(e) => {
+                        setSelectedFormIds((prev) =>
+                          e.target.checked ? [...prev, tpl.id] : prev.filter((id) => id !== tpl.id)
+                        );
+                      }}
+                    />
+                    {tpl.label}
+                    {tpl.required && <span style={{ fontSize: 12, color: '#ef4444' }}>*</span>}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && <p style={styles.errorMsg}>{error}</p>}
 

@@ -143,6 +143,7 @@ export interface CreateAppointmentBody {
   }>;
   suppressed_template_item_ids: string[];
   send_now: boolean;
+  form_template_ids?: string[];
 }
 
 export function createAppointment(
@@ -457,6 +458,12 @@ export async function staffUploadConsent(appointmentId: string, itemId: string, 
 
 export function exportForms(appointmentId: string): Promise<{ pdf_url: string; generated_at: string; item_count: number }> {
   return apiRequest(`/staff/patients/${appointmentId}/forms/export`, { method: 'POST' });
+}
+
+// ─── Staff — Form Templates (lightweight list for new-appointment modal) ─────
+
+export function listStaffFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
+  return apiRequest('/staff/form-templates');
 }
 
 // ─── Admin — Form Templates ───────────────────────────────────────────────────
