@@ -192,6 +192,9 @@ export default function Queue() {
                 <button onClick={() => navigate('/admin/navigation-routes')} style={styles.adminBtn}>
                   מסלולי ניווט
                 </button>
+                <button onClick={() => navigate('/admin/form-templates')} style={styles.adminBtn}>
+                  תבניות טפסים
+                </button>
                 <button onClick={() => navigate('/admin/trash')} style={styles.adminBtn}>
                   פח אשפה
                 </button>
