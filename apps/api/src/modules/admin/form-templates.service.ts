@@ -1,5 +1,5 @@
 import { query, withTransaction } from '../../db/db';
-import { presignGet, uploadEncrypted } from '../../services/s3';
+import { presignGet, uploadEncrypted, deleteObject } from '../../services/s3';
 
 export interface CreateTemplateItemInput {
   procedure_type?: string | null;
@@ -81,9 +81,13 @@ export async function uploadBlankForm(id: string, buffer: Buffer, contentType: s
 }
 
 export async function deleteBlankForm(id: string) {
-  const { rows } = await query(
-    `UPDATE form_template_items SET blank_form_url = NULL WHERE id = $1 RETURNING id`,
+  const { rows: existing } = await query(
+    `SELECT blank_form_url FROM form_template_items WHERE id = $1`,
     [id],
   );
-  if (!rows[0]) throw Object.assign(new Error('Not found'), { status: 404 });
+  if (!existing[0]) throw Object.assign(new Error('Not found'), { status: 404 });
+  await query(`UPDATE form_template_items SET blank_form_url = NULL WHERE id = $1`, [id]);
+  if (existing[0].blank_form_url) {
+    await deleteObject(existing[0].blank_form_url as string);
+  }
 }
