@@ -28,7 +28,7 @@ test.describe('admin: form templates', () => {
     const res = await request.get('/api/admin/form-templates');
     expect(res.status()).toBe(200);
     const body = await res.json();
-    expect(Array.isArray(body)).toBe(true);
+    expect(Array.isArray(body.items)).toBe(true);
   });
 
   test('admin can create a form template item', async ({ request }) => {
@@ -94,7 +94,7 @@ test.describe('admin: form templates', () => {
     // should no longer appear in active list
     const listRes = await request.get('/api/admin/form-templates');
     const list = await listRes.json();
-    expect(list.find((i: { id: string }) => i.id === id)).toBeUndefined();
+    expect(list.items.find((i: { id: string }) => i.id === id)).toBeUndefined();
   });
 
   test('non-admin staff cannot access form templates', async ({ request }) => {
