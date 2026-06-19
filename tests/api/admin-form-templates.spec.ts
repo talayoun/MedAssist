@@ -102,4 +102,59 @@ test.describe('admin: form templates', () => {
     const res = await request.get('/api/admin/form-templates');
     expect(res.status()).toBe(403);
   });
+
+  test('admin can upload a blank form PDF', async ({ request }) => {
+    // create a template item to attach the PDF to
+    const createRes = await request.post('/api/admin/form-templates', {
+      data: { label: 'PDF test', item_type: 'patient_upload', required: false, order_index: 0 },
+    });
+    expect(createRes.status()).toBe(201);
+    const { id } = await createRes.json();
+    createdIds.push(id);
+
+    // minimal valid 1-page PDF bytes (just enough for magic-byte check)
+    const pdfBytes = Buffer.from('%PDF-1.4 1 0 obj<</Type/Catalog>>endobj\nxref\n0 0\ntrailer<</Root 1 0 R>>\nstartxref\n0\n%%EOF');
+
+    const uploadRes = await request.post(`/api/admin/form-templates/${id}/blank`, {
+      multipart: {
+        file: {
+          name: 'blank.pdf',
+          mimeType: 'application/pdf',
+          buffer: pdfBytes,
+        },
+      },
+    });
+    expect(uploadRes.status()).toBe(200);
+    const body = await uploadRes.json();
+    expect(body.id).toBe(id);
+    expect(body.blank_form_url).toBeTruthy();
+  });
+
+  test('admin can delete a blank form PDF', async ({ request }) => {
+    // create template + upload PDF
+    const createRes = await request.post('/api/admin/form-templates', {
+      data: { label: 'PDF delete test', item_type: 'patient_upload', required: false, order_index: 0 },
+    });
+    expect(createRes.status()).toBe(201);
+    const { id } = await createRes.json();
+    createdIds.push(id);
+
+    const pdfBytes = Buffer.from('%PDF-1.4 1 0 obj<</Type/Catalog>>endobj\nxref\n0 0\ntrailer<</Root 1 0 R>>\nstartxref\n0\n%%EOF');
+    await request.post(`/api/admin/form-templates/${id}/blank`, {
+      multipart: {
+        file: { name: 'blank.pdf', mimeType: 'application/pdf', buffer: pdfBytes },
+      },
+    });
+
+    // delete the blank form
+    const delRes = await request.delete(`/api/admin/form-templates/${id}/blank`);
+    expect(delRes.status()).toBe(204);
+
+    // verify blank_form_url is now null — check via patch (GET single item not exposed, but list shows active items)
+    const listRes = await request.get('/api/admin/form-templates');
+    const { items } = await listRes.json();
+    const found = items.find((i: { id: string; blank_form_url: string | null }) => i.id === id);
+    expect(found).toBeDefined();
+    expect(found.blank_form_url).toBeNull();
+  });
 });
