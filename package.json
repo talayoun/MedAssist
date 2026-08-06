@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "turbo run dev",
+    "dev:all": "turbo run dev --filter=@medassist/api --filter=@medassist/patient-pwa --filter=@medassist/staff-backoffice",
     "build": "turbo run build",
     "test": "turbo run test",
     "test:api": "playwright test --project=api",

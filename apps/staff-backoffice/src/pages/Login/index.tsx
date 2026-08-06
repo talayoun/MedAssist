@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, ApiError } from '../../services/api';
 import { useAuth } from '../../main';
+import logo from '../../assets/medassist-logo.png';
 
 export default function Login() {
   const { setUser } = useAuth();
@@ -35,7 +36,7 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <h1 style={styles.title}>MedAssist Staff</h1>
+        <img src={logo} alt="MedAssist" style={styles.logo} />
         <p style={styles.subtitle}>כניסה לצוות רפואי</p>
 
         <form onSubmit={handleSubmit} style={styles.form}>
@@ -84,27 +85,27 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#f0f4f8',
+    background: 'linear-gradient(160deg, #F0FDFA 0%, #f4f6f8 60%)',
     fontFamily: 'system-ui, sans-serif',
     direction: 'rtl',
   },
   card: {
     background: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: '40px 48px',
-    boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+    boxShadow: '0 12px 32px rgba(15,23,42,0.10)',
+    border: '1px solid #e2e8f0',
     width: '100%',
     maxWidth: 400,
   },
-  title: {
-    margin: 0,
-    fontSize: 28,
-    fontWeight: 700,
-    color: '#1a56db',
-    textAlign: 'center',
+  logo: {
+    display: 'block',
+    height: 34,
+    margin: '0 auto',
+    objectFit: 'contain',
   },
   subtitle: {
-    margin: '8px 0 28px',
+    margin: '12px 0 28px',
     color: '#6b7280',
     textAlign: 'center',
     fontSize: 15,
@@ -124,12 +125,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   input: {
     padding: '10px 14px',
+    minHeight: 44,
     borderRadius: 8,
     border: '1.5px solid #d1d5db',
     fontSize: 15,
     outline: 'none',
     transition: 'border-color 0.15s',
     direction: 'ltr',
+    boxSizing: 'border-box',
   },
   error: {
     margin: 0,
@@ -143,8 +146,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   button: {
     marginTop: 8,
+    minHeight: 44,
     padding: '12px',
-    background: '#1a56db',
+    background: '#0D9488',
     color: '#fff',
     border: 'none',
     borderRadius: 8,

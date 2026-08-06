@@ -62,6 +62,24 @@ async function seed() {
       await client.query<{ id: string }>(`SELECT id FROM patients WHERE phone_number = '+972526068400'`)
     ).rows[0].id;
 
+    // ─── Reset prior seed state for this patient ────────────────────────────
+    // Re-running db:seed reuses the same patient row (ON CONFLICT DO NOTHING
+    // above), but previous runs' appointments were never cleaned up — leftover
+    // appointments already advanced to 'navigation'/'waiting' by earlier manual
+    // testing would sit alongside the freshly seeded one and cause confusion
+    // about which magic link is "the" demo link. Wipe this patient's dependent
+    // rows (children before parent, no ON DELETE CASCADE in the schema) so each
+    // seed run leaves exactly one appointment, deterministically at 'checklist'.
+    await client.query(`DELETE FROM companions WHERE appointment_id IN (SELECT id FROM appointments WHERE patient_id = $1)`, [patientId]);
+    await client.query(`DELETE FROM notifications WHERE patient_id = $1`, [patientId]);
+    await client.query(`DELETE FROM digital_forms WHERE patient_id = $1`, [patientId]);
+    await client.query(`DELETE FROM patient_stations WHERE appointment_id IN (SELECT id FROM appointments WHERE patient_id = $1)`, [patientId]);
+    await client.query(`DELETE FROM waiting_queue WHERE appointment_id IN (SELECT id FROM appointments WHERE patient_id = $1)`, [patientId]);
+    await client.query(`DELETE FROM nav_progress WHERE appointment_id IN (SELECT id FROM appointments WHERE patient_id = $1)`, [patientId]);
+    await client.query(`DELETE FROM checklist_progress WHERE appointment_id IN (SELECT id FROM appointments WHERE patient_id = $1)`, [patientId]);
+    await client.query(`DELETE FROM magic_links WHERE appointment_id IN (SELECT id FROM appointments WHERE patient_id = $1)`, [patientId]);
+    await client.query(`DELETE FROM appointments WHERE patient_id = $1`, [patientId]);
+
     // ─── Appointment ─────────────────────────────────────────────────────────
     const visitDatetime = new Date();
     visitDatetime.setDate(visitDatetime.getDate() + 3); // 3 days from now

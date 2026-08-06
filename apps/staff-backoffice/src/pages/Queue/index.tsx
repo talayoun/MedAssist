@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getQueue, getDepartments, updatePatientStatus, setWaitEstimate,
-  sendBroadcast, resetArrivalToNow, resendInvite, logout, ApiError,
+  sendBroadcast, resetArrivalToNow, resendInvite, ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
 import NewAppointment from '../NewAppointment';
@@ -48,8 +48,7 @@ const PHASE_OPTIONS: AppointmentPhase[] = [
 ];
 
 export default function Queue() {
-  const { user, setUser } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
   const [queue, setQueue] = useState<Queue | null>(null);
@@ -140,34 +139,24 @@ export default function Queue() {
     setTimeout(() => setBroadcastResult(null), 4000);
   }
 
-  async function handleLogout() {
-    await logout().catch(() => {});
-    setUser(null);
-    navigate('/login', { replace: true });
-  }
-
   const adminBroadcastDisabled = isAdmin && !filterDept;
 
   return (
     <div style={styles.page}>
-      <header style={styles.header}>
-        <div>
-          <h1 style={styles.headerTitle}>MedAssist, לוח בקרה</h1>
-          {queue && <span style={styles.deptBadge}>{queue.department_label}</span>}
-        </div>
-        <div style={styles.headerRight}>
+      <div style={styles.body}>
+        <div style={styles.pageHeaderRow}>
+          <div>
+            <h1 style={styles.pageTitle}>תור מטופלים</h1>
+            {queue && <span style={styles.deptBadge}>{queue.department_label}</span>}
+          </div>
           <button
             onClick={() => setShowNewAppointment(true)}
             style={styles.newAppointmentBtn}
           >
             + מטופל חדש
           </button>
-          <span style={styles.userName}>{user?.name}</span>
-          <button onClick={handleLogout} style={styles.logoutBtn}>יציאה</button>
         </div>
-      </header>
 
-      <div style={styles.body}>
         {createResult && <p style={styles.successBanner}>{createResult}</p>}
         <div style={styles.filtersRow}>
           {isAdmin && (
@@ -410,33 +399,33 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: 'system-ui, sans-serif',
     direction: 'rtl',
   },
-  header: {
-    background: '#1a56db',
-    color: '#fff',
-    padding: '16px 24px',
+  pageHeaderRow: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    marginBottom: 20,
   },
-  headerTitle: { margin: 0, fontSize: 20, fontWeight: 700 },
+  pageTitle: { margin: 0, fontSize: 24, fontWeight: 700, color: '#0f172a' },
   deptBadge: {
     display: 'inline-block',
-    marginTop: 4,
-    background: 'rgba(255,255,255,0.2)',
+    marginTop: 6,
+    background: '#F0FDFA',
+    color: '#0D9488',
     borderRadius: 12,
     padding: '2px 10px',
     fontSize: 13,
+    fontWeight: 600,
   },
-  headerRight: { display: 'flex', alignItems: 'center', gap: 12 },
   newAppointmentBtn: {
-    background: '#fff',
-    color: '#1a56db',
+    background: '#0D9488',
+    color: '#fff',
     border: 'none',
-    borderRadius: 7,
-    padding: '7px 14px',
+    borderRadius: 8,
+    padding: '10px 18px',
     cursor: 'pointer',
     fontSize: 14,
     fontWeight: 700,
+    minHeight: 44,
   },
   successBanner: {
     background: '#d1fae5',
@@ -446,17 +435,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 14px',
     marginBottom: 16,
   },
-  userName: { fontSize: 14, opacity: 0.9 },
-  logoutBtn: {
-    background: 'rgba(255,255,255,0.15)',
-    border: '1px solid rgba(255,255,255,0.4)',
-    color: '#fff',
-    borderRadius: 6,
-    padding: '6px 14px',
-    cursor: 'pointer',
-    fontSize: 13,
-  },
-  body: { padding: 24, maxWidth: 900, margin: '0 auto' },
+  body: { padding: '28px 32px', maxWidth: 1080, margin: '0 auto' },
   filtersRow: {
     display: 'flex',
     gap: 16,
@@ -500,7 +479,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   primaryBtn: {
     padding: '8px 16px',
-    background: '#1a56db',
+    background: '#0D9488',
     color: '#fff',
     border: 'none',
     borderRadius: 7,

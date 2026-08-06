@@ -103,6 +103,24 @@ export function saveFormDraft(
   });
 }
 
+export async function uploadFormImage(
+  token: string,
+  formId: string,
+  file: File
+): Promise<{ image_id: string; url: string }> {
+  const formData = new FormData();
+  formData.append('image', file);
+  const res = await fetch(`${BASE_URL}/api/visit/${token}/forms/${formId}/images`, {
+    method: 'POST',
+    body: formData,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
+  }
+  return body as { image_id: string; url: string };
+}
+
 export function submitSignature(
   token: string,
   formId: string,
