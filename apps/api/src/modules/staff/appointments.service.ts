@@ -5,6 +5,7 @@ import { scheduleMagicLinkForAppointment } from '../magic-links/magic-links.sche
 import { enqueueNotification } from '../notifications/notifications.producer';
 import { seedProgressForAppointment } from '../checklist/checklist.service';
 import type { ChecklistCategory, ChecklistCustomItem } from '../checklist/merge';
+import type { StaffAuthContext } from '@medassist/shared-types';
 
 export interface CreateAppointmentInput {
   patient_name: string;
@@ -19,6 +20,7 @@ export interface CreateAppointmentInput {
   }>;
   suppressed_template_item_ids: string[];
   send_now: boolean;
+  form_template_ids?: string[];
 }
 
 export interface CreateAppointmentResult {
@@ -35,9 +37,9 @@ export interface CreateAppointmentResult {
  */
 export async function createElectiveAppointment(
   input: CreateAppointmentInput,
-  staffDepartmentScope: string | null
+  caller: StaffAuthContext
 ): Promise<CreateAppointmentResult> {
-  if (staffDepartmentScope && input.department_id !== staffDepartmentScope) {
+  if (caller.role === 'staff' && input.department_id !== caller.departmentId) {
     throw Object.assign(new Error('forbidden'), { status: 403 });
   }
 
@@ -103,6 +105,47 @@ export async function createElectiveAppointment(
     customItemsWithIds,
     input.suppressed_template_item_ids
   );
+
+  // Snapshot form templates: explicit selection or auto-select by procedure type
+  type FormTemplateRow = { id: string; label: string; item_type: string; required: boolean; order_index: number };
+  let formTemplatesToSnapshot: FormTemplateRow[];
+
+  if (input.form_template_ids !== undefined) {
+    // Explicit selection: fetch only the specified templates (if any)
+    if (input.form_template_ids.length > 0) {
+      const placeholders = input.form_template_ids.map((_, i) => `$${i + 1}`).join(', ');
+      const { rows } = await query<FormTemplateRow>(
+        `SELECT id, label, item_type, required, order_index
+         FROM form_template_items
+         WHERE id IN (${placeholders}) AND is_active = true
+         ORDER BY order_index`,
+        input.form_template_ids,
+      );
+      formTemplatesToSnapshot = rows;
+    } else {
+      formTemplatesToSnapshot = []; // staff explicitly selected nothing
+    }
+  } else {
+    // Backward compat: auto-select by procedure type + global
+    const { rows } = await query<FormTemplateRow>(
+      `SELECT id, label, item_type, required, order_index
+       FROM form_template_items
+       WHERE (procedure_type = $1 OR procedure_type IS NULL) AND is_active = true
+       ORDER BY order_index`,
+      [input.procedure_type],
+    );
+    formTemplatesToSnapshot = rows;
+  }
+
+  for (const tmpl of formTemplatesToSnapshot) {
+    await query(
+      `INSERT INTO patient_form_items
+         (appointment_id, form_template_item_id, label, item_type, required, order_index)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (appointment_id, form_template_item_id) WHERE form_template_item_id IS NOT NULL DO NOTHING`,
+      [appointmentId, tmpl.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index],
+    );
+  }
 
   if (input.send_now) {
     const ttlHours = parseInt(process.env.ELECTIVE_LINK_TTL_HOURS ?? '72', 10);

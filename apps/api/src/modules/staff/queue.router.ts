@@ -10,6 +10,12 @@ import {
   QueuePhase,
 } from './queue.service';
 import { resendInviteForAppointment } from './resend-invite.service';
+import type { StaffAuthContext } from '@medassist/shared-types';
+
+function callerCtx(req: Request): StaffAuthContext {
+  const deptId = req.staffAuth!.departmentId;
+  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
+}
 
 const router = Router();
 
@@ -54,7 +60,7 @@ router.patch('/queue/:appointment_id/status', requireStaffAuth, async (req: Requ
     const result = await updatePatientStatus(
       req.params.appointment_id as string,
       parsed.data.status,
-      req.staffAuth!.departmentId ?? null
+      callerCtx(req)
     );
     res.json(result);
   } catch (err: unknown) {
@@ -69,7 +75,7 @@ router.post('/queue/:appointment_id/reset-arrival', requireStaffAuth, async (req
   try {
     const result = await resetArrivalToNow(
       req.params.appointment_id as string,
-      req.staffAuth!.departmentId ?? null
+      callerCtx(req)
     );
     res.json(result);
   } catch (err: unknown) {
@@ -114,7 +120,7 @@ router.post('/queue/:appointment_id/resend-invite', requireStaffAuth, async (req
   try {
     const result = await resendInviteForAppointment(
       req.params.appointment_id as string,
-      req.staffAuth!.departmentId ?? null
+      callerCtx(req)
     );
     res.status(200).json(result);
   } catch (err: unknown) {

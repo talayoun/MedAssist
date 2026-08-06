@@ -1,309 +1,355 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  getQueue, getDepartments, addStation, markStationComplete,
-  exportPatientPDF, issueCompanionLink, ApiError,
+  getStaffForms, staffUploadConsent, exportForms, getAppointment, ApiError,
+  type AppointmentDetail,
 } from '../../services/api';
-import type { QueuePatient, Department, AppointmentPhase } from '@medassist/shared-types';
+import type { StaffFormsResponseDTO, FormItemDTO } from '@medassist/shared-types';
 
-const TEAL = '#0D9488';
-
-const PHASE_LABELS: Record<AppointmentPhase, string> = {
-  link_sent: 'קישור נשלח',
-  checklist: 'צ׳קליסט',
-  navigation: 'בדרך למחלקה',
-  waiting: 'ממתין במחלקה',
-  done: 'סיים',
-  expired: 'פג תוקף',
+const card: React.CSSProperties = {
+  background: '#fff',
+  border: '1px solid #e2e8f0',
+  borderRadius: '12px',
+  padding: '20px 24px',
+  boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
 };
 
-const PHASE_COLORS: Record<AppointmentPhase, string> = {
-  link_sent: '#94a3b8',
-  checklist: '#8b5cf6',
-  navigation: '#0ea5e9',
-  waiting: '#f59e0b',
-  done: '#10b981',
-  expired: '#6b7280',
+const statusColors: Record<string, { bg: string; text: string }> = {
+  pending: { bg: '#f1f5f9', text: '#64748b' },
+  staff_uploaded: { bg: '#fef9c3', text: '#854d0e' },
+  patient_submitted: { bg: '#dcfce7', text: '#166534' },
 };
 
-export default function PatientDetail() {
-  const { appointmentId } = useParams<{ appointmentId: string }>();
-  const navigate = useNavigate();
+const statusLabels: Record<string, string> = {
+  pending: 'ממתין',
+  staff_uploaded: 'הועלה על ידי צוות',
+  patient_submitted: 'הוגש על ידי מטופל',
+};
 
-  const [patient, setPatient] = useState<QueuePatient | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [departments, setDepartments] = useState<Department[]>([]);
+function FormItemRow({ item, appointmentId, onUpdate }: {
+  item: FormItemDTO;
+  appointmentId: string;
+  onUpdate: (updated: FormItemDTO) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const colors = statusColors[item.status] ?? statusColors.pending;
 
-  const [newStationDept, setNewStationDept] = useState('');
-  const [addingStation, setAddingStation] = useState(false);
-  const [stationBusyId, setStationBusyId] = useState<string | null>(null);
-
-  const [pdfState, setPdfState] = useState<{ loading: boolean; url: string | null; error: string | null }>({
-    loading: false, url: null, error: null,
-  });
-
-  const [companionPhone, setCompanionPhone] = useState('+972');
-  const [companionState, setCompanionState] = useState<{ loading: boolean; message: string | null; error: string | null }>({
-    loading: false, message: null, error: null,
-  });
-
-  const loadPatient = useCallback(async () => {
-    if (!appointmentId) return;
+  const handleConsentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadErr(null);
     try {
-      const queue = await getQueue();
-      const found = queue.patients.find((p) => p.appointment_id === appointmentId);
-      if (!found) {
-        setNotFound(true);
-        return;
-      }
-      setNotFound(false);
-      setPatient(found);
+      const updated = await staffUploadConsent(appointmentId, item.id, file);
+      onUpdate(updated);
     } catch (err) {
-      if (err instanceof ApiError && err.status !== 401) setNotFound(true);
-    }
-  }, [appointmentId]);
-
-  useEffect(() => { loadPatient(); }, [loadPatient]);
-  useEffect(() => {
-    getDepartments().then(({ departments: rows }) => setDepartments(rows)).catch(() => {});
-  }, []);
-
-  async function handleAddStation(e: React.FormEvent) {
-    e.preventDefault();
-    if (!appointmentId || !newStationDept || !patient) return;
-    setAddingStation(true);
-    try {
-      await addStation(appointmentId, newStationDept, patient.stations.length + 1);
-      setNewStationDept('');
-      await loadPatient();
+      setUploadErr(err instanceof ApiError ? err.message : 'שגיאה בהעלאה');
     } finally {
-      setAddingStation(false);
+      setUploading(false);
     }
-  }
-
-  async function handleCompleteStation(stationId: string) {
-    if (!appointmentId) return;
-    setStationBusyId(stationId);
-    try {
-      await markStationComplete(appointmentId, stationId);
-      await loadPatient();
-    } finally {
-      setStationBusyId(null);
-    }
-  }
-
-  async function handleExportPdf() {
-    if (!appointmentId) return;
-    setPdfState({ loading: true, url: null, error: null });
-    try {
-      const result = await exportPatientPDF(appointmentId);
-      if (result.pdf_url) {
-        setPdfState({ loading: false, url: result.pdf_url, error: null });
-        window.open(result.pdf_url, '_blank');
-      } else {
-        setPdfState({ loading: false, url: null, error: null });
-      }
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message || 'שגיאה בייצוא PDF' : 'שגיאה בייצוא PDF';
-      setPdfState({ loading: false, url: null, error: message });
-    }
-  }
-
-  async function handleCompanionSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!appointmentId || !companionPhone) return;
-    setCompanionState({ loading: true, message: null, error: null });
-    try {
-      const result = await issueCompanionLink(appointmentId, companionPhone);
-      setCompanionState({
-        loading: false,
-        message: `הקישור נשלח (סטטוס SMS: ${result.sms_status})`,
-        error: null,
-      });
-    } catch (err) {
-      const message = err instanceof ApiError ? err.message || 'שגיאה בשליחת קישור' : 'שגיאה בשליחת קישור';
-      setCompanionState({ loading: false, message: null, error: message });
-    }
-  }
-
-  if (notFound) {
-    return (
-      <div style={styles.body}>
-        <button type="button" style={styles.backLink} onClick={() => navigate('/queue')}>← חזרה לתור</button>
-        <div style={styles.emptyCard}>
-          <p>לא נמצא מטופל פעיל בתור עבור מזהה זה.</p>
-          <p style={styles.hint}>ייתכן שהמטופל כבר סיים את הביקור ואינו מופיע ברשימת ההמתנה הפעילה.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!patient) {
-    return <div style={styles.body}><p style={styles.hint}>טוען פרטי מטופל...</p></div>;
-  }
-
-  const pendingStations = patient.stations.filter((s) => s.status === 'pending');
-  const completedStations = patient.stations.filter((s) => s.status === 'complete');
+  };
 
   return (
-    <div style={styles.body}>
-      <button type="button" style={styles.backLink} onClick={() => navigate('/queue')}>← חזרה לתור</button>
-
-      <div style={styles.headerRow}>
-        <div>
-          <h1 style={styles.title}>{patient.patient_name}</h1>
-          <div style={styles.badgeRow}>
-            <span style={{ ...styles.badge, background: PHASE_COLORS[patient.current_phase] }}>
-              {PHASE_LABELS[patient.current_phase]}
-            </span>
-            {patient.track === 'er' && <span style={{ ...styles.badge, background: '#dc2626' }}>מיון</span>}
-          </div>
-        </div>
-      </div>
-
-      <div style={styles.grid}>
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>פרטי ביקור</h2>
-          <dl style={styles.dl}>
-            <dt style={styles.dt}>מחלקה</dt><dd style={styles.dd}>{patient.department}</dd>
-            <dt style={styles.dt}>מסלול</dt><dd style={styles.dd}>{patient.track === 'er' ? 'מיון' : 'אלקטיבי'}</dd>
-            {patient.arrival_time && (
-              <>
-                <dt style={styles.dt}>שעת הגעה</dt>
-                <dd style={styles.dd}>{new Date(patient.arrival_time).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}</dd>
-              </>
-            )}
-            {patient.minutes_waiting != null && (
-              <><dt style={styles.dt}>ממתין</dt><dd style={styles.dd}>{patient.minutes_waiting} דקות</dd></>
-            )}
-            {patient.estimated_wait_minutes != null && (
-              <><dt style={styles.dt}>זמן משוער</dt><dd style={styles.dd}>{patient.estimated_wait_minutes} דקות</dd></>
-            )}
-          </dl>
-        </div>
-
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>תחנות קליניות</h2>
-
-          {patient.stations.length === 0 && <p style={styles.hint}>לא נוספו תחנות עדיין.</p>}
-
-          {pendingStations.length > 0 && (
-            <ul style={styles.stationList}>
-              {pendingStations.map((s) => (
-                <li key={s.station_id} style={styles.stationRow}>
-                  <span>{s.order_index}. {s.department}</span>
-                  <button
-                    type="button"
-                    style={styles.completeBtn}
-                    disabled={stationBusyId === s.station_id}
-                    onClick={() => handleCompleteStation(s.station_id)}
-                  >
-                    {stationBusyId === s.station_id ? '...' : 'סמן כהושלם'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          {completedStations.length > 0 && (
-            <ul style={styles.stationList}>
-              {completedStations.map((s) => (
-                <li key={s.station_id} style={{ ...styles.stationRow, opacity: 0.6 }}>
-                  <span>{s.order_index}. {s.department} ✓</span>
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <form onSubmit={handleAddStation} style={styles.inlineForm}>
-            <select
-              value={newStationDept}
-              onChange={(e) => setNewStationDept(e.target.value)}
-              style={styles.select}
-              required
-            >
-              <option value="">הוסף תחנה במחלקה...</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
-            <button type="submit" style={styles.primaryBtn} disabled={addingStation || !newStationDept}>
-              {addingStation ? 'מוסיף...' : '+ הוסף'}
-            </button>
-          </form>
-        </div>
-
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>טפסים</h2>
-          <p style={styles.formsCount}>{patient.forms_submitted} / {patient.forms_total} טפסים הוגשו</p>
-          <button type="button" style={styles.primaryBtn} onClick={handleExportPdf} disabled={pdfState.loading}>
-            {pdfState.loading ? 'מייצא...' : 'ייצוא PDF'}
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '10px 14px',
+      background: '#f8fafc',
+      border: '1px solid #e2e8f0',
+      borderRadius: '8px',
+      gap: '12px',
+      marginBottom: '8px',
+    }}>
+      <span style={{ fontWeight: 600, flex: 1, fontSize: '14px' }}>{item.label}</span>
+      <span style={{
+        fontSize: '12px',
+        background: colors.bg,
+        color: colors.text,
+        padding: '3px 10px',
+        borderRadius: '12px',
+        whiteSpace: 'nowrap',
+        fontWeight: 600,
+      }}>
+        {statusLabels[item.status] ?? item.status}
+      </span>
+      {item.item_type === 'staff_upload_sign' && item.status === 'pending' && (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="application/pdf"
+            style={{ display: 'none' }}
+            onChange={handleConsentUpload}
+          />
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => inputRef.current?.click()}
+            style={{
+              padding: '6px 14px',
+              background: '#7c3aed',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              cursor: uploading ? 'not-allowed' : 'pointer',
+              opacity: uploading ? 0.6 : 1,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {uploading ? 'מעלה...' : 'העלה PDF'}
           </button>
-          {pdfState.error && <p style={styles.errorMsg}>{pdfState.error}</p>}
-          {pdfState.url && <p style={styles.successMsg}>נפתח בכרטיסייה חדשה.</p>}
+          {uploadErr && <span style={{ fontSize: '12px', color: '#dc2626' }}>{uploadErr}</span>}
         </div>
-
-        <div style={styles.card}>
-          <h2 style={styles.cardTitle}>קישור למלווה</h2>
-          <p style={styles.hint}>המלווה יקבל SMS עם קישור צפייה בלבד במסך ההמתנה.</p>
-          <form onSubmit={handleCompanionSubmit} style={styles.inlineForm}>
-            <input
-              type="tel"
-              value={companionPhone}
-              onChange={(e) => setCompanionPhone(e.target.value)}
-              style={{ ...styles.select, direction: 'ltr', textAlign: 'left' }}
-              placeholder="+972501234567"
-              required
-            />
-            <button type="submit" style={styles.primaryBtn} disabled={companionState.loading}>
-              {companionState.loading ? 'שולח...' : 'שלח קישור למלווה'}
-            </button>
-          </form>
-          {companionState.error && <p style={styles.errorMsg}>{companionState.error}</p>}
-          {companionState.message && <p style={styles.successMsg}>{companionState.message}</p>}
+      )}
+      {item.item_type === 'staff_upload_sign' && item.status === 'staff_uploaded' && item.staff_file_url && (
+        <a
+          href={item.staff_file_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            padding: '6px 14px',
+            background: '#0f172a',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '13px',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          צפה
+        </a>
+      )}
+      {item.item_type === 'patient_upload' && item.patient_file_url && (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            style={{
+              padding: '6px 14px',
+              background: '#0f172a',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            תצוגה מקדימה
+          </button>
+          {item.patient_file_download_url && (
+            <a
+              href={item.patient_file_download_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '6px 14px',
+                background: '#475569',
+                color: '#fff',
+                borderRadius: '6px',
+                fontSize: '13px',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              הורד
+            </a>
+          )}
         </div>
-      </div>
+      )}
+      {previewOpen && item.patient_file_url && (
+        <div
+          onClick={() => setPreviewOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'zoom-out',
+          }}
+        >
+          <img
+            src={item.patient_file_url}
+            alt={item.label}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              objectFit: 'contain',
+              borderRadius: 8,
+              cursor: 'default',
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
-  body: { padding: '28px 32px', maxWidth: 1080, margin: '0 auto', direction: 'rtl', fontFamily: 'system-ui, sans-serif' },
-  backLink: { background: 'none', border: 'none', color: TEAL, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 0, marginBottom: 16 },
-  headerRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  title: { margin: 0, fontSize: 26, fontWeight: 700, color: '#0f172a' },
-  badgeRow: { display: 'flex', gap: 8, marginTop: 8 },
-  badge: { display: 'inline-block', borderRadius: 20, padding: '3px 12px', fontSize: 12, fontWeight: 700, color: '#fff' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 20 },
-  card: { background: '#fff', borderRadius: 12, padding: 20, border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' },
-  cardTitle: { margin: '0 0 14px', fontSize: 16, fontWeight: 700, color: '#0f172a' },
-  dl: { margin: 0, display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px' },
-  dt: { fontSize: 13, color: '#718096', fontWeight: 600 },
-  dd: { margin: 0, fontSize: 14, color: '#1a202c', fontWeight: 600 },
-  hint: { fontSize: 13, color: '#94a3b8', margin: '0 0 12px' },
-  stationList: { listStyle: 'none', margin: '0 0 12px', padding: 0, display: 'flex', flexDirection: 'column', gap: 8 },
-  stationRow: {
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    background: '#f7fafc', borderRadius: 8, padding: '8px 12px', fontSize: 14,
-  },
-  completeBtn: {
-    minHeight: 36, padding: '6px 12px', background: '#fff', border: `1px solid ${TEAL}`,
-    color: TEAL, borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-  },
-  inlineForm: { display: 'flex', gap: 8, marginTop: 4 },
-  select: {
-    flex: 1, minHeight: 44, padding: '8px 12px', borderRadius: 8, border: '1.5px solid #d1d5db',
-    fontSize: 14, direction: 'rtl', boxSizing: 'border-box',
-  },
-  primaryBtn: {
-    minHeight: 44, padding: '8px 18px', background: TEAL, color: '#fff', border: 'none',
-    borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
-  },
-  formsCount: { fontSize: 20, fontWeight: 700, color: '#0f172a', margin: '0 0 16px' },
-  errorMsg: { color: '#b91c1c', fontSize: 13, marginTop: 10 },
-  successMsg: { color: '#059669', fontSize: 13, marginTop: 10 },
-  emptyCard: {
-    background: '#fff', borderRadius: 12, padding: 32, border: '1px solid #e2e8f0',
-    textAlign: 'center', color: '#475569',
-  },
-};
+export default function PatientDetail() {
+  const { appointmentId } = useParams<{ appointmentId: string }>();
+  const navigate = useNavigate();
+  const [apptData, setApptData] = useState<AppointmentDetail | null>(null);
+  const [formsData, setFormsData] = useState<StaffFormsResponseDTO | null>(null);
+  const [loadErr, setLoadErr] = useState<string | null>(null);
+  const [exportErr, setExportErr] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    if (!appointmentId) return;
+    Promise.all([
+      getAppointment(appointmentId),
+      getStaffForms(appointmentId),
+    ]).then(([appt, forms]) => {
+      setApptData(appt);
+      setFormsData(forms);
+    }).catch((err) => {
+      setLoadErr(err instanceof ApiError ? err.message : 'שגיאה בטעינת נתונים');
+    });
+  }, [appointmentId]);
+
+  const handleExport = async () => {
+    if (!appointmentId || exporting) return;
+    setExporting(true);
+    setExportErr(null);
+    const newTab = window.open('about:blank', '_blank');
+    try {
+      const { pdf_url } = await exportForms(appointmentId);
+      if (newTab) newTab.location.href = pdf_url;
+    } catch {
+      newTab?.close();
+      setExportErr('שגיאה בייצוא');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleUpdate = (updated: FormItemDTO) => {
+    setFormsData((prev) =>
+      prev ? { ...prev, items: prev.items.map((i) => (i.id === updated.id ? updated : i)) } : prev
+    );
+  };
+
+  if (!appointmentId) return <div style={{ padding: '24px' }}>מזהה תור חסר</div>;
+
+  return (
+    <div style={{
+      maxWidth: '800px',
+      margin: '32px auto',
+      padding: '0 24px',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      direction: 'rtl',
+    }}>
+      {/* Back button */}
+      <button
+        type="button"
+        onClick={() => navigate('/queue')}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          color: '#0D9488',
+          fontSize: '14px',
+          fontWeight: 600,
+          padding: '4px 0',
+          marginBottom: '16px',
+        }}
+      >
+{'חזרה לתור ←'}
+      </button>
+
+      {/* Patient info header */}
+      {apptData && (
+        <div style={{ ...card, marginBottom: '16px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '2px' }}>שם מטופל</div>
+              <div style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>{apptData.patient_name}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '2px' }}>מחלקה</div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>{apptData.department_name}</div>
+            </div>
+            {apptData.procedure_type && (
+              <div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, marginBottom: '2px' }}>פרוצדורה</div>
+                <div style={{ fontSize: '15px', fontWeight: 600, color: '#1e293b' }}>{apptData.procedure_type}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Documents card */}
+      <div style={card}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '1.0625rem', fontWeight: 700, margin: 0 }}>מסמכים</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {(formsData?.new_since_last_export ?? 0) > 0 && (
+              <span style={{
+                background: '#dc2626',
+                color: '#fff',
+                borderRadius: '12px',
+                padding: '2px 8px',
+                fontSize: '12px',
+                fontWeight: 700,
+              }}>
+                {formsData!.new_since_last_export} חדשים
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={exporting}
+              style={{
+                padding: '8px 16px',
+                background: '#0D9488',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: 600,
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                opacity: exporting ? 0.6 : 1,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {exporting ? 'מייצא...' : 'ייצא PDF'}
+            </button>
+          </div>
+        </div>
+
+        {exportErr && <p style={{ color: '#dc2626', fontSize: '13px', marginBottom: '12px' }}>{exportErr}</p>}
+
+        {loadErr ? (
+          <p style={{ color: '#dc2626', fontSize: '14px' }}>{loadErr}</p>
+        ) : !formsData ? (
+          <p style={{ color: '#64748b', fontSize: '14px' }}>טוען מסמכים...</p>
+        ) : formsData.items.length === 0 ? (
+          <p style={{ color: '#64748b', fontSize: '14px' }}>אין מסמכים לתור זה</p>
+        ) : (
+          formsData.items.map((item) => (
+            <FormItemRow
+              key={item.id}
+              item={item}
+              appointmentId={appointmentId}
+              onUpdate={handleUpdate}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

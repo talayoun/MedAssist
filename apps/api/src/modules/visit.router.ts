@@ -15,6 +15,7 @@ import magicLinksRouter from './magic-links/magic-links.router';
 import checklistRouter from './checklist/checklist.router';
 import navigationRouter from './navigation/navigation.router';
 import waitingRouter from './waiting/waiting.router';
+import formsRouter from './forms/forms.router';
 
 const visitRouter = Router();
 
@@ -25,5 +26,6 @@ visitRouter.use(magicLinksRouter);
 visitRouter.use('/:token/checklist', checklistRouter);
 visitRouter.use('/:token/navigation', navigationRouter);
 visitRouter.use('/:token/waiting', waitingRouter);
+visitRouter.use('/:token/forms', formsRouter);
 
 export default visitRouter;

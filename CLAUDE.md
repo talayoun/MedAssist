@@ -65,6 +65,89 @@ pnpm --filter api worker           # run BullMQ notification worker (separate pr
 
 ---
 
+## Dev Server Startup Sequence
+
+Run **every command with `doppler run --`**. Secrets come from Doppler only — no `.env` files.
+
+### Step 0 — Kill stale node processes (Windows)
+
+```powershell
+# Kill all stale node processes from previous sessions:
+Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force
+
+# Stop the Turborepo daemon:
+doppler run -- pnpm exec turbo daemon stop
+
+# Confirm port 3000 is free (expect: no output):
+netstat -ano | findstr :3000
+```
+
+> If port 3000 shows EACCES with nothing listening, Hyper-V/WinNAT reserved it.
+> Fix: run `netsh int ipv4 set dynamicport tcp start=49152 num=16384` as admin, then reboot.
+> See: "Windows Hyper-V port exclusion fix" below.
+
+### Step 1 — Start Docker (PostgreSQL + Redis)
+
+```powershell
+docker compose up -d
+```
+
+### Step 2 — Run migrations (only if schema changed)
+
+```powershell
+doppler run -- pnpm --filter api db:migrate
+```
+
+### Step 3 — Seed dev data (only on fresh DB or after wipe)
+
+```powershell
+doppler run -- pnpm --filter api db:seed
+```
+
+### Step 4 — Start all apps (Terminal 1)
+
+```powershell
+doppler run -- pnpm dev
+```
+
+Starts in parallel via Turborepo:
+
+- API: `tsx watch` → `http://localhost:3000`
+- Patient PWA: Vite → `http://localhost:5173`
+- Staff backoffice: Vite → `http://localhost:5174`
+
+### Step 5 — Start notification worker (Terminal 2)
+
+```powershell
+doppler run -- pnpm --filter api worker
+```
+
+Required for SMS/notification delivery (BullMQ). Not needed for most dev work.
+
+---
+
+## Windows Hyper-V Port Exclusion Fix
+
+If port 3000 shows `EACCES: permission denied` and nothing is listening on it, Windows Hyper-V reserved it. This happens after a reboot — the range shifts randomly.
+
+**Permanent fix (run once as Administrator, then reboot):**
+
+```powershell
+netsh int ipv4 set dynamicport tcp start=49152 num=16384
+netsh int ipv6 set dynamicport tcp start=49152 num=16384
+```
+
+This confines WinNAT to ports ≥49152, so it can never steal port 3000 again.
+
+**Verify after reboot:**
+
+```powershell
+netsh interface ipv4 show excludedportrange protocol=tcp
+# port 3000 should no longer appear in the list
+```
+
+---
+
 ## Environment Variables
 
 **API (`apps/api/.env`):**
@@ -187,3 +270,57 @@ git merge feat/telegram-notification-consumer
 - No desktop patient interface; no mobile staff backoffice
 - No features beyond the MVP Must-Have list without a constitution amendment
 - Do not skip the `docs/superpowers/` spec → plan → tasks workflow for new features
+
+---
+
+## Environment Variables — Doppler
+
+Project is developed across multiple machines. All secrets managed via **Doppler** — no `.env` files exist or should be created.
+
+`.env.example` files are fine and encouraged as documentation of required variables (no real values).
+
+### Running the project
+
+Always prefix with `doppler run --`:
+
+```bash
+doppler run -- pnpm dev
+doppler run -- pnpm test
+```
+
+Never suggest running without `doppler run --`.
+
+### New machine setup
+
+```bash
+doppler login
+doppler setup   # connects to dev environment
+```
+
+### Add or update a secret
+
+```bash
+# Preferred: interactive prompt — value never appears in shell history
+doppler secrets set VARIABLE_NAME
+
+# Avoid: value visible in shell history
+# doppler secrets set VARIABLE_NAME=value
+```
+
+Never create `.env` files. Never suggest `export VAR=value` as a permanent fix. If a secret is missing, the answer is always `doppler secrets set`.
+
+When adding code that requires a new env var, always suggest the matching `doppler secrets set VARIABLE_NAME` command (interactive form).
+
+### View existing secrets
+
+```bash
+doppler secrets              # all vars
+doppler secrets get VAR_NAME # single var
+```
+
+### Environments
+
+| Environment   | Use                          |
+|---------------|------------------------------|
+| `dev`         | Local development            |
+| `production`  | Production (if applicable)   |

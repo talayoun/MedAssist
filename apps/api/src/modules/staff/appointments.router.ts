@@ -2,6 +2,14 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { requireStaffAuth } from '../../middleware/auth';
 import { createElectiveAppointment } from './appointments.service';
+import { generateToken } from '../magic-links/magic-links.service';
+import { query } from '../../db/db';
+import type { StaffAuthContext } from '@medassist/shared-types';
+
+function callerCtx(req: Request): StaffAuthContext {
+  const deptId = req.staffAuth!.departmentId;
+  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
+}
 
 const router = Router();
 
@@ -22,6 +30,20 @@ const CreateAppointmentSchema = z.object({
   custom_items: z.array(CustomItemSchema).max(50).default([]),
   suppressed_template_item_ids: z.array(z.string().uuid()).max(50).default([]),
   send_now: z.boolean().default(false),
+  form_template_ids: z.array(z.string().uuid()).max(50).optional(),
+});
+
+/** GET /api/staff/form-templates — lightweight list for the new-appointment modal */
+router.get('/form-templates', requireStaffAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT id, label, item_type, required, order_index, procedure_type
+       FROM form_template_items
+       WHERE is_active = true
+       ORDER BY procedure_type NULLS FIRST, order_index`,
+    );
+    res.json({ items: rows });
+  } catch (err) { next(err); }
 });
 
 /** POST /api/staff/appointments */
@@ -34,8 +56,8 @@ router.post('/appointments', requireStaffAuth, async (req: Request, res: Respons
     }
 
     const result = await createElectiveAppointment(
-      parsed.data,
-      req.staffAuth!.departmentId ?? null
+      { ...parsed.data, form_template_ids: parsed.data.form_template_ids },
+      callerCtx(req)
     );
     res.status(201).json(result);
   } catch (err: unknown) {
@@ -45,6 +67,60 @@ router.post('/appointments', requireStaffAuth, async (req: Request, res: Respons
     if (e.status === 400) { res.status(400).json({ error: 'invalid_request', message: e.message }); return; }
     next(err);
   }
+});
+
+/** GET /api/staff/appointments */
+router.get('/appointments', requireStaffAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT a.id, a.status, a.procedure_type, a.visit_datetime,
+              p.name AS patient_name, d.name AS department_name,
+              a.created_at
+       FROM appointments a
+       JOIN patients p ON p.id = a.patient_id
+       JOIN departments d ON d.id = a.department_id
+       ORDER BY a.visit_datetime DESC NULLS LAST
+       LIMIT 100`,
+    );
+    res.json({ appointments: rows });
+  } catch (err) { next(err); }
+});
+
+/** GET /api/staff/appointments/:id */
+router.get('/appointments/:id', requireStaffAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT a.id, a.status, a.procedure_type, a.visit_datetime,
+              p.name AS patient_name, d.name AS department_name,
+              ml.token AS magic_link_token
+       FROM appointments a
+       JOIN patients p ON p.id = a.patient_id
+       JOIN departments d ON d.id = a.department_id
+       LEFT JOIN magic_links ml
+         ON ml.appointment_id = a.id
+         AND ml.expires_at > NOW()
+         AND ml.link_type = 'patient'
+       WHERE a.id = $1
+       ORDER BY ml.expires_at DESC NULLS LAST
+       LIMIT 1`,
+      [req.params.id],
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'not_found' }); return; }
+    res.json(rows[0]);
+  } catch (err) { next(err); }
+});
+
+/** POST /api/staff/appointments/:id/magic-link — generate a fresh token */
+router.post('/appointments/:id/magic-link', requireStaffAuth, async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query(
+      `SELECT a.id, a.status FROM appointments a WHERE a.id = $1`,
+      [req.params.id],
+    );
+    if (!rows[0]) { res.status(404).json({ error: 'not_found' }); return; }
+    const token = await generateToken(req.params.id as string, 'elective', 72);
+    res.status(201).json({ token });
+  } catch (err) { next(err); }
 });
 
 export default router;

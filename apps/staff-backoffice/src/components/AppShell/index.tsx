@@ -101,11 +101,17 @@ export default function AppShell() {
           <>
             <div style={styles.navGroupLabel}>ניהול</div>
             <nav style={styles.navGroup}>
-              <NavLink to="/admin" end style={linkStyle}>
+              <NavLink to="/admin/checklists" style={linkStyle}>
                 תבניות צ׳קליסט
               </NavLink>
               <NavLink to="/admin/navigation-routes" style={linkStyle}>
                 מסלולי ניווט
+              </NavLink>
+              <NavLink to="/admin/form-templates" style={linkStyle}>
+                תבניות טפסים
+              </NavLink>
+              <NavLink to="/admin/trash" style={linkStyle}>
+                פח אשפה
               </NavLink>
             </nav>
           </>

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { createAppointment, CreateAppointmentBody, ApiError } from '../../services/api';
-import type { Department } from '@medassist/shared-types';
+import React, { useState, useEffect } from 'react';
+import { createAppointment, listStaffFormTemplates, CreateAppointmentBody, ApiError } from '../../services/api';
+import type { Department, FormTemplateItemDTO } from '@medassist/shared-types';
 
 type Category = 'bring' | 'fast' | 'medication' | 'other';
 
@@ -26,7 +26,7 @@ export default function NewAppointment({
   onCreated,
 }: Props) {
   const [name, setName] = useState('');
-  const [phone, setPhone] = useState('+972');
+  const [phone, setPhone] = useState('');
   const [departmentId, setDepartmentId] = useState(defaultDepartmentId ?? '');
   const [procedureType, setProcedureType] = useState('pre-op-cardiac');
   const [visitDatetime, setVisitDatetime] = useState(defaultVisitDateTime());
@@ -34,6 +34,15 @@ export default function NewAppointment({
   const [sendNow, setSendNow] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [formTemplates, setFormTemplates] = useState<FormTemplateItemDTO[]>([]);
+  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [templateLoadError, setTemplateLoadError] = useState(false);
+
+  useEffect(() => {
+    listStaffFormTemplates()
+      .then(({ items }) => setFormTemplates(items))
+      .catch(() => setTemplateLoadError(true));
+  }, []);
 
   function addCustomItem() {
     setCustomItems((prev) => [
@@ -55,7 +64,8 @@ export default function NewAppointment({
     setError(null);
 
     if (!name.trim()) { setError('נא להזין שם מטופל'); return; }
-    if (!/^\+[1-9]\d{6,14}$/.test(phone)) { setError('מספר טלפון לא תקין (E.164, למשל +972501234567)'); return; }
+    const normalizedPhone = normalizeIsraeliPhone(phone.trim());
+    if (!normalizedPhone) { setError('מספר טלפון לא תקין (למשל 0526068400)'); return; }
     if (!departmentId) { setError('נא לבחור מחלקה'); return; }
     if (!procedureType.trim()) { setError('נא להזין סוג פרוצדורה'); return; }
     if (!visitDatetime) { setError('נא לבחור מועד ביקור'); return; }
@@ -66,13 +76,14 @@ export default function NewAppointment({
 
     const body: CreateAppointmentBody = {
       patient_name: name.trim(),
-      phone_number: phone.trim(),
+      phone_number: normalizedPhone,
       department_id: departmentId,
       procedure_type: procedureType.trim(),
       visit_datetime: new Date(visitDatetime).toISOString(),
       custom_items: cleanedCustomItems,
       suppressed_template_item_ids: [],
       send_now: sendNow,
+      form_template_ids: selectedFormIds,
     };
 
     setSubmitting(true);
@@ -110,13 +121,42 @@ export default function NewAppointment({
           </label>
 
           <label style={styles.field}>
-            <span style={styles.label}>טלפון (E.164)</span>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+972501234567"
-              style={styles.input}
-            />
+            <span style={styles.label}>טלפון</span>
+            <div style={{
+              display: 'flex',
+              border: '1.5px solid #d1d5db',
+              borderRadius: 7,
+              overflow: 'hidden',
+              direction: 'ltr',
+            }}>
+              <span style={{
+                padding: '8px 10px',
+                background: '#f3f4f6',
+                borderLeft: '1px solid #d1d5db',
+                fontSize: 14,
+                color: '#374151',
+                whiteSpace: 'nowrap',
+                userSelect: 'none',
+              }}>
+                {'🇮🇱 +972'}
+              </span>
+              <input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0521234567"
+                inputMode="tel"
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  border: 'none',
+                  fontSize: 14,
+                  direction: 'ltr',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  minWidth: 0,
+                }}
+              />
+            </div>
           </label>
 
           <label style={styles.field}>
@@ -146,10 +186,24 @@ export default function NewAppointment({
             <input
               value={procedureType}
               onChange={(e) => setProcedureType(e.target.value)}
+              list="procedure-type-options"
               placeholder="pre-op-cardiac"
               style={styles.input}
+              autoComplete="off"
             />
           </label>
+          <datalist id="procedure-type-options">
+            <option value="pre-op-cardiac" />
+            <option value="pre-op-orthopedic" />
+            <option value="pre-op-general" />
+            <option value="pre-op-gastro" />
+            <option value="pre-op-neuro" />
+            <option value="colonoscopy" />
+            <option value="gastroscopy" />
+            <option value="cataract" />
+            <option value="mri" />
+            <option value="biopsy" />
+          </datalist>
 
           <label style={styles.field}>
             <span style={styles.label}>מועד ביקור</span>
@@ -204,6 +258,33 @@ export default function NewAppointment({
             שלח SMS עכשיו (ולא לפי הזמנון)
           </label>
 
+          <div style={styles.field}>
+            <span style={styles.label}>טפסים לשליחה למטופל (אופציונלי)</span>
+            {templateLoadError ? (
+              <p style={{ fontSize: 13, color: '#b91c1c', margin: 0 }}>לא ניתן לטעון טפסים</p>
+            ) : formTemplates.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#9ca3af', margin: 0 }}>אין טפסים זמינים</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {formTemplates.map((tpl) => (
+                  <label key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#374151' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedFormIds.includes(tpl.id)}
+                      onChange={(e) => {
+                        setSelectedFormIds((prev) =>
+                          e.target.checked ? [...prev, tpl.id] : prev.filter((id) => id !== tpl.id)
+                        );
+                      }}
+                    />
+                    {tpl.label}
+                    {tpl.required && <span style={{ fontSize: 12, color: '#ef4444' }}>*</span>}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           {error && <p style={styles.errorMsg}>{error}</p>}
 
           <div style={styles.actions}>
@@ -216,6 +297,18 @@ export default function NewAppointment({
       </div>
     </div>
   );
+}
+
+/** Accepts 05XXXXXXX or +97205XXXXXXX, returns E.164 +972XXXXXXXXX or null if invalid. */
+function normalizeIsraeliPhone(raw: string): string | null {
+  const digits = raw.replace(/\D/g, '');
+  // Local format: 0XXXXXXXXX (10 digits starting with 0)
+  if (/^0\d{9}$/.test(digits)) return `+972${digits.slice(1)}`;
+  // Already E.164 without +: 972XXXXXXXXX
+  if (/^972\d{9}$/.test(digits)) return `+${digits}`;
+  // Full E.164 with +
+  if (/^\+972\d{9}$/.test(raw.trim())) return raw.trim();
+  return null;
 }
 
 function defaultVisitDateTime(): string {

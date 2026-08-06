@@ -2,13 +2,16 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   getQueue, getDepartments, updatePatientStatus, setWaitEstimate,
-  sendBroadcast, resetArrivalToNow, resendInvite, ApiError,
+  sendBroadcast, resetArrivalToNow, resendInvite, softDeleteAppointment,
+  clearDepartmentQueue, ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
 import NewAppointment from '../NewAppointment';
 import type {
   QueueResponse, QueuePatient, AppointmentPhase, Department,
 } from '@medassist/shared-types';
+
+const TEAL = '#0D9488';
 
 type Queue = QueueResponse;
 type Patient = QueuePatient;
@@ -60,16 +63,14 @@ export default function Queue() {
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [filterDept, setFilterDept] = useState<string>('');
-  const [filterPhase, setFilterPhase] = useState<AppointmentPhase | ''>('');
+  const [clearing, setClearing] = useState(false);
+  const [filterPhases, setFilterPhases] = useState<Set<AppointmentPhase>>(new Set());
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [createResult, setCreateResult] = useState<string | null>(null);
 
   const fetchQueue = useCallback(async () => {
     try {
-      const data = await getQueue({
-        departmentId: filterDept || null,
-        phase: filterPhase || null,
-      });
+      const data = await getQueue({ departmentId: filterDept || null });
       setQueue(data);
       setLoadError(null);
     } catch (err) {
@@ -77,7 +78,7 @@ export default function Queue() {
         setLoadError('שגיאה בטעינת התור');
       }
     }
-  }, [filterDept, filterPhase]);
+  }, [filterDept]);
 
   useEffect(() => {
     fetchQueue();
@@ -105,6 +106,31 @@ export default function Queue() {
     setUpdatingId(appointmentId);
     try {
       await resetArrivalToNow(appointmentId);
+      await fetchQueue();
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  async function handleClearDepartment() {
+    if (!filterDept) return;
+    const dept = departments.find((d) => d.id === filterDept);
+    if (!window.confirm(`למחוק את כל המטופלים במחלקה "${dept?.name ?? filterDept}"?\nהפעולה ניתנת לביטול מהפח תוך 7 ימים.`)) return;
+    setClearing(true);
+    try {
+      const { deleted_count } = await clearDepartmentQueue(filterDept);
+      await fetchQueue();
+      if (deleted_count === 0) window.alert('אין מטופלים פעילים במחלקה זו.');
+    } finally {
+      setClearing(false);
+    }
+  }
+
+  async function handleTrashPatient(appointmentId: string) {
+    if (!window.confirm('להעביר מטופל זה לפח האשפה?')) return;
+    setUpdatingId(appointmentId);
+    try {
+      await softDeleteAppointment(appointmentId);
       await fetchQueue();
     } finally {
       setUpdatingId(null);
@@ -141,14 +167,15 @@ export default function Queue() {
 
   const adminBroadcastDisabled = isAdmin && !filterDept;
 
+  const visiblePatients = filterPhases.size === 0
+    ? (queue?.patients ?? [])
+    : (queue?.patients ?? []).filter((p) => filterPhases.has(p.current_phase));
+
   return (
     <div style={styles.page}>
       <div style={styles.body}>
         <div style={styles.pageHeaderRow}>
-          <div>
-            <h1 style={styles.pageTitle}>תור מטופלים</h1>
-            {queue && <span style={styles.deptBadge}>{queue.department_label}</span>}
-          </div>
+          <h1 style={styles.pageTitle}>תור מטופלים</h1>
           <button
             onClick={() => setShowNewAppointment(true)}
             style={styles.newAppointmentBtn}
@@ -160,33 +187,71 @@ export default function Queue() {
         {createResult && <p style={styles.successBanner}>{createResult}</p>}
         <div style={styles.filtersRow}>
           {isAdmin && (
-            <label style={styles.filterLabel}>
-              מחלקה:
-              <select
-                value={filterDept}
-                onChange={(e) => setFilterDept(e.target.value)}
-                style={styles.filterSelect}
-              >
-                <option value="">כל המחלקות</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </label>
+            <>
+              <label style={styles.filterLabel}>
+                מחלקה:
+                <select
+                  value={filterDept}
+                  onChange={(e) => setFilterDept(e.target.value)}
+                  style={styles.filterSelect}
+                >
+                  <option value="">כל המחלקות</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </label>
+              {filterDept && (
+                <button
+                  type="button"
+                  onClick={handleClearDepartment}
+                  disabled={clearing}
+                  style={{
+                    padding: '5px 12px',
+                    background: clearing ? '#9f1239' : '#dc2626',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: clearing ? 'not-allowed' : 'pointer',
+                    opacity: clearing ? 0.7 : 1,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {clearing ? 'מוחק...' : 'נקה מחלקה'}
+                </button>
+              )}
+            </>
           )}
-          <label style={styles.filterLabel}>
-            שלב:
-            <select
-              value={filterPhase}
-              onChange={(e) => setFilterPhase(e.target.value as AppointmentPhase | '')}
-              style={styles.filterSelect}
-            >
-              <option value="">כל השלבים</option>
-              {PHASE_OPTIONS.map((p) => (
-                <option key={p} value={p}>{PHASE_LABELS[p]}</option>
-              ))}
-            </select>
-          </label>
+          <div style={styles.phaseCheckboxGroup}>
+            <span style={styles.filterLabel}>שלב:</span>
+            <label style={styles.checkboxLabel}>
+              <input
+                type="checkbox"
+                checked={filterPhases.size === 0}
+                onChange={() => setFilterPhases(new Set())}
+              />
+              כל השלבים
+            </label>
+            {PHASE_OPTIONS.map((p) => (
+              <label key={p} style={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={filterPhases.has(p)}
+                  onChange={() => {
+                    setFilterPhases((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(p)) next.delete(p); else next.add(p);
+                      return next;
+                    });
+                  }}
+                />
+                <span style={{ ...styles.phaseDot, background: PHASE_COLORS[p] }} />
+                {PHASE_LABELS[p]}
+              </label>
+            ))}
+          </div>
         </div>
 
         <div style={styles.controlsRow}>
@@ -232,11 +297,11 @@ export default function Queue() {
 
         {!queue ? (
           <p style={styles.loading}>טוען תור...</p>
-        ) : queue.patients.length === 0 ? (
+        ) : visiblePatients.length === 0 ? (
           <p style={styles.emptyState}>אין מטופלים בתור כרגע</p>
         ) : (
           <div style={styles.patientList}>
-            {queue.patients.map((patient) => (
+            {visiblePatients.map((patient) => (
               <PatientCard
                 key={patient.appointment_id}
                 patient={patient}
@@ -244,7 +309,9 @@ export default function Queue() {
                 onStatusChange={handleStatusChange}
                 onResetArrival={handleResetArrival}
                 onResendInvite={handleResendInvite}
+                onTrash={handleTrashPatient}
                 showDepartment={isAdmin && !filterDept}
+                isAdmin={isAdmin}
               />
             ))}
           </div>
@@ -279,27 +346,31 @@ function PatientCard({
   onStatusChange,
   onResetArrival,
   onResendInvite,
+  onTrash,
   showDepartment,
+  isAdmin,
 }: {
   patient: Patient;
   updating: boolean;
   onStatusChange: (id: string, status: Exclude<Patient['queue_status'], null>) => void;
   onResetArrival: (id: string) => void;
   onResendInvite: (id: string) => void;
+  onTrash: (id: string) => void;
   showDepartment: boolean;
+  isAdmin: boolean;
 }) {
   const navigate = useNavigate();
   const statusColor = patient.queue_status ? STATUS_COLORS[patient.queue_status] : '#9ca3af';
   const phaseColor = PHASE_COLORS[patient.current_phase] ?? '#9ca3af';
 
   return (
-    <div style={styles.card}>
+    <div style={{ ...styles.card, borderRightColor: phaseColor }}>
       <div style={styles.cardHeader}>
         <div>
-          <span style={styles.patientName}>{patient.patient_name}</span>
           <span style={{ ...styles.phaseBadge, background: phaseColor }}>
             {PHASE_LABELS[patient.current_phase]}
           </span>
+          <span style={styles.patientName}>{patient.patient_name}</span>
           {patient.queue_status && (
             <span style={{ ...styles.statusBadge, background: statusColor }}>
               {STATUS_LABELS[patient.queue_status] ?? patient.queue_status}
@@ -344,6 +415,19 @@ function PatientCard({
       )}
 
       <div style={styles.cardActions}>
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => onTrash(patient.appointment_id)}
+              disabled={updating}
+              style={styles.deleteBtn}
+              title="העבר לפח"
+            >
+              🗑
+            </button>
+            <span style={styles.actionDivider} />
+          </>
+        )}
         {patient.queue_status ? (
           <select
             value={patient.queue_status}
@@ -385,7 +469,7 @@ function PatientCard({
           onClick={() => navigate(`/patients/${patient.appointment_id}`)}
           style={styles.detailBtn}
         >
-          פרטים ←
+          {'פרטים ←'}
         </button>
       </div>
     </div>
@@ -395,32 +479,22 @@ function PatientCard({
 const styles: Record<string, React.CSSProperties> = {
   page: {
     minHeight: '100vh',
-    background: '#f8fafc',
-    fontFamily: 'system-ui, sans-serif',
+    background: '#eef2f7',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
     direction: 'rtl',
   },
   pageHeaderRow: {
     display: 'flex',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
   },
   pageTitle: { margin: 0, fontSize: 24, fontWeight: 700, color: '#0f172a' },
-  deptBadge: {
-    display: 'inline-block',
-    marginTop: 6,
-    background: '#F0FDFA',
-    color: '#0D9488',
-    borderRadius: 12,
-    padding: '2px 10px',
-    fontSize: 13,
-    fontWeight: 600,
-  },
   newAppointmentBtn: {
-    background: '#0D9488',
+    background: TEAL,
     color: '#fff',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 7,
     padding: '10px 18px',
     cursor: 'pointer',
     fontSize: 14,
@@ -435,7 +509,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 14px',
     marginBottom: 16,
   },
-  body: { padding: '28px 32px', maxWidth: 1080, margin: '0 auto' },
+  body: { padding: '24px 40px', maxWidth: 1400, margin: '0 auto' },
   filtersRow: {
     display: 'flex',
     gap: 16,
@@ -449,6 +523,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
     fontSize: 14,
     color: '#374151',
+    fontWeight: 500,
   },
   filterSelect: {
     padding: '7px 12px',
@@ -458,16 +533,39 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     background: '#fff',
   },
+  phaseCheckboxGroup: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: '6px 14px',
+  },
+  checkboxLabel: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+    fontSize: 13,
+    color: '#374151',
+    cursor: 'pointer',
+    userSelect: 'none',
+  } as React.CSSProperties,
+  phaseDot: {
+    display: 'inline-block',
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
+    flexShrink: 0,
+  },
   controlsRow: { display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' },
   controlBox: {
     flex: 1,
     minWidth: 260,
     background: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+    borderRadius: 12,
+    padding: '16px 20px',
+    boxShadow: '0 1px 6px rgba(27,58,107,0.08)',
+    border: '1px solid #e5e7eb',
   },
-  controlTitle: { margin: '0 0 10px', fontSize: 14, fontWeight: 600, color: '#374151' },
+  controlTitle: { margin: '0 0 10px', fontSize: 13, fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.4px' },
   row: { display: 'flex', gap: 8 },
   textInput: {
     flex: 1,
@@ -476,10 +574,11 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1.5px solid #d1d5db',
     fontSize: 14,
     direction: 'rtl',
+    color: '#111827',
   },
   primaryBtn: {
-    padding: '8px 16px',
-    background: '#0D9488',
+    padding: '8px 18px',
+    background: TEAL,
     color: '#fff',
     border: 'none',
     borderRadius: 7,
@@ -498,15 +597,16 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '10px 14px',
     marginBottom: 16,
   },
-  loading: { textAlign: 'center', color: '#6b7280', padding: 40 },
+  loading: { textAlign: 'center', color: '#9ca3af', padding: 60, fontSize: 15 },
   emptyState: { textAlign: 'center', color: '#9ca3af', padding: 60, fontSize: 16 },
-  patientList: { display: 'flex', flexDirection: 'column', gap: 12 },
+  patientList: { display: 'flex', flexDirection: 'column', gap: 10 },
   card: {
     background: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+    borderRadius: 12,
+    padding: '14px 18px',
+    boxShadow: '0 1px 6px rgba(27,58,107,0.08)',
     border: '1px solid #e5e7eb',
+    borderRightWidth: 4,
   },
   cardHeader: {
     display: 'flex',
@@ -516,11 +616,11 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
     gap: 8,
   },
-  patientName: { fontWeight: 700, fontSize: 16, marginLeft: 10 },
+  patientName: { fontWeight: 700, fontSize: 16, color: '#111827', marginRight: 10 },
   phaseBadge: {
     display: 'inline-block',
     borderRadius: 20,
-    padding: '2px 10px',
+    padding: '3px 10px',
     fontSize: 12,
     fontWeight: 600,
     color: '#fff',
@@ -530,7 +630,7 @@ const styles: Record<string, React.CSSProperties> = {
   statusBadge: {
     display: 'inline-block',
     borderRadius: 20,
-    padding: '2px 10px',
+    padding: '3px 10px',
     fontSize: 12,
     fontWeight: 600,
     color: '#fff',
@@ -540,7 +640,7 @@ const styles: Record<string, React.CSSProperties> = {
   erBadge: {
     display: 'inline-block',
     borderRadius: 20,
-    padding: '2px 10px',
+    padding: '3px 10px',
     fontSize: 12,
     fontWeight: 700,
     color: '#fff',
@@ -548,7 +648,7 @@ const styles: Record<string, React.CSSProperties> = {
     verticalAlign: 'middle',
     marginLeft: 6,
   },
-  cardMeta: { display: 'flex', gap: 12, flexWrap: 'wrap' },
+  cardMeta: { display: 'flex', gap: 16, flexWrap: 'wrap' },
   metaItem: { fontSize: 13, color: '#6b7280' },
   stations: { display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 },
   stationChip: {
@@ -557,42 +657,63 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     fontWeight: 500,
   },
-  cardActions: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' },
+  cardActions: { display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 12, paddingTop: 12, borderTop: '1px solid #f3f4f6' },
   statusSelect: {
     padding: '7px 12px',
     borderRadius: 7,
     border: '1.5px solid #d1d5db',
     fontSize: 14,
     cursor: 'pointer',
+    background: '#f9fafb',
   },
   mutedNote: { fontSize: 13, color: '#9ca3af', fontStyle: 'italic' },
   resetBtn: {
     padding: '7px 14px',
-    background: '#fef3c7',
-    border: '1px solid #f59e0b',
+    background: '#fffbeb',
+    border: '1px solid #fbbf24',
     borderRadius: 7,
     cursor: 'pointer',
-    fontSize: 14,
+    fontSize: 13,
     color: '#92400e',
     fontWeight: 600,
   },
   resendBtn: {
     padding: '7px 14px',
-    background: '#dcfce7',
+    background: '#f0fdf4',
     border: '1px solid #86efac',
     borderRadius: 7,
     cursor: 'pointer',
-    fontSize: 14,
+    fontSize: 13,
     color: '#166534',
     fontWeight: 600,
   },
   detailBtn: {
+    marginRight: 'auto',
     padding: '7px 14px',
-    background: '#f3f4f6',
-    border: '1px solid #d1d5db',
+    background: 'transparent',
+    border: `1.5px solid ${TEAL}`,
     borderRadius: 7,
     cursor: 'pointer',
-    fontSize: 14,
-    color: '#374151',
+    fontSize: 13,
+    color: TEAL,
+    fontWeight: 600,
+  },
+  actionDivider: {
+    width: 1,
+    height: 24,
+    background: '#e5e7eb',
+    flexShrink: 0,
+  },
+  deleteBtn: {
+    padding: '6px 10px',
+    background: 'transparent',
+    border: '1px solid #fca5a5',
+    borderRadius: 7,
+    cursor: 'pointer',
+    fontSize: 15,
+    color: '#ef4444',
+    lineHeight: 1,
+    minWidth: 34,
+    minHeight: 34,
   },
 };

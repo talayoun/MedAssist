@@ -10,6 +10,10 @@ import departmentsRouter from './modules/staff/departments.router';
 import appointmentsRouter from './modules/staff/appointments.router';
 import adminChecklistsRouter from './modules/admin/checklists.router';
 import adminNavigationRoutesRouter from './modules/admin/navigation-routes.router';
+import adminTrashRouter from './modules/admin/trash.router';
+import adminFormTemplatesRouter from './modules/admin/form-templates.router';
+import staffFormsRouter from './modules/forms/forms.staff.router';
+import { startTrashPurgeScheduler } from './modules/admin/trash.scheduler';
 
 const app = express();
 
@@ -35,7 +39,7 @@ app.use(
 );
 
 // Body parsers
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '200kb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -48,6 +52,9 @@ app.use('/api/staff', departmentsRouter);
 app.use('/api/staff', appointmentsRouter);
 app.use('/api/admin', adminChecklistsRouter);
 app.use('/api/admin', adminNavigationRoutesRouter);
+app.use('/api/admin', adminTrashRouter);
+app.use('/api/admin', adminFormTemplatesRouter);
+app.use('/api/staff', staffFormsRouter);
 
 // 404 handler
 app.use((_req: Request, res: Response) => {
@@ -56,7 +63,12 @@ app.use((_req: Request, res: Response) => {
 
 // Global error handler
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+app.use((err: Error & { status?: number }, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status ?? 500;
+  if (status < 500) {
+    res.status(status).json({ error: err.message });
+    return;
+  }
   console.error(err);
   res.status(500).json({
     error: 'server_error',
@@ -68,6 +80,7 @@ export default app;
 
 // Start server when run directly
 if (require.main === module) {
+  startTrashPurgeScheduler();
   const PORT = parseInt(process.env.PORT ?? '3000', 10);
   app.listen(PORT, () => {
     console.log(`API listening on port ${PORT}`);

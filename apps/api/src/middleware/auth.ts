@@ -5,6 +5,7 @@ import { isTokenRevoked } from '../db/redis';
 
 export interface StaffJwtPayload {
   sub: string;      // staff_user id
+  name: string;
   role: 'staff' | 'admin';
   departmentId: string | null;
   email: string;
@@ -32,6 +33,9 @@ declare global {
   }
 }
 
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET env var is required');
+const JWT_SECRET = process.env.JWT_SECRET;
+
 // ─── Staff JWT auth ───────────────────────────────────────────────────────────
 
 export function requireStaffAuth(req: Request, res: Response, next: NextFunction): void {
@@ -43,7 +47,7 @@ export function requireStaffAuth(req: Request, res: Response, next: NextFunction
 
   let payload: StaffJwtPayload;
   try {
-    payload = jwt.verify(token, process.env.JWT_SECRET!) as StaffJwtPayload;
+    payload = jwt.verify(token, JWT_SECRET) as StaffJwtPayload;
   } catch {
     res.status(401).json({ error: 'invalid_session' });
     return;
@@ -82,10 +86,16 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 
 // ─── Magic Link token auth ────────────────────────────────────────────────────
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function requireMagicLinkToken(req: Request, res: Response, next: NextFunction): void {
   const token = req.params.token as string;
   if (!token) {
     res.status(400).json({ error: 'missing_token' });
+    return;
+  }
+  if (!UUID_RE.test(token)) {
+    res.status(401).json({ error: 'link_not_found' });
     return;
   }
 
@@ -108,7 +118,7 @@ export function requireMagicLinkToken(req: Request, res: Response, next: NextFun
   )
     .then(({ rows }) => {
       if (rows.length === 0) {
-        res.status(404).json({ error: 'link_not_found' });
+        res.status(401).json({ error: 'link_not_found' });
         return;
       }
       const row = rows[0];

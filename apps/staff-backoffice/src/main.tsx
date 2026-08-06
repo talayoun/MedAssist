@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Login from './pages/Login';
@@ -6,6 +6,9 @@ import Queue from './pages/Queue';
 import PatientDetail from './pages/PatientDetail';
 import Admin from './pages/Admin';
 import NavigationRoutes from './pages/Admin/NavigationRoutes';
+import Trash from './pages/Admin/Trash';
+import { FormTemplates } from './pages/Admin/FormTemplates';
+import { getSessionUser } from './services/api';
 import AppShell from './components/AppShell';
 
 // ─── Auth Context ─────────────────────────────────────────────────────────────
@@ -50,6 +53,16 @@ function RequireAdmin({ children }: { children: React.ReactNode }) {
 
 function App() {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    getSessionUser()
+      .then((user) => { if (user) setUser(user as AuthUser); })
+      .catch(() => {})
+      .finally(() => setAuthChecked(true));
+  }, []);
+
+  if (!authChecked) return null;
 
   return (
     <AuthContext.Provider value={{ user, setUser }}>
@@ -73,8 +86,11 @@ function App() {
                 </RequireAdmin>
               }
             >
-              <Route index element={<Admin />} />
+              <Route index element={<Navigate to="checklists" replace />} />
+              <Route path="checklists" element={<Admin />} />
               <Route path="navigation-routes" element={<NavigationRoutes />} />
+              <Route path="form-templates" element={<FormTemplates />} />
+              <Route path="trash" element={<Trash />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/queue" replace />} />

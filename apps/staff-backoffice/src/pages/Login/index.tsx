@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login, ApiError } from '../../services/api';
 import { useAuth } from '../../main';
-import logo from '../../assets/medassist-logo.png';
 
 export default function Login() {
   const { setUser } = useAuth();
@@ -36,8 +35,11 @@ export default function Login() {
   return (
     <div style={styles.page}>
       <div style={styles.card}>
-        <img src={logo} alt="MedAssist" style={styles.logo} />
-        <p style={styles.subtitle}>כניסה לצוות רפואי</p>
+        <div style={styles.cardHeader}>
+          <h1 style={styles.title}>Med<span style={styles.titleAccent}>Assist</span> Staff</h1>
+          <p style={styles.subtitle}>כניסה לצוות רפואי</p>
+        </div>
+        <div style={styles.accentBar} />
 
         <form onSubmit={handleSubmit} style={styles.form}>
           <label style={styles.label}>
@@ -77,6 +79,7 @@ export default function Login() {
       </div>
     </div>
   );
+
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -85,54 +88,67 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(160deg, #F0FDFA 0%, #f4f6f8 60%)',
-    fontFamily: 'system-ui, sans-serif',
+    background: '#eef2f7',
+    fontFamily: 'system-ui, -apple-system, sans-serif',
     direction: 'rtl',
   },
   card: {
     background: '#fff',
     borderRadius: 16,
-    padding: '40px 48px',
-    boxShadow: '0 12px 32px rgba(15,23,42,0.10)',
-    border: '1px solid #e2e8f0',
+    overflow: 'hidden',
+    boxShadow: '0 8px 40px rgba(27,58,107,0.15)',
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 420,
   },
-  logo: {
-    display: 'block',
-    height: 34,
-    margin: '0 auto',
-    objectFit: 'contain',
+  cardHeader: {
+    background: '#0D9488',
+    padding: '32px 40px 28px',
+    textAlign: 'center',
+  },
+  title: {
+    margin: 0,
+    fontSize: 26,
+    fontWeight: 700,
+    color: '#ffffff',
+    letterSpacing: '-0.3px',
+  },
+  titleAccent: {
+    color: '#0D9488',
   },
   subtitle: {
-    margin: '12px 0 28px',
-    color: '#6b7280',
-    textAlign: 'center',
-    fontSize: 15,
+    margin: '6px 0 0',
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 14,
+    fontWeight: 400,
+  },
+  accentBar: {
+    height: 3,
+    background: 'linear-gradient(to left, #0D9488, #0F766E)',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
     gap: 16,
+    padding: '32px 40px 36px',
   },
   label: {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
     color: '#374151',
+    letterSpacing: '0.2px',
   },
   input: {
-    padding: '10px 14px',
-    minHeight: 44,
+    padding: '11px 14px',
     borderRadius: 8,
     border: '1.5px solid #d1d5db',
     fontSize: 15,
     outline: 'none',
     transition: 'border-color 0.15s',
     direction: 'ltr',
-    boxSizing: 'border-box',
+    color: '#111827',
   },
   error: {
     margin: 0,
@@ -145,16 +161,16 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
   },
   button: {
-    marginTop: 8,
-    minHeight: 44,
-    padding: '12px',
+    marginTop: 4,
+    padding: '13px',
     background: '#0D9488',
     color: '#fff',
     border: 'none',
     borderRadius: 8,
     fontSize: 16,
-    fontWeight: 600,
+    fontWeight: 700,
     cursor: 'pointer',
     transition: 'background 0.15s',
+    letterSpacing: '0.3px',
   },
 };

@@ -1,6 +1,7 @@
 import { query } from '../../db/db';
 import { generateToken } from '../magic-links/magic-links.service';
 import { enqueueNotification } from '../notifications/notifications.producer';
+import type { StaffAuthContext } from '@medassist/shared-types';
 
 interface ResendContext {
   appointment_id: string;
@@ -26,7 +27,7 @@ interface ResendResult {
  */
 export async function resendInviteForAppointment(
   appointmentId: string,
-  staffDepartmentScope: string | null
+  caller: StaffAuthContext
 ): Promise<ResendResult> {
   // Fetch appointment context
   const { rows } = await query<ResendContext>(`
@@ -47,7 +48,7 @@ export async function resendInviteForAppointment(
   const appt = rows[0];
 
   // Enforce department scope for non-admin staff
-  if (staffDepartmentScope && appt.department_id !== staffDepartmentScope) {
+  if (caller.role === 'staff' && appt.department_id !== caller.departmentId) {
     const err = Object.assign(new Error('forbidden'), { status: 403 });
     throw err;
   }

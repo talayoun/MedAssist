@@ -77,10 +77,13 @@ router.post('/logout', requireStaffAuth, async (req: Request, res: Response, nex
  */
 router.get('/me', requireStaffAuth, (req: Request, res: Response) => {
   res.json({
-    id: req.staffAuth!.sub,
-    email: req.staffAuth!.email,
-    role: req.staffAuth!.role,
-    departmentId: req.staffAuth!.departmentId,
+    user: {
+      id: req.staffAuth!.sub,
+      name: req.staffAuth!.name,
+      email: req.staffAuth!.email,
+      role: req.staffAuth!.role,
+      department_id: req.staffAuth!.departmentId,
+    },
   });
 });
 
