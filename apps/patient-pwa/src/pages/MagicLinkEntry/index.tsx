@@ -13,7 +13,7 @@ const styles = {
     background: '#f7fafc',
     fontFamily: 'system-ui, -apple-system, sans-serif',
   } as React.CSSProperties,
-  greeting: { fontSize: '1.125rem', fontWeight: 700, color: '#1a202c' } as React.CSSProperties,
+  greeting: { fontSize: '1.125rem', fontWeight: 700, color: '#fff' } as React.CSSProperties,
   content: {
     maxWidth: '480px',
     margin: '0 auto',
