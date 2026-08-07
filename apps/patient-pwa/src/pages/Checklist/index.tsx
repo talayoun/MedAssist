@@ -1,13 +1,12 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import type { ChangeEvent } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getChecklist, saveChecklistProgress, getForms, uploadFormImage, uploadFormPdf, ApiError } from '../../services/api';
+import { getChecklist, saveChecklistProgress, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
 import { Card } from '../../components/ui/Card';
 import { CheckboxRow } from '../../components/ui/CheckboxRow';
 import { StatusPill } from '../../components/ui/StatusPill';
 import { Button } from '../../components/ui/Button';
-import type { ChecklistResponse, ChecklistItem, FormItemDTO } from '@medassist/shared-types';
+import type { ChecklistResponse, ChecklistItem } from '@medassist/shared-types';
 
 const CATEGORY_LABELS: Record<ChecklistItem['category'], string> = {
   bring: 'מה להביא',
@@ -16,121 +15,12 @@ const CATEGORY_LABELS: Record<ChecklistItem['category'], string> = {
   other: 'הוראות נוספות',
 };
 
-function FormDocumentItem({
-  item,
-  token,
-  onUpdate,
-}: {
-  item: FormItemDTO;
-  token: string;
-  onUpdate: (updated: FormItemDTO) => void;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const pdfInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const updated = await uploadFormImage(token, item.id, file);
-      onUpdate(updated as unknown as FormItemDTO);
-    } catch (err) {
-      setUploadError(err instanceof ApiError ? err.message : 'שגיאה בהעלאה');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handlePdfChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    setUploadError(null);
-    try {
-      const updated = await uploadFormPdf(token, item.id, file);
-      onUpdate(updated as unknown as FormItemDTO);
-    } catch (err) {
-      setUploadError(err instanceof ApiError ? err.message : 'שגיאה בהעלאה');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const statusLabel = {
-    pending: 'ממתין',
-    staff_uploaded: 'ממתין לחתימה',
-    patient_submitted: 'הועלה',
-  }[item.status];
-
-  const isComplete = item.status === 'patient_submitted';
-
-  return (
-    <Card variant={isComplete ? 'success' : 'default'} className="flex items-center justify-between gap-3 !p-4">
-      <span className="flex-1 text-[17px] font-semibold text-text text-right">{item.label}</span>
-      <div className="flex items-center gap-2.5">
-        {uploadError && <span className="text-xs text-error">{uploadError}</span>}
-        <span className={`text-[13px] whitespace-nowrap ${isComplete ? 'text-success' : 'text-[#718096]'}`}>{statusLabel}</span>
-        {item.item_type === 'patient_upload' && !isComplete && (
-          <>
-            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-            <button
-              type="button"
-              data-testid="form-action-btn"
-              disabled={uploading}
-              onClick={() => inputRef.current?.click()}
-              className={`min-w-11 min-h-11 px-4 bg-teal text-white rounded-[10px] text-base font-bold flex items-center justify-center ${
-                uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-              }`}
-            >
-              {uploading ? '...' : 'העלה תמונה'}
-            </button>
-            <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handlePdfChange} />
-            <button
-              type="button"
-              data-testid="form-action-pdf-btn"
-              disabled={uploading}
-              onClick={() => pdfInputRef.current?.click()}
-              className={`min-w-11 min-h-11 px-4 bg-white border border-teal text-teal rounded-[10px] text-base font-bold flex items-center justify-center ${
-                uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
-              }`}
-            >
-              {uploading ? '...' : 'העלה PDF'}
-            </button>
-          </>
-        )}
-        {item.item_type === 'staff_upload_sign' && item.status === 'staff_uploaded' && (
-          <a
-            href={`/visit/${token}/forms/${item.id}`}
-            data-testid="form-action-btn"
-            className="min-w-11 min-h-11 px-4 bg-[#7c3aed] text-white rounded-[10px] text-[15px] font-bold flex items-center justify-center no-underline"
-          >
-            חתום
-          </a>
-        )}
-      </div>
-    </Card>
-  );
-}
-
 export default function Checklist() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [data, setData] = useState<ChecklistResponse | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
-  const [formItems, setFormItems] = useState<FormItemDTO[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [formsLoadErr, setFormsLoadErr] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!token) return;
-    getForms(token)
-      .then(({ items }) => setFormItems(items))
-      .catch(() => setFormsLoadErr('שגיאה בטעינת מסמכים'));
-  }, [token]);
 
   useEffect(() => {
     if (!token) return;
@@ -170,7 +60,7 @@ export default function Checklist() {
 
   if (!data) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-bg">
+      <div className="min-h-screen flex items-center justify-center bg-bg">
         <p className="text-[#555]">טוען רשימת הכנות...</p>
       </div>
     );
@@ -241,23 +131,6 @@ export default function Checklist() {
             </div>
           </div>
         ))}
-
-        {(formItems.length > 0 || formsLoadErr) && (
-          <div className="mt-2">
-            <h2 className="text-[22px] font-semibold text-text mb-4 text-right">מסמכים</h2>
-            {formsLoadErr && <p className="text-error text-[15px] mb-3">{formsLoadErr}</p>}
-            <div className="space-y-3">
-              {formItems.map((item) => (
-                <FormDocumentItem
-                  key={item.id}
-                  item={item}
-                  token={token!}
-                  onUpdate={(updated) => setFormItems((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))}
-                />
-              ))}
-            </div>
-          </div>
-        )}
 
         {allComplete && (
           <Button

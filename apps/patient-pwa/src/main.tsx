@@ -6,6 +6,7 @@ import MagicLinkEntry from './pages/MagicLinkEntry';
 import Checklist from './pages/Checklist';
 import Navigation from './pages/Navigation';
 import Waiting from './pages/Waiting';
+import Forms from './pages/Forms';
 import { SignaturePage } from './pages/Forms/SignaturePage';
 import ErrorPage from './pages/Error';
 import BottomNav from './components/BottomNav';
@@ -62,6 +63,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route index element={<MagicLinkEntry />} />
           <Route element={<VisitLayout />}>
             <Route path="checklist" element={<Checklist />} />
+            <Route path="forms" element={<Forms />} />
             <Route path="navigation" element={<Navigation />} />
             <Route path="waiting" element={<Waiting />} />
           </Route>

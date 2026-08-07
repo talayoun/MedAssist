@@ -40,15 +40,17 @@ function IconClock({ active }: { active: boolean }) {
   );
 }
 
-function IconUser({ active }: { active: boolean }) {
+function IconForms({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
       stroke="currentColor" strokeWidth={active ? 2 : 1.75}
       strokeLinecap="round" strokeLinejoin="round"
       className="transition-[stroke-width] duration-200"
     >
-      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="9" y1="15" x2="15" y2="15" />
+      <line x1="9" y1="11" x2="15" y2="11" />
     </svg>
   );
 }
@@ -72,9 +74,9 @@ type TabDef = {
 
 const TABS: TabDef[] = [
   { id: 'checklist', label: 'הכנה מקדימה', pathSuffix: 'checklist', icon: IconChecklist, enabled: true },
+  { id: 'forms', label: 'טפסים', pathSuffix: 'forms', icon: IconForms, enabled: true },
   { id: 'navigation', label: 'ניווט', pathSuffix: 'navigation', icon: IconNavigation, enabled: true },
   { id: 'waiting', label: 'המתנה', pathSuffix: 'waiting', icon: IconClock, enabled: true },
-  { id: 'soon', label: 'בקרוב', pathSuffix: null, icon: IconUser, enabled: false },
 ];
 
 export default function BottomNav() {
@@ -86,7 +88,7 @@ export default function BottomNav() {
   if (!phase) return null;
 
   function isTabUnlocked(tabId: string): boolean {
-    if (tabId === 'checklist') return true;
+    if (tabId === 'checklist' || tabId === 'forms') return true;
     if (!phase) return false;
     if (tabId === 'navigation') return phase === 'navigation' || phase === 'waiting';
     if (tabId === 'waiting') return phase === 'waiting';
