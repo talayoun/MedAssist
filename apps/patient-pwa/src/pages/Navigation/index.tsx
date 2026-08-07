@@ -1,156 +1,8 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNavigation, confirmStep, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
 import type { NavigationRoute, NavigationStep } from '@medassist/shared-types';
-
-const TEAL = '#0D9488';
-const TEAL_HOVER = '#0F766E';
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#f7fafc',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  } as React.CSSProperties,
-  content: { maxWidth: '480px', margin: '0 auto', width: '100%', padding: '24px 16px 32px', flex: 1 } as React.CSSProperties,
-  header: { textAlign: 'right', marginBottom: '20px' } as React.CSSProperties,
-  h1: { fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' } as React.CSSProperties,
-  subheader: { fontSize: '1rem', color: '#475569' } as React.CSSProperties,
-  peekBanner: {
-    background: '#f0fdfa',
-    border: `1px solid ${TEAL}`,
-    borderRadius: '10px',
-    padding: '8px 12px',
-    fontSize: '0.875rem',
-    color: TEAL_HOVER,
-    textAlign: 'center',
-    marginBottom: '12px',
-  } as React.CSSProperties,
-  arrivedBanner: {
-    background: '#d1fae5',
-    color: '#065f46',
-    borderRadius: '10px',
-    padding: '10px 16px',
-    fontSize: '1rem',
-    fontWeight: 700,
-    textAlign: 'center',
-    marginBottom: '16px',
-  } as React.CSSProperties,
-  stepCard: {
-    background: '#fff',
-    border: `2px solid ${TEAL}`,
-    borderRadius: '16px',
-    padding: '20px',
-    marginBottom: '20px',
-  } as React.CSSProperties,
-  instruction: { fontSize: '1.25rem', fontWeight: 600, color: '#1a202c', textAlign: 'right', marginBottom: '16px', lineHeight: 1.5 } as React.CSSProperties,
-  photo: {
-    width: '100%',
-    aspectRatio: '4/3',
-    objectFit: 'cover',
-    borderRadius: '14px',
-    display: 'block',
-  } as React.CSSProperties,
-  photoPlaceholder: {
-    width: '100%',
-    aspectRatio: '4/3',
-    borderRadius: '14px',
-    background: '#f0fdfa',
-    border: `1px dashed ${TEAL}`,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    padding: '16px',
-    textAlign: 'center',
-  } as React.CSSProperties,
-  photoPlaceholderText: { fontSize: '0.9375rem', fontWeight: 600, color: TEAL_HOVER, lineHeight: 1.5 } as React.CSSProperties,
-  dotsRow: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' } as React.CSSProperties,
-  confirmBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '12px',
-    width: '100%',
-    minHeight: '64px',
-    background: TEAL,
-    color: '#fff',
-    border: 'none',
-    borderRadius: '16px',
-    fontSize: '1.25rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    marginBottom: '12px',
-    boxShadow: '0 2px 6px rgba(13,148,136,0.35)',
-  } as React.CSSProperties,
-  backBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    width: '100%',
-    minHeight: '56px',
-    background: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '16px',
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    color: '#1a202c',
-    cursor: 'pointer',
-    marginBottom: '20px',
-  } as React.CSSProperties,
-  outlineTealBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    width: '100%',
-    minHeight: '56px',
-    background: '#fff',
-    border: `1.5px solid ${TEAL}`,
-    borderRadius: '16px',
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    color: TEAL,
-    cursor: 'pointer',
-    marginBottom: '12px',
-  } as React.CSSProperties,
-  mapRow: { display: 'flex', flexDirection: 'column', gap: '12px' } as React.CSSProperties,
-  wazeBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    width: '100%',
-    minHeight: '56px',
-    background: TEAL,
-    color: '#fff',
-    border: 'none',
-    borderRadius: '14px',
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-  } as React.CSSProperties,
-  gmapsBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '10px',
-    width: '100%',
-    minHeight: '56px',
-    background: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '14px',
-    fontSize: '1.0625rem',
-    fontWeight: 700,
-    color: '#1a202c',
-    cursor: 'pointer',
-  } as React.CSSProperties,
-};
 
 function CheckIcon() {
   return (
@@ -171,7 +23,7 @@ function PinIcon({ color }: { color: string }) {
 
 function PhotoIcon() {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0D9488" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="5" width="18" height="14" rx="2" />
       <circle cx="8.5" cy="10" r="1.5" />
       <path d="M21 15l-5-5-9 9" />
@@ -185,9 +37,9 @@ function StepPhoto({ step }: { step: NavigationStep }) {
 
   if (failed) {
     return (
-      <div style={styles.photoPlaceholder}>
+      <div className="w-full aspect-[4/3] rounded-[14px] bg-[#f0fdfa] border border-dashed border-teal flex flex-col items-center justify-center gap-2.5 p-4 text-center">
         <PhotoIcon />
-        <span style={styles.photoPlaceholderText}>{step.instruction}</span>
+        <span className="text-[15px] font-semibold text-teal-hover leading-6">{step.instruction}</span>
       </div>
     );
   }
@@ -195,9 +47,23 @@ function StepPhoto({ step }: { step: NavigationStep }) {
     <img
       src={step.image_url}
       alt={`שלב ${step.order} — ${step.instruction}`}
-      style={styles.photo}
+      className="w-full aspect-[4/3] object-cover rounded-[14px] block"
       onError={() => setFailed(true)}
     />
+  );
+}
+
+function Dots({ total, current, filledUpTo }: { total: number; current: number; filledUpTo: number }) {
+  return (
+    <div className="flex items-center justify-center gap-2 flex-wrap mb-6">
+      {Array.from({ length: total }, (_, i) => i + 1).map((order) => (
+        <div
+          key={order}
+          className="rounded-full h-2 bg-teal transition-all duration-300"
+          style={{ width: order === current ? '32px' : '8px', opacity: order <= filledUpTo ? 1 : 0.3 }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -265,17 +131,17 @@ export default function Navigation() {
 
   if (error) {
     return (
-      <div style={styles.page}>
+      <div className="min-h-screen flex flex-col bg-bg">
         <AppHeader />
-        <p style={{ color: '#c00', fontSize: '1rem', padding: '24px' }}>{error}</p>
+        <p className="text-[#c00] text-base p-6">{error}</p>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div style={{ ...styles.page, alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#555' }}>טוען הוראות ניווט...</p>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <p className="text-[#555]">טוען הוראות ניווט...</p>
       </div>
     );
   }
@@ -286,48 +152,48 @@ export default function Navigation() {
     const displayStep = data.steps.find((s) => s.order === step) ?? data.steps[data.steps.length - 1];
 
     return (
-      <div style={styles.page}>
+      <div className="min-h-screen flex flex-col bg-bg">
         <AppHeader />
-        <div style={styles.content}>
-          <div style={styles.arrivedBanner}>✓ הגעת ליעד</div>
-
-          <div style={styles.header}>
-            <h1 style={styles.h1}>ניווט בבית החולים</h1>
-            <p style={styles.subheader}>שלב {step} מתוך {data.total_steps}</p>
+        <div className="max-w-[480px] w-full mx-auto px-4 py-6 flex-1">
+          <div className="bg-[#d1fae5] text-[#065f46] rounded-[10px] px-4 py-2.5 text-base font-bold text-center mb-4">
+            ✓ הגעת ליעד
           </div>
 
-          <div style={styles.stepCard}>
-            <p style={styles.instruction}>{displayStep.instruction}</p>
+          <div className="text-right mb-5">
+            <h1 className="text-[28px] font-bold text-text mb-2">ניווט בבית החולים</h1>
+            <p className="text-base text-text-muted">שלב {step} מתוך {data.total_steps}</p>
+          </div>
+
+          <div className="bg-white border-2 border-teal rounded-2xl p-5 mb-5">
+            <p className="text-xl font-semibold text-[#1a202c] text-right mb-4 leading-normal">{displayStep.instruction}</p>
             <StepPhoto step={displayStep} />
           </div>
 
-          <div style={styles.dotsRow}>
-            {Array.from({ length: data.total_steps }, (_, i) => i + 1).map((order) => (
-              <div
-                key={order}
-                style={{
-                  borderRadius: '999px',
-                  height: '8px',
-                  width: order === step ? '32px' : '8px',
-                  background: TEAL,
-                  opacity: order <= step ? 1 : 0.3,
-                  transition: 'all 0.3s ease',
-                }}
-              />
-            ))}
-          </div>
+          <Dots total={data.total_steps} current={step} filledUpTo={step} />
 
           {step < data.total_steps && (
-            <button type="button" style={styles.confirmBtn} onClick={() => setReviewStep((s) => (s ?? data.total_steps) + 1)}>
+            <button
+              type="button"
+              onClick={() => setReviewStep((s) => (s ?? data.total_steps) + 1)}
+              className="w-full min-h-16 flex items-center justify-center gap-3 bg-teal text-white rounded-2xl text-xl font-bold mb-3 shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
+            >
               <span>שלב הבא</span>
             </button>
           )}
           {step > 1 && (
-            <button type="button" style={styles.backBtn} onClick={() => setReviewStep((s) => (s ?? 1) - 1)}>
+            <button
+              type="button"
+              onClick={() => setReviewStep((s) => (s ?? 1) - 1)}
+              className="w-full min-h-14 flex items-center justify-center gap-2 bg-white border border-border rounded-2xl text-[17px] font-bold text-[#1a202c] mb-5"
+            >
               <span>שלב קודם</span>
             </button>
           )}
-          <button type="button" style={styles.outlineTealBtn} onClick={() => navigate(`/visit/${token}/waiting`)}>
+          <button
+            type="button"
+            onClick={() => navigate(`/visit/${token}/waiting`)}
+            className="w-full min-h-14 flex items-center justify-center gap-2 bg-white border-[1.5px] border-teal rounded-2xl text-[17px] font-bold text-teal mb-3"
+          >
             <span>חזרה להמתנה</span>
           </button>
         </div>
@@ -337,8 +203,8 @@ export default function Navigation() {
 
   if (data.steps.length === 0 || viewOrder === null) {
     return (
-      <div style={{ ...styles.page, alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#555' }}>טוען הוראות ניווט...</p>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <p className="text-[#555]">טוען הוראות ניווט...</p>
       </div>
     );
   }
@@ -348,54 +214,42 @@ export default function Navigation() {
   const canGoOlder = stepCache.current.has(viewOrder - 1);
 
   return (
-    <div style={styles.page}>
+    <div className="min-h-screen flex flex-col bg-bg">
       <AppHeader />
-      <div style={styles.content}>
-        <div style={styles.header}>
-          <h1 style={styles.h1}>ניווט בבית החולים</h1>
-          <p style={styles.subheader}>
-            שלב {viewOrder} מתוך {data.total_steps}
-          </p>
+      <div className="max-w-[480px] w-full mx-auto px-4 py-6 flex-1">
+        <div className="text-right mb-5">
+          <h1 className="text-[28px] font-bold text-text mb-2">ניווט בבית החולים</h1>
+          <p className="text-base text-text-muted">שלב {viewOrder} מתוך {data.total_steps}</p>
         </div>
 
         {isPeekingPast && (
-          <div style={styles.peekBanner}>צופה בשלב קודם — ההתקדמות שלך נשמרה בשלב {data.current_step}</div>
+          <div className="bg-[#f0fdfa] border border-teal rounded-[10px] px-3 py-2 text-sm text-teal-hover text-center mb-3">
+            צופה בשלב קודם — ההתקדמות שלך נשמרה בשלב {data.current_step}
+          </div>
         )}
 
-        <div style={styles.stepCard}>
-          <p style={styles.instruction}>{displayedStep.instruction}</p>
+        <div className="bg-white border-2 border-teal rounded-2xl p-5 mb-5">
+          <p className="text-xl font-semibold text-[#1a202c] text-right mb-4 leading-normal">{displayedStep.instruction}</p>
           <StepPhoto step={displayedStep} />
         </div>
 
-        <div style={styles.dotsRow}>
-          {Array.from({ length: data.total_steps }, (_, i) => i + 1).map((order) => (
-            <div
-              key={order}
-              style={{
-                borderRadius: '999px',
-                height: '8px',
-                width: order === viewOrder ? '32px' : '8px',
-                background: order <= data.current_step ? TEAL : '#e2e8f0',
-                transition: 'all 0.3s ease',
-              }}
-            />
-          ))}
-        </div>
+        <Dots total={data.total_steps} current={viewOrder} filledUpTo={data.current_step} />
 
         {isPeekingPast ? (
           <button
             type="button"
-            style={styles.confirmBtn}
             onClick={() => setViewOrder(data.current_step)}
+            className="w-full min-h-16 flex items-center justify-center gap-3 bg-teal text-white rounded-2xl text-xl font-bold mb-3 shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
           >
             <span>חזרה לשלב הנוכחי</span>
           </button>
         ) : (
           <button
             type="button"
-            style={{ ...styles.confirmBtn, opacity: loading ? 0.7 : 1 }}
             onClick={handleConfirm}
             disabled={loading}
+            className="w-full min-h-16 flex items-center justify-center gap-3 bg-teal text-white rounded-2xl text-xl font-bold mb-3 shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
+            style={{ opacity: loading ? 0.7 : 1 }}
           >
             <CheckIcon />
             <span>{loading ? 'מעבד...' : 'אני כאן'}</span>
@@ -405,21 +259,29 @@ export default function Navigation() {
         {canGoOlder && (
           <button
             type="button"
-            style={styles.backBtn}
             onClick={() => setViewOrder((v) => (v ?? 1) - 1)}
             disabled={loading}
+            className="w-full min-h-14 flex items-center justify-center gap-2 bg-white border border-border rounded-2xl text-[17px] font-bold text-[#1a202c] mb-5"
           >
             <span>שלב קודם</span>
           </button>
         )}
 
         {data.parking_coordinates && (
-          <div style={styles.mapRow}>
-            <button type="button" style={styles.wazeBtn} onClick={handleWaze}>
+          <div className="flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleWaze}
+              className="w-full min-h-14 flex items-center justify-center gap-2.5 bg-teal text-white rounded-[14px] text-[17px] font-bold"
+            >
               <PinIcon color="#fff" />
               <span>פתיחה ב-Waze</span>
             </button>
-            <button type="button" style={styles.gmapsBtn} onClick={handleGoogleMaps}>
+            <button
+              type="button"
+              onClick={handleGoogleMaps}
+              className="w-full min-h-14 flex items-center justify-center gap-2.5 bg-white border border-border rounded-[14px] text-[17px] font-bold text-[#1a202c]"
+            >
               <PinIcon color="#1a202c" />
               <span>פתיחה ב-Google Maps</span>
             </button>
