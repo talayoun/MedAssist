@@ -141,6 +141,54 @@ export async function uploadPatientImage(
   return updatedRow;
 }
 
+export async function uploadPatientPdf(
+  itemId: string,
+  appointmentId: string,
+  buffer: Buffer,
+): Promise<Record<string, unknown>> {
+  // Quick IDOR check before transaction
+  const { rows: ownerCheck } = await query(
+    `SELECT id FROM patient_form_items WHERE id = $1 AND appointment_id = $2`,
+    [itemId, appointmentId],
+  );
+  if (!ownerCheck[0]) throw Object.assign(new Error('Forbidden'), { status: 403 });
+
+  const ts = Date.now();
+  const key = `forms/appointments/${appointmentId}/pdfs/${ts}-${randomUUID()}.pdf`;
+
+  let updatedRow: Record<string, unknown> = {};
+
+  await withTransaction(async (client) => {
+    await verifyOwnershipTx(client, itemId, appointmentId);
+
+    await client.query(
+      `UPDATE patient_documents SET is_current = false
+       WHERE patient_form_item_id = $1 AND is_current = true`,
+      [itemId],
+    );
+
+    await client.query(
+      `INSERT INTO patient_documents
+         (appointment_id, patient_form_item_id, file_url, doc_type, uploaded_by_patient, is_current)
+       VALUES ($1, $2, $3, 'pdf_upload', true, true)`,
+      [appointmentId, itemId, key],
+    );
+
+    const { rows } = await client.query(
+      `UPDATE patient_form_items
+       SET status = 'patient_submitted', updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [itemId],
+    );
+    updatedRow = rows[0];
+
+    await uploadEncrypted(key, buffer, 'application/pdf');
+  });
+
+  return updatedRow;
+}
+
 export async function submitSignature(
   itemId: string,
   appointmentId: string,

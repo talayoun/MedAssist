@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { getChecklist, saveChecklistProgress, getForms, uploadFormImage, ApiError } from '../../services/api';
+import { getChecklist, saveChecklistProgress, getForms, uploadFormImage, uploadFormPdf, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
 import { Card } from '../../components/ui/Card';
 import { CheckboxRow } from '../../components/ui/CheckboxRow';
@@ -26,6 +26,7 @@ function FormDocumentItem({
   onUpdate: (updated: FormItemDTO) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -36,6 +37,21 @@ function FormDocumentItem({
     setUploadError(null);
     try {
       const updated = await uploadFormImage(token, item.id, file);
+      onUpdate(updated as unknown as FormItemDTO);
+    } catch (err) {
+      setUploadError(err instanceof ApiError ? err.message : 'שגיאה בהעלאה');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handlePdfChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const updated = await uploadFormPdf(token, item.id, file);
       onUpdate(updated as unknown as FormItemDTO);
     } catch (err) {
       setUploadError(err instanceof ApiError ? err.message : 'שגיאה בהעלאה');
@@ -70,7 +86,19 @@ function FormDocumentItem({
                 uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
-              {uploading ? '...' : 'העלה'}
+              {uploading ? '...' : 'העלה תמונה'}
+            </button>
+            <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handlePdfChange} />
+            <button
+              type="button"
+              data-testid="form-action-pdf-btn"
+              disabled={uploading}
+              onClick={() => pdfInputRef.current?.click()}
+              className={`min-w-11 min-h-11 px-4 bg-white border border-teal text-teal rounded-[10px] text-[15px] font-bold flex items-center justify-center ${
+                uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              {uploading ? '...' : 'העלה PDF'}
             </button>
           </>
         )}

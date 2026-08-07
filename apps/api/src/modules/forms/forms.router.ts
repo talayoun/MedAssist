@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireMagicLinkToken, denyCompanionWrite } from '../../middleware/auth';
-import { imageUpload } from './upload.middleware';
+import { imageUpload, pdfUpload } from './upload.middleware';
 import * as svc from './forms.service';
 
 const router = Router({ mergeParams: true });
@@ -26,6 +26,23 @@ router.post(
         req.magicLink.appointmentId,
         req.file!.buffer,
         req.file!.mimetype,
+      );
+      res.json(result);
+    } catch (err) { next(err); }
+  },
+);
+
+router.post(
+  '/:itemId/upload-pdf',
+  denyCompanionWrite,
+  ...pdfUpload,
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.magicLink) { res.status(401).json({ error: 'Unauthorized' }); return; }
+    try {
+      const result = await svc.uploadPatientPdf(
+        req.params.itemId as string,
+        req.magicLink.appointmentId,
+        req.file!.buffer,
       );
       res.json(result);
     } catch (err) { next(err); }

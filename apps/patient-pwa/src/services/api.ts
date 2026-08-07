@@ -100,6 +100,18 @@ export async function uploadFormImage(token: string, itemId: string, file: File)
   return body as FormItemDTO;
 }
 
+export async function uploadFormPdf(token: string, itemId: string, file: File): Promise<FormItemDTO> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE_URL}/api/visit/${token}/forms/${itemId}/upload-pdf`, {
+    method: 'POST',
+    body: fd,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
+  return body as FormItemDTO;
+}
+
 export function submitFormSignature(token: string, itemId: string, signatureData: string): Promise<FormItemDTO> {
   return apiRequest(`/visit/${token}/forms/${itemId}/signature`, {
     method: 'POST',
