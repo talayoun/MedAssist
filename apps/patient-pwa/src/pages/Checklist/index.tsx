@@ -82,7 +82,7 @@ function FormDocumentItem({
               data-testid="form-action-btn"
               disabled={uploading}
               onClick={() => inputRef.current?.click()}
-              className={`min-w-11 min-h-11 px-4 bg-teal text-white rounded-[10px] text-[15px] font-bold flex items-center justify-center ${
+              className={`min-w-11 min-h-11 px-4 bg-teal text-white rounded-[10px] text-base font-bold flex items-center justify-center ${
                 uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
               }`}
             >
@@ -94,7 +94,7 @@ function FormDocumentItem({
               data-testid="form-action-pdf-btn"
               disabled={uploading}
               onClick={() => pdfInputRef.current?.click()}
-              className={`min-w-11 min-h-11 px-4 bg-white border border-teal text-teal rounded-[10px] text-[15px] font-bold flex items-center justify-center ${
+              className={`min-w-11 min-h-11 px-4 bg-white border border-teal text-teal rounded-[10px] text-base font-bold flex items-center justify-center ${
                 uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
               }`}
             >

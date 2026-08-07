@@ -10,6 +10,15 @@ export function CheckboxRow({ label, description, checked, onChange }: CheckboxR
     <div
       className={`flex gap-4 flex-row-reverse cursor-pointer ${description ? 'items-start' : 'items-center'}`}
       onClick={() => onChange(!checked)}
+      role="checkbox"
+      aria-checked={checked}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onChange(!checked);
+        }
+      }}
     >
       <div className="flex-1">
         <div className="text-right">
