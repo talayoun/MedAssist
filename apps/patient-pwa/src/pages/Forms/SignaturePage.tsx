@@ -1,7 +1,9 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SignatureCanvas, clearCanvas } from '../../components/SignatureCanvas';
 import { submitFormSignature } from '../../services/api';
+import AppHeader from '../../components/AppHeader';
+import { Button } from '../../components/ui/Button';
 
 export function SignaturePage() {
   const { token, itemId } = useParams<{ token: string; itemId: string }>();
@@ -12,7 +14,7 @@ export function SignaturePage() {
   const navigate = useNavigate();
 
   if (!token || !itemId) {
-    return <main style={{ padding: '16px' }}>Invalid parameters</main>;
+    return <main className="p-4">Invalid parameters</main>;
   }
 
   const handleSubmit = () => {
@@ -46,52 +48,33 @@ export function SignaturePage() {
   };
 
   return (
-    <main style={{ padding: '16px', maxWidth: '480px', margin: '0 auto', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '16px' }}>חתימת הסכמה</h1>
+    <div className="min-h-screen bg-bg">
+      <AppHeader />
+      <main className="max-w-[480px] mx-auto p-4">
+        <div className="bg-white border-2 border-border rounded-2xl p-5">
+          <div className="mb-4 text-right">
+            <div className="text-[18px] font-semibold text-text">חתימה</div>
+            <div className="text-sm text-text-muted mt-1">חתום בתוך המסגרת</div>
+          </div>
 
-      <p style={{ marginBottom: '12px', color: '#475569' }}>חתום בתיבה למטה:</p>
-      <SignatureCanvas canvasRef={canvasRef} onDraw={() => setHasDrawn(true)} />
+          <SignatureCanvas canvasRef={canvasRef} onDraw={() => setHasDrawn(true)} />
 
-      <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-        <button
-          type="button"
-          onClick={() => { if (canvasRef.current) clearCanvas(canvasRef.current); setHasDrawn(false); }}
-          style={{
-            flex: 1,
-            minHeight: '44px',
-            background: '#f1f5f9',
-            border: '1px solid #cbd5e1',
-            borderRadius: '8px',
-            color: '#475569',
-            fontWeight: 600,
-            cursor: 'pointer',
-            fontSize: '1rem',
-          }}
-        >
-          נקה
-        </button>
-        <button
-          type="button"
-          onClick={handleSubmit}
-          disabled={submitting}
-          style={{
-            flex: 1,
-            minHeight: '44px',
-            background: '#0D9488',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            fontWeight: 600,
-            cursor: submitting ? 'not-allowed' : 'pointer',
-            opacity: submitting ? 0.5 : 1,
-            fontSize: '1rem',
-          }}
-        >
-          {submitting ? 'שולח...' : 'שלח חתימה'}
-        </button>
-      </div>
+          <div className="flex gap-3 mt-4 flex-row-reverse">
+            <Button
+              variant="ghost"
+              size="medium"
+              onClick={() => { if (canvasRef.current) clearCanvas(canvasRef.current); setHasDrawn(false); }}
+            >
+              נקה
+            </Button>
+            <Button variant="primary" size="medium" onClick={handleSubmit} disabled={submitting}>
+              {submitting ? 'שולח...' : 'שמור חתימה'}
+            </Button>
+          </div>
+        </div>
 
-      {error && <p style={{ color: '#dc2626', marginTop: '12px' }}>{error}</p>}
-    </main>
+        {error && <p className="text-error mt-3 text-right">{error}</p>}
+      </main>
+    </div>
   );
 }
