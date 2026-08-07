@@ -1,92 +1,17 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getWaitingStatus, sendContactMessage, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
 import type { WaitingResponse, WaitingStatus } from '@medassist/shared-types';
 
-const TEAL = '#0D9488';
-
 const POLL_INTERVAL_MS = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS ?? '60000', 10);
-const RING_RADIUS = 88;
+const RING_RADIUS = 80;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-const STATUS_STAGE: Record<WaitingStatus, { progress: number; label: string; color: string }> = {
-  waiting: { progress: 1 / 3, label: 'ממתין', color: TEAL },
-  in_treatment: { progress: 2 / 3, label: 'בטיפול', color: '#0f766e' },
-  done: { progress: 1, label: 'הושלם', color: '#16a34a' },
-};
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#f7fafc',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  } as React.CSSProperties,
-  content: { maxWidth: '480px', margin: '0 auto', width: '100%', padding: '24px 16px 32px', flex: 1 } as React.CSSProperties,
-  header: { textAlign: 'right', marginBottom: '24px' } as React.CSSProperties,
-  h1: { fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' } as React.CSSProperties,
-  subheader: { fontSize: '1rem', color: '#475569' } as React.CSSProperties,
-  ringWrap: { display: 'flex', justifyContent: 'center', marginBottom: '24px' } as React.CSSProperties,
-  ringCenterLabel: { fontSize: '0.875rem', color: '#475569', marginBottom: '4px' } as React.CSSProperties,
-  ringCenterValue: { fontSize: '1.375rem', fontWeight: 700 } as React.CSSProperties,
-  card: {
-    background: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '16px',
-    padding: '20px',
-    marginBottom: '12px',
-  } as React.CSSProperties,
-  cardRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } as React.CSSProperties,
-  cardLabel: { fontSize: '0.875rem', color: '#475569', marginBottom: '4px' } as React.CSSProperties,
-  cardValue: { fontSize: '1.375rem', fontWeight: 700, color: '#0f172a' } as React.CSSProperties,
-  iconCircle: {
-    flexShrink: 0,
-    background: '#f0fdfa',
-    borderRadius: '14px',
-    width: '48px',
-    height: '48px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as React.CSSProperties,
-  divider: { borderTop: '1px solid #e2e8f0', marginTop: '16px', paddingTop: '16px' } as React.CSSProperties,
-  warningCard: {
-    background: '#fffbeb',
-    border: '1px solid #d97706',
-    borderRadius: '16px',
-    padding: '18px 20px',
-    marginBottom: '12px',
-    fontSize: '0.9375rem',
-    color: '#92400e',
-    textAlign: 'right',
-  } as React.CSSProperties,
-  broadcastCard: {
-    background: '#fff3cd',
-    border: '1px solid #ffc107',
-    borderRadius: '16px',
-    padding: '18px 20px',
-    marginBottom: '12px',
-    fontSize: '1rem',
-    textAlign: 'right',
-  } as React.CSSProperties,
-  contactSection: { marginTop: '24px' } as React.CSSProperties,
-  contactBtn: {
-    display: 'block',
-    width: '100%',
-    minHeight: '56px',
-    padding: '14px',
-    background: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '14px',
-    fontSize: '1.0625rem',
-    fontWeight: 600,
-    color: '#1a202c',
-    cursor: 'pointer',
-    marginBottom: '8px',
-    textAlign: 'center',
-  } as React.CSSProperties,
+const STATUS_STAGE: Record<WaitingStatus, { progress: number; label: string }> = {
+  waiting: { progress: 1 / 3, label: 'ממתין' },
+  in_treatment: { progress: 2 / 3, label: 'בטיפול' },
+  done: { progress: 1, label: 'הושלם' },
 };
 
 const CONTACT_MESSAGES = {
@@ -94,15 +19,6 @@ const CONTACT_MESSAGES = {
   confirm_here: 'אני כאן ומחכה',
   question: 'יש לי שאלה',
 };
-
-function ClockIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
 
 function formatTime(d: Date): string {
   return new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
@@ -150,8 +66,8 @@ export default function Waiting() {
 
   if (!data) {
     return (
-      <div style={{ ...styles.page, alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#555' }}>טוען מצב תור...</p>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <p className="text-[#555]">טוען מצב תור...</p>
       </div>
     );
   }
@@ -164,99 +80,112 @@ export default function Waiting() {
       : null;
 
   return (
-    <div style={styles.page}>
+    <div className="min-h-screen flex flex-col bg-bg">
       <AppHeader />
-      <div style={styles.content}>
-        <div style={styles.header}>
-          <h1 style={styles.h1}>סטטוס המתנה</h1>
-          <p style={styles.subheader}>הצוות ב{data.department} יודע שהגעת — נעדכן אותך כאן</p>
-        </div>
-
-        <div style={styles.ringWrap}>
-          <div style={{ position: 'relative', width: '192px', height: '192px' }}>
-            <svg width="192" height="192" viewBox="0 0 192 192" style={{ transform: 'rotate(-90deg)' }}>
-              <circle cx="96" cy="96" r={RING_RADIUS} stroke="#e2e8f0" strokeWidth="8" fill="none" />
-              <circle
-                cx="96"
-                cy="96"
-                r={RING_RADIUS}
-                stroke={stage.color}
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={RING_CIRCUMFERENCE}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 0.5s' }}
-              />
-            </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={styles.ringCenterLabel}>סטטוס</span>
-              <span style={{ ...styles.ringCenterValue, color: stage.color }}>{stage.label}</span>
-            </div>
+      <div className="max-w-[480px] w-full mx-auto px-4 py-5 flex flex-col gap-4">
+        <div className="bg-gradient-to-br from-teal to-teal-hover rounded-2xl p-5 shadow-lg">
+          <div className="flex items-center justify-end gap-2 mb-4">
+            <span className="text-xs font-bold text-white/80 uppercase tracking-wider">עדכון חי</span>
+            <span className="relative w-3 h-3">
+              <span className="absolute inset-0 rounded-full bg-[#4ADE80] animate-ping opacity-75" />
+              <span className="relative block rounded-full w-3 h-3 bg-[#22C55E]" />
+            </span>
           </div>
+          <h2 className="text-[22px] font-bold text-white text-right mb-3">
+            הצוות ב{data.department} יודע שהגעת
+          </h2>
+          <p className="text-[15px] leading-6 text-white/85 text-right">
+            נעדכן אותך כאן בנייד ברגע שהצוות יהיה מוכן לקבל אותך.
+          </p>
         </div>
 
-        {data.estimated_wait_minutes !== null && (
-          <div style={styles.card}>
-            <div style={styles.cardRow}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={styles.cardLabel}>זמן המתנה משוער</div>
-                <div style={styles.cardValue}>כ-{data.estimated_wait_minutes} דקות</div>
-              </div>
-              <div style={styles.iconCircle}>
-                <ClockIcon />
+        <div className="bg-white border border-border rounded-2xl p-5">
+          <div className="flex items-center gap-4">
+            <div className="relative w-24 h-24 shrink-0">
+              <svg className="w-24 h-24 -rotate-90" viewBox="0 0 176 176">
+                <circle cx="88" cy="88" r={RING_RADIUS} stroke="#E2E8F0" strokeWidth="8" fill="none" />
+                <circle
+                  cx="88"
+                  cy="88"
+                  r={RING_RADIUS}
+                  stroke="#0D9488"
+                  strokeWidth="8"
+                  fill="none"
+                  strokeDasharray={RING_CIRCUMFERENCE}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  className="transition-[stroke-dashoffset] duration-500"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <p className="text-[13px] text-text-muted mb-0.5">סטטוס</p>
+                <p className="font-bold text-lg text-teal-hover">{stage.label}</p>
               </div>
             </div>
-            {estimatedCallTime && (
-              <div style={styles.divider}>
-                <div style={{ ...styles.cardLabel, textAlign: 'right' }}>שעת קריאה משוערת</div>
-                <div style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>
-                  {estimatedCallTime}
+
+            <div className="flex-1 text-right space-y-3">
+              {data.estimated_wait_minutes !== null && (
+                <div>
+                  <p className="text-xs text-[#64748B]">זמן המתנה משוער</p>
+                  <p className="font-bold text-2xl leading-tight text-text">כ-{data.estimated_wait_minutes} דקות</p>
                 </div>
-              </div>
-            )}
+              )}
+              {estimatedCallTime && (
+                <div className="border-t border-[#F1F5F9] pt-3">
+                  <p className="text-xs text-[#64748B]">שעת קריאה משוערת</p>
+                  <p className="font-semibold text-xl leading-tight text-text">{estimatedCallTime}</p>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
 
         {data.status === 'done' && (
-          <div style={{ ...styles.card, textAlign: 'center' }}>
-            <p style={{ fontSize: '1.125rem', fontWeight: 600, color: '#16a34a' }}>הביקור הסתיים — נתראה!</p>
+          <div className="bg-white border border-border rounded-2xl p-5 text-center">
+            <p className="text-lg font-semibold text-success">הביקור הסתיים — נתראה!</p>
           </div>
         )}
 
         {data.broadcast_message && (
-          <div style={styles.broadcastCard}>
+          <div className="bg-[#fff3cd] border border-[#ffc107] rounded-2xl px-5 py-4 text-base text-right">
             <strong>עדכון מהצוות: </strong>
             {data.broadcast_message}
           </div>
         )}
 
         {data.status !== 'done' && (
-          <div style={styles.warningCard}>
+          <div className="bg-warning-bg border border-warning rounded-2xl px-5 py-4 text-[15px] text-[#92400e] text-right">
             שים לב: זמן ההמתנה הוא הערכה בלבד ועשוי להשתנות בהתאם לעומס
           </div>
         )}
 
-        <div style={styles.contactSection}>
+        <div className="mt-2">
           {!contactSent ? (
             <>
               {!showContactOptions ? (
-                <button type="button" style={styles.contactBtn} onClick={() => setShowContactOptions(true)}>
+                <button
+                  type="button"
+                  onClick={() => setShowContactOptions(true)}
+                  className="block w-full min-h-14 px-3.5 bg-white border border-border rounded-2xl text-[17px] font-semibold text-[#1a202c] mb-2"
+                >
                   צור קשר עם הצוות
                 </button>
               ) : (
                 <>
-                  {(Object.entries(CONTACT_MESSAGES) as [keyof typeof CONTACT_MESSAGES, string][]).map(
-                    ([type, label]) => (
-                      <button key={type} type="button" style={styles.contactBtn} onClick={() => handleContact(type)}>
-                        {label}
-                      </button>
-                    )
-                  )}
+                  {(Object.entries(CONTACT_MESSAGES) as [keyof typeof CONTACT_MESSAGES, string][]).map(([type, label]) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => handleContact(type)}
+                      className="block w-full min-h-14 px-3.5 bg-white border border-border rounded-2xl text-[17px] font-semibold text-[#1a202c] mb-2"
+                    >
+                      {label}
+                    </button>
+                  ))}
                   <button
                     type="button"
-                    style={{ ...styles.contactBtn, color: '#888' }}
                     onClick={() => setShowContactOptions(false)}
+                    className="block w-full min-h-14 px-3.5 bg-white border border-border rounded-2xl text-[17px] font-semibold text-[#888] mb-2"
                   >
                     ביטול
                   </button>
@@ -264,7 +193,7 @@ export default function Waiting() {
               )}
             </>
           ) : (
-            <p style={{ textAlign: 'center', color: '#16a34a', fontSize: '1rem' }}>✓ ההודעה נשלחה לצוות</p>
+            <p className="text-center text-success text-base">✓ ההודעה נשלחה לצוות</p>
           )}
         </div>
       </div>
