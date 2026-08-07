@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import './styles/index.css';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate } from 'react-router-dom';
 import MagicLinkEntry from './pages/MagicLinkEntry';
 import Checklist from './pages/Checklist';
