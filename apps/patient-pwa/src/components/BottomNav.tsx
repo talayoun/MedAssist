@@ -55,15 +55,6 @@ function IconForms({ active }: { active: boolean }) {
   );
 }
 
-function IconLock() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
-      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  );
-}
-
 type TabDef = {
   id: string;
   label: string;
@@ -73,11 +64,13 @@ type TabDef = {
 };
 
 const TABS: TabDef[] = [
-  { id: 'checklist', label: 'הכנה מקדימה', pathSuffix: 'checklist', icon: IconChecklist, enabled: true },
+  { id: 'checklist', label: 'צ׳ק-ליסט', pathSuffix: 'checklist', icon: IconChecklist, enabled: true },
   { id: 'forms', label: 'טפסים', pathSuffix: 'forms', icon: IconForms, enabled: true },
   { id: 'navigation', label: 'ניווט', pathSuffix: 'navigation', icon: IconNavigation, enabled: true },
   { id: 'waiting', label: 'המתנה', pathSuffix: 'waiting', icon: IconClock, enabled: true },
 ];
+
+const orderedTabs = [...TABS].reverse();
 
 export default function BottomNav() {
   const navigate = useNavigate();
@@ -101,11 +94,10 @@ export default function BottomNav() {
       className="fixed bottom-0 left-0 right-0 z-[100] w-full flex items-stretch border-t border-teal/20 bg-[rgba(236,252,248,0.94)] shadow-[0_-4px_28px_rgba(13,148,136,0.07),0_-1px_0_rgba(20,184,166,0.1)] backdrop-blur-[20px] backdrop-saturate-[180%]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      {TABS.map((tab) => {
+      {orderedTabs.map((tab) => {
         const fullPath = token && tab.pathSuffix ? `/visit/${token}/${tab.pathSuffix}` : null;
         const isActive = fullPath ? location.pathname === fullPath : false;
-        const isLocked = !tab.enabled || !isTabUnlocked(tab.id);
-        const isEnabled = !isLocked;
+        const isEnabled = tab.enabled && isTabUnlocked(tab.id);
 
         return (
           <button
@@ -125,13 +117,7 @@ export default function BottomNav() {
           >
             <span
               aria-hidden="true"
-              className={`absolute inset-[5px_6px] rounded-[10px] transition-colors duration-150 pointer-events-none ${
-                isActive ? 'bg-teal/[0.09]' : 'bg-transparent'
-              }`}
-            />
-            <span
-              aria-hidden="true"
-              className={`absolute top-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full transition-colors duration-150 pointer-events-none ${
+              className={`absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 rounded-t-full transition-colors duration-150 pointer-events-none ${
                 isActive ? 'bg-teal' : 'bg-transparent'
               }`}
             />
@@ -139,11 +125,6 @@ export default function BottomNav() {
               className={`relative flex items-center justify-center transition-transform duration-200 ${isActive ? 'scale-[1.09]' : 'scale-100'}`}
             >
               <tab.icon active={isActive} />
-              {isLocked && (
-                <span className="absolute -top-1 -right-1 bg-[#94a3b8] rounded-full w-4 h-4 flex items-center justify-center">
-                  <IconLock />
-                </span>
-              )}
             </span>
             <span
               className={`relative text-center max-w-[72px] leading-[1.1] transition-colors duration-150 ${

@@ -11,7 +11,8 @@ import { SignaturePage } from './pages/Forms/SignaturePage';
 import ErrorPage from './pages/Error';
 import BottomNav from './components/BottomNav';
 import { resolveVisit, ApiError } from './services/api';
-import { VisitPhaseContext, AppPhase } from './context/VisitPhaseContext';
+import { VisitPhaseContext } from './context/VisitPhaseContext';
+import type { VisitInfo } from './context/VisitPhaseContext';
 
 // Hebrew RTL for all patient-facing content
 document.documentElement.setAttribute('dir', 'rtl');
@@ -23,7 +24,7 @@ document.documentElement.setAttribute('lang', 'he');
 function VisitLayout() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<AppPhase>(null);
+  const [info, setInfo] = useState<VisitInfo>({ phase: null, patientName: null });
 
   useEffect(() => {
     if (!token) return;
@@ -31,7 +32,7 @@ function VisitLayout() {
 
     const fetchPhase = () => {
       resolveVisit(token)
-        .then(v => { if (!cancelled) setPhase(v.phase); })
+        .then(v => { if (!cancelled) setInfo({ phase: v.phase, patientName: v.patient.name }); })
         .catch(err => {
           if (cancelled) return;
           if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
@@ -46,7 +47,7 @@ function VisitLayout() {
   }, [token, navigate]);
 
   return (
-    <VisitPhaseContext.Provider value={phase}>
+    <VisitPhaseContext.Provider value={info}>
       <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
         <Outlet />
         <BottomNav />

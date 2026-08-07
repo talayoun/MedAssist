@@ -75,9 +75,7 @@ export default function MagicLinkEntry() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader>
-        <span className="text-[18px] font-bold text-white">שלום, {ctx.patient.name}</span>
-      </AppHeader>
+      <AppHeader patientName={ctx.patient.name} />
 
       <main className="max-w-[480px] mx-auto px-4 py-8 flex flex-col gap-8">
         <Card className="!p-6 !rounded-3xl flex flex-col gap-4">
