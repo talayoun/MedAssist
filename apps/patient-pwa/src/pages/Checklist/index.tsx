@@ -1,153 +1,19 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import type { ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getChecklist, saveChecklistProgress, getForms, uploadFormImage, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
+import { Card } from '../../components/ui/Card';
+import { CheckboxRow } from '../../components/ui/CheckboxRow';
+import { StatusPill } from '../../components/ui/StatusPill';
+import { Button } from '../../components/ui/Button';
 import type { ChecklistResponse, ChecklistItem, FormItemDTO } from '@medassist/shared-types';
-
-const TEAL = '#0D9488';
-const TEAL_HOVER = '#0F766E';
 
 const CATEGORY_LABELS: Record<ChecklistItem['category'], string> = {
   bring: 'מה להביא',
   fast: 'צום',
   medication: 'תרופות',
   other: 'הוראות נוספות',
-};
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#f7fafc',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  } as React.CSSProperties,
-  content: { maxWidth: '480px', margin: '0 auto', width: '100%', padding: '16px 16px 32px' } as React.CSSProperties,
-  progressCard: {
-    background: '#fff',
-    borderRadius: '16px',
-    boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
-    padding: '16px 20px',
-    marginBottom: '24px',
-  } as React.CSSProperties,
-  progressHeaderRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' } as React.CSSProperties,
-  progressTitle: { fontSize: '1.125rem', fontWeight: 600, color: '#0f172a' } as React.CSSProperties,
-  pill: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '4px 12px',
-    borderRadius: '8px',
-    fontSize: '0.875rem',
-    fontWeight: 500,
-  } as React.CSSProperties,
-  progressTrack: { width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '999px', overflow: 'hidden' } as React.CSSProperties,
-  progressFill: { height: '100%', background: TEAL, borderRadius: '999px', transition: 'width 0.3s' } as React.CSSProperties,
-  header: { textAlign: 'right', marginBottom: '24px' } as React.CSSProperties,
-  h1: { fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' } as React.CSSProperties,
-  subheader: { fontSize: '1rem', color: '#475569' } as React.CSSProperties,
-  categoryTitle: { fontSize: '1.375rem', fontWeight: 600, color: '#0f172a', marginBottom: '16px', textAlign: 'right' } as React.CSSProperties,
-  categoryGroup: { marginBottom: '24px' } as React.CSSProperties,
-  itemCard: {
-    background: '#fff',
-    borderRadius: '16px',
-    padding: '20px',
-    marginBottom: '16px',
-    boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
-  } as React.CSSProperties,
-  itemCardWarning: {
-    background: '#fffbeb',
-    borderInlineStart: '4px solid #d97706',
-    boxShadow: 'none',
-  } as React.CSSProperties,
-  itemRow: { display: 'flex', alignItems: 'center', gap: '16px' } as React.CSSProperties,
-  itemText: { flex: 1, fontSize: '1.125rem', fontWeight: 600, color: '#0f172a', textAlign: 'right' } as React.CSSProperties,
-  itemTextCompleted: { textDecoration: 'line-through', color: '#94a3b8' } as React.CSSProperties,
-  checkbox: {
-    flexShrink: 0,
-    width: '44px',
-    height: '44px',
-    borderRadius: '10px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    border: '2px solid #e2e8f0',
-    background: '#fff',
-  } as React.CSSProperties,
-  checkboxChecked: { background: TEAL, borderColor: TEAL } as React.CSSProperties,
-  urgentBadge: {
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    background: '#fef2f2',
-    color: '#dc2626',
-    padding: '3px 10px',
-    borderRadius: '999px',
-    whiteSpace: 'nowrap',
-    marginInlineEnd: '8px',
-  } as React.CSSProperties,
-  completionBanner: {
-    background: '#f0fdf4',
-    borderInlineStart: '4px solid #16a34a',
-    borderRadius: '16px',
-    padding: '24px',
-    textAlign: 'center',
-    marginBottom: '24px',
-  } as React.CSSProperties,
-  completionTitle: { fontSize: '1.5rem', fontWeight: 700, color: '#16a34a', marginBottom: '8px' } as React.CSSProperties,
-  completionBody: { fontSize: '1.0625rem', color: '#475569' } as React.CSSProperties,
-  continueButton: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '12px',
-    width: '100%',
-    minHeight: '64px',
-    background: TEAL,
-    color: '#fff',
-    border: 'none',
-    borderRadius: '16px',
-    fontSize: '1.25rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    boxShadow: '0 2px 6px rgba(13,148,136,0.35)',
-  } as React.CSSProperties,
-  docsSection: { marginTop: '8px' } as React.CSSProperties,
-  docsTitle: { fontSize: '1.375rem', fontWeight: 600, color: '#0f172a', marginBottom: '16px', textAlign: 'right' } as React.CSSProperties,
-  docItem: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '12px',
-    background: '#fff',
-    borderRadius: '16px',
-    padding: '16px 20px',
-    marginBottom: '12px',
-    boxShadow: '0 1px 2px rgba(15,23,42,0.06)',
-  } as React.CSSProperties,
-  docItemDone: {
-    background: '#f0fdf4',
-    borderInlineStart: '4px solid #16a34a',
-    boxShadow: 'none',
-  } as React.CSSProperties,
-  docLabel: { fontSize: '1.0625rem', fontWeight: 600, color: '#0f172a', flex: 1, textAlign: 'right' } as React.CSSProperties,
-  docStatus: { fontSize: '0.8125rem', whiteSpace: 'nowrap' } as React.CSSProperties,
-  docActionBtn: {
-    minWidth: '44px',
-    minHeight: '44px',
-    padding: '0 16px',
-    background: TEAL,
-    color: '#fff',
-    border: 'none',
-    borderRadius: '10px',
-    fontSize: '0.9375rem',
-    fontWeight: 700,
-    cursor: 'pointer',
-    textDecoration: 'none',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as React.CSSProperties,
-  docErrorText: { fontSize: '0.75rem', color: '#dc2626' } as React.CSSProperties,
 };
 
 function FormDocumentItem({
@@ -163,7 +29,7 @@ function FormDocumentItem({
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
@@ -187,46 +53,38 @@ function FormDocumentItem({
   const isComplete = item.status === 'patient_submitted';
 
   return (
-    <div style={{ ...styles.docItem, ...(isComplete ? styles.docItemDone : {}) }}>
-      <span style={styles.docLabel}>{item.label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        {uploadError && <span style={styles.docErrorText}>{uploadError}</span>}
-        <span style={{ ...styles.docStatus, color: isComplete ? '#16a34a' : '#718096' }}>{statusLabel}</span>
+    <Card variant={isComplete ? 'success' : 'default'} className="flex items-center justify-between gap-3 !p-4">
+      <span className="flex-1 text-[17px] font-semibold text-text text-right">{item.label}</span>
+      <div className="flex items-center gap-2.5">
+        {uploadError && <span className="text-xs text-error">{uploadError}</span>}
+        <span className={`text-[13px] whitespace-nowrap ${isComplete ? 'text-success' : 'text-[#718096]'}`}>{statusLabel}</span>
         {item.item_type === 'patient_upload' && !isComplete && (
           <>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleFileChange}
-            />
+            <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
             <button
               type="button"
               data-testid="form-action-btn"
               disabled={uploading}
               onClick={() => inputRef.current?.click()}
-              style={{ ...styles.docActionBtn, opacity: uploading ? 0.6 : 1, cursor: uploading ? 'not-allowed' : 'pointer' }}
+              className={`min-w-11 min-h-11 px-4 bg-teal text-white rounded-[10px] text-[15px] font-bold flex items-center justify-center ${
+                uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+              }`}
             >
               {uploading ? '...' : 'העלה'}
             </button>
           </>
         )}
         {item.item_type === 'staff_upload_sign' && item.status === 'staff_uploaded' && (
-          <a href={`/visit/${token}/forms/${item.id}`} data-testid="form-action-btn" style={{ ...styles.docActionBtn, background: '#7c3aed' }}>
+          <a
+            href={`/visit/${token}/forms/${item.id}`}
+            data-testid="form-action-btn"
+            className="min-w-11 min-h-11 px-4 bg-[#7c3aed] text-white rounded-[10px] text-[15px] font-bold flex items-center justify-center no-underline"
+          >
             חתום
           </a>
         )}
       </div>
-    </div>
-  );
-}
-
-function CheckIcon({ color = '#fff' }: { color?: string }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
+    </Card>
   );
 }
 
@@ -275,17 +133,17 @@ export default function Checklist() {
 
   if (error) {
     return (
-      <div style={styles.page}>
+      <div className="min-h-screen flex flex-col bg-bg">
         <AppHeader />
-        <p style={{ color: '#c00', fontSize: '1rem', padding: '24px' }}>{error}</p>
+        <p className="text-[#c00] text-base p-6">{error}</p>
       </div>
     );
   }
 
   if (!data) {
     return (
-      <div style={{ ...styles.page, alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#555' }}>טוען רשימת הכנות...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg">
+        <p className="text-[#555]">טוען רשימת הכנות...</p>
       </div>
     );
   }
@@ -301,100 +159,88 @@ export default function Checklist() {
   }, {});
 
   return (
-    <div style={styles.page}>
+    <div className="min-h-screen flex flex-col bg-bg">
       <AppHeader />
-      <div style={styles.content}>
-        <div style={styles.progressCard}>
-          <div style={styles.progressHeaderRow}>
-            <span style={styles.progressTitle}>התקדמות</span>
-            <span
-              style={{
-                ...styles.pill,
-                background: allComplete ? '#f0fdf4' : '#f0fdfa',
-                color: allComplete ? '#16a34a' : TEAL,
-              }}
-            >
+      <div className="max-w-[480px] w-full mx-auto px-4 pt-4 pb-8">
+        <Card className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-lg font-semibold text-text">התקדמות</span>
+            <StatusPill status={allComplete ? 'completed' : 'info'}>
               {completedCount} מתוך {totalCount} הושלמו
-            </span>
+            </StatusPill>
           </div>
-          <div style={styles.progressTrack}>
-            <div style={{ ...styles.progressFill, width: `${totalCount ? (completedCount / totalCount) * 100 : 0}%` }} />
+          <div className="w-full h-2 bg-border rounded-full overflow-hidden">
+            <div
+              className="h-full bg-teal rounded-full transition-[width] duration-300"
+              style={{ width: `${totalCount ? (completedCount / totalCount) * 100 : 0}%` }}
+            />
           </div>
-        </div>
+        </Card>
 
-        <div style={styles.header}>
-          <h1 style={styles.h1}>מה להביא ולהכין</h1>
-          <p style={styles.subheader}>
-            {isUrgentWindow ? `⚠️ הביקור שלך בעוד פחות מ-24 שעות — בדוק פריטים דחופים` : `לקראת: ${data.procedure_type}`}
+        <div className="text-right mb-6">
+          <h1 className="text-[28px] font-bold text-text mb-2">מה להביא ולהכין</h1>
+          <p className="text-base text-text-muted">
+            {isUrgentWindow ? '⚠️ הביקור שלך בעוד פחות מ-24 שעות — בדוק פריטים דחופים' : `לקראת: ${data.procedure_type}`}
           </p>
         </div>
 
         {allComplete && (
-          <div style={styles.completionBanner}>
-            <div style={styles.completionTitle}>הושלם!</div>
-            <div style={styles.completionBody}>סיימת את כל ההכנות. נתראה ביום הביקור</div>
-          </div>
+          <Card variant="success" className="text-center mb-6">
+            <div className="text-2xl font-bold text-success mb-2">הושלם!</div>
+            <div className="text-[17px] text-text-muted">סיימת את כל ההכנות. נתראה ביום הביקור</div>
+          </Card>
         )}
 
         {Object.entries(groupedItems).map(([category, items]) => (
-          <div key={category} style={styles.categoryGroup}>
-            <h2 style={styles.categoryTitle}>{CATEGORY_LABELS[category as ChecklistItem['category']]}</h2>
-            {items.map((item) => {
-              const isCompleted = completedIds.has(item.id);
-              const isUrgent = item.time_sensitive && !isCompleted;
-              return (
-                <div
-                  key={item.id}
-                  style={{ ...styles.itemCard, ...(isUrgent ? styles.itemCardWarning : {}) }}
-                  onClick={() => toggleItem(item)}
-                  role="checkbox"
-                  aria-checked={isCompleted}
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && toggleItem(item)}
-                >
-                  <div style={styles.itemRow}>
-                    <div style={{ ...styles.checkbox, ...(isCompleted ? styles.checkboxChecked : {}) }}>
-                      {isCompleted && <CheckIcon />}
-                    </div>
-                    <span style={{ ...styles.itemText, ...(isCompleted ? styles.itemTextCompleted : {}) }}>
-                      {isUrgent && <span style={styles.urgentBadge}>דחוף</span>}
-                      {item.text}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+          <div key={category} className="mb-6">
+            <h2 className="text-[22px] font-semibold text-text mb-4 text-right">
+              {CATEGORY_LABELS[category as ChecklistItem['category']]}
+            </h2>
+            <div className="space-y-4">
+              {items.map((item) => {
+                const isCompleted = completedIds.has(item.id);
+                const isUrgent = item.time_sensitive && !isCompleted;
+                return (
+                  <Card key={item.id} variant={isUrgent ? 'warning' : 'default'}>
+                    <CheckboxRow
+                      label={isUrgent ? `דחוף: ${item.text}` : item.text}
+                      checked={isCompleted}
+                      onChange={() => toggleItem(item)}
+                    />
+                  </Card>
+                );
+              })}
+            </div>
           </div>
         ))}
 
         {(formItems.length > 0 || formsLoadErr) && (
-          <div style={styles.docsSection}>
-            <h2 style={styles.docsTitle}>מסמכים</h2>
-            {formsLoadErr && <p style={{ color: '#dc2626', fontSize: '0.9375rem', marginBottom: '12px' }}>{formsLoadErr}</p>}
-            {formItems.map((item) => (
-              <FormDocumentItem
-                key={item.id}
-                item={item}
-                token={token!}
-                onUpdate={(updated) =>
-                  setFormItems((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))
-                }
-              />
-            ))}
+          <div className="mt-2">
+            <h2 className="text-[22px] font-semibold text-text mb-4 text-right">מסמכים</h2>
+            {formsLoadErr && <p className="text-error text-[15px] mb-3">{formsLoadErr}</p>}
+            <div className="space-y-3">
+              {formItems.map((item) => (
+                <FormDocumentItem
+                  key={item.id}
+                  item={item}
+                  token={token!}
+                  onUpdate={(updated) => setFormItems((prev) => prev.map((f) => (f.id === updated.id ? updated : f)))}
+                />
+              ))}
+            </div>
           </div>
         )}
 
         {allComplete && (
-          <button
-            type="button"
-            style={styles.continueButton}
+          <Button
             onClick={() => token && navigate(`/visit/${token}/navigation`)}
-            onMouseEnter={(e) => (e.currentTarget.style.background = TEAL_HOVER)}
-            onMouseLeave={(e) => (e.currentTarget.style.background = TEAL)}
+            className="w-full flex items-center justify-center gap-3 mt-6 !rounded-2xl shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
           >
-            <CheckIcon />
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
             <span>המשך לניווט</span>
-          </button>
+          </Button>
         )}
       </div>
     </div>
