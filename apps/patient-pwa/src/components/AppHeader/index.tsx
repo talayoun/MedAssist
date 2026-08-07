@@ -1,34 +1,11 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 import logo from '../../assets/medassist-logo.png';
 
-const TEAL = '#0D9488';
-
-const styles = {
-  header: {
-    background: TEAL,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-    padding: '16px 24px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexShrink: 0,
-  } as React.CSSProperties,
-  logoBadge: {
-    background: '#fff',
-    borderRadius: '10px',
-    padding: '6px 12px',
-    display: 'flex',
-    alignItems: 'center',
-    flexShrink: 0,
-  } as React.CSSProperties,
-  logo: { height: '26px', objectFit: 'contain', display: 'block' } as React.CSSProperties,
-};
-
-export default function AppHeader({ children }: { children?: React.ReactNode }) {
+export default function AppHeader({ children }: { children?: ReactNode }) {
   return (
-    <header style={styles.header}>
-      <span style={styles.logoBadge}>
-        <img src={logo} alt="MedAssist" style={styles.logo} />
+    <header className="bg-teal shadow-[0_1px_3px_rgba(0,0,0,0.12)] px-6 py-4 flex items-center justify-between shrink-0">
+      <span className="bg-white rounded-[10px] px-3 py-1.5 flex items-center shrink-0">
+        <img src={logo} alt="MedAssist" className="h-[26px] object-contain block" />
       </span>
       {children}
     </header>
