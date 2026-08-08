@@ -478,7 +478,7 @@ function PatientCard({
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
-    minHeight: '100vh',
+    minHeight: '100%',
     background: '#eef2f7',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     direction: 'rtl',
