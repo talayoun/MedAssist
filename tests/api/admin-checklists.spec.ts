@@ -82,6 +82,28 @@ test.describe('POST /api/admin/checklists', () => {
     expect(body.items[1].time_sensitive).toBe(true);
   });
 
+  test('persists description and link_target fields (not stripped)', async ({ request }) => {
+    const procedureType = `test-proc-desc-${Date.now()}`;
+    const res = await request.post('/api/admin/checklists', {
+      data: {
+        procedure_type: procedureType,
+        items: [
+          {
+            text: 'מלא טופס הסכמה מדעת',
+            category: 'other',
+            time_sensitive: false,
+            description: 'הטפסים נשלחו אליך וממתינים להעלאה',
+            link_target: 'forms',
+          },
+        ],
+      },
+    });
+    expect(res.status()).toBe(201);
+    const body = await res.json();
+    expect(body.items[0].description).toBe('הטפסים נשלחו אליך וממתינים להעלאה');
+    expect(body.items[0].link_target).toBe('forms');
+  });
+
   test('rejects duplicate procedure_type with 409', async ({ request }) => {
     const procedureType = `dup-proc-${Date.now()}`;
     await request.post('/api/admin/checklists', {

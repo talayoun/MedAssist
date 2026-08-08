@@ -19,6 +19,8 @@ const ItemSchema = z.object({
   text: z.string().min(1).max(200),
   category: z.enum(['bring', 'fast', 'medication', 'other']),
   time_sensitive: z.boolean(),
+  description: z.string().max(500).nullable().optional(),
+  link_target: z.enum(['forms']).nullable().optional(),
 });
 
 const CreateSchema = z.object({
