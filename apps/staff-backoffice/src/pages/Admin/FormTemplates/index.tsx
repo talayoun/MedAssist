@@ -14,14 +14,45 @@ const card: React.CSSProperties = {
   marginBottom: '24px',
 };
 
+type ItemType = 'patient_upload' | 'staff_upload_sign' | 'text_field' | 'yes_no_list' | 'consent';
+type Section = 'personal' | 'medical' | 'financial' | 'documents' | 'consent';
+
+const ITEM_TYPE_LABELS: Record<ItemType, string> = {
+  patient_upload: 'העלאת מסמך (מטופל)',
+  staff_upload_sign: 'מסמך צוות + חתימה',
+  text_field: 'שדה טקסט',
+  yes_no_list: 'כן/לא + רשימה',
+  consent: 'הסכמה (checkbox)',
+};
+
+const SECTION_LABELS: Record<Section, string> = {
+  personal: 'פרטים אישיים',
+  medical: 'מידע רפואי',
+  financial: 'כספי ובירוקרטי',
+  documents: 'מסמכים רפואיים',
+  consent: 'הסכמות וחתימות',
+};
+
+const UPLOAD_TYPES: ItemType[] = ['patient_upload', 'staff_upload_sign'];
+
 interface NewItemDraft {
   label: string;
   required: boolean;
+  item_type: ItemType;
+  section: Section;
+  sub_label: string;
+  placeholder: string;
+  list_item_placeholder: string;
 }
 
 const defaultDraft: NewItemDraft = {
   label: '',
   required: true,
+  item_type: 'patient_upload',
+  section: 'documents',
+  sub_label: '',
+  placeholder: '',
+  list_item_placeholder: '',
 };
 
 export function FormTemplates() {
@@ -52,9 +83,11 @@ export function FormTemplates() {
 
   useEffect(() => { load(); }, []);
 
+  const isUploadType = UPLOAD_TYPES.includes(draft.item_type);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!draftFile) {
+    if (isUploadType && !draftFile) {
       setSaveErr('יש להעלות קובץ PDF');
       return;
     }
@@ -64,11 +97,15 @@ export function FormTemplates() {
       let created = await createFormTemplate({
         procedure_type: null,
         label: draft.label.trim(),
-        item_type: 'patient_upload',
+        item_type: draft.item_type,
         required: draft.required,
         order_index: 0,
+        section: draft.section,
+        sub_label: draft.sub_label.trim() || null,
+        placeholder: draft.placeholder.trim() || null,
+        list_item_placeholder: draft.list_item_placeholder.trim() || null,
       });
-      if (draftFile) {
+      if (isUploadType && draftFile) {
         created = await uploadFormTemplateBlank(created.id, draftFile);
       }
       setItems((prev) => [...prev, created]);
@@ -147,32 +184,93 @@ export function FormTemplates() {
                 />
               </label>
             </div>
-            <div style={{ marginBottom: '12px' }}>
-              <span style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>קובץ PDF</span>
-              <input
-                ref={draftFileRef}
-                type="file"
-                accept="application/pdf"
-                style={{ display: 'none' }}
-                onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
-              />
-              <button
-                type="button"
-                onClick={() => draftFileRef.current?.click()}
-                style={{
-                  padding: '8px 16px',
-                  background: draftFile ? '#CCFBF1' : '#f8fafc',
-                  color: draftFile ? '#0F766E' : '#0D9488',
-                  border: `1px solid ${draftFile ? '#5EEAD4' : '#cbd5e1'}`,
-                  borderRadius: '6px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                {draftFile ? draftFile.name : 'בחר קובץ PDF'}
-              </button>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontWeight: 600, flex: 1 }}>
+                סוג פריט
+                <select
+                  value={draft.item_type}
+                  onChange={(e) => setDraft((d) => ({ ...d, item_type: e.target.value as ItemType }))}
+                  style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+                >
+                  {(Object.keys(ITEM_TYPE_LABELS) as ItemType[]).map((t) => (
+                    <option key={t} value={t}>{ITEM_TYPE_LABELS[t]}</option>
+                  ))}
+                </select>
+              </label>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontWeight: 600, flex: 1 }}>
+                קטגוריה
+                <select
+                  value={draft.section}
+                  onChange={(e) => setDraft((d) => ({ ...d, section: e.target.value as Section }))}
+                  style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
+                >
+                  {(Object.keys(SECTION_LABELS) as Section[]).map((s) => (
+                    <option key={s} value={s}>{SECTION_LABELS[s]}</option>
+                  ))}
+                </select>
+              </label>
             </div>
+
+            {(draft.item_type === 'text_field' || draft.item_type === 'consent') && (
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontWeight: 600 }}>
+                  {draft.item_type === 'consent' ? 'תת-כותרת (טקסט הסכמה)' : 'Placeholder'}
+                  <input
+                    type="text"
+                    value={draft.item_type === 'consent' ? draft.sub_label : draft.placeholder}
+                    onChange={(e) => setDraft((d) => (
+                      draft.item_type === 'consent'
+                        ? { ...d, sub_label: e.target.value }
+                        : { ...d, placeholder: e.target.value }
+                    ))}
+                    style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', width: '100%' }}
+                  />
+                </label>
+              </div>
+            )}
+
+            {draft.item_type === 'yes_no_list' && (
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', fontWeight: 600 }}>
+                  Placeholder לשורת רשימה (למשל: &quot;פרט את האלרגיה&quot;)
+                  <input
+                    type="text"
+                    value={draft.list_item_placeholder}
+                    onChange={(e) => setDraft((d) => ({ ...d, list_item_placeholder: e.target.value }))}
+                    style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', width: '100%' }}
+                  />
+                </label>
+              </div>
+            )}
+
+            {isUploadType && (
+              <div style={{ marginBottom: '12px' }}>
+                <span style={{ display: 'block', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>קובץ PDF</span>
+                <input
+                  ref={draftFileRef}
+                  type="file"
+                  accept="application/pdf"
+                  style={{ display: 'none' }}
+                  onChange={(e) => setDraftFile(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  type="button"
+                  onClick={() => draftFileRef.current?.click()}
+                  style={{
+                    padding: '8px 16px',
+                    background: draftFile ? '#CCFBF1' : '#f8fafc',
+                    color: draftFile ? '#0F766E' : '#0D9488',
+                    border: `1px solid ${draftFile ? '#5EEAD4' : '#cbd5e1'}`,
+                    borderRadius: '6px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {draftFile ? draftFile.name : 'בחר קובץ PDF'}
+                </button>
+              </div>
+            )}
             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, marginBottom: '16px' }}>
               <input
                 type="checkbox"
@@ -231,7 +329,9 @@ export function FormTemplates() {
                   <td style={{ padding: '10px 4px', fontWeight: 600 }}>{item.label}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>{item.required ? '✓' : ''}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                    {item.blank_form_url ? (
+                    {!UPLOAD_TYPES.includes(item.item_type as ItemType) ? (
+                      <span style={{ color: '#cbd5e1' }}>—</span>
+                    ) : item.blank_form_url ? (
                       <button
                         type="button"
                         onClick={() => window.open(item.blank_form_url!, '_blank')}

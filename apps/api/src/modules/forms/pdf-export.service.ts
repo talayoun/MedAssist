@@ -54,7 +54,7 @@ function splitField(label: string, value: string, opts: { size: number; bold?: b
 export async function buildExport(appointmentId: string, staffId: string, ctx: StaffAuthContext) {
   await verifyAppointmentDept(appointmentId, ctx);
 
-  // 1. Fetch items with current documents
+  // 1. Fetch items with current documents and any patient-entered values
   const { rows: items } = await query(
     `SELECT
        pfi.id,
@@ -63,10 +63,13 @@ export async function buildExport(appointmentId: string, staffId: string, ctx: S
        pfi.status,
        pfi.staff_file_url,
        pd.file_url       AS patient_file_url,
-       pd.doc_type       AS patient_doc_type
+       pd.doc_type       AS patient_doc_type,
+       pfv.value          AS value
      FROM patient_form_items pfi
      LEFT JOIN patient_documents pd
        ON pd.patient_form_item_id = pfi.id AND pd.is_current = true
+     LEFT JOIN patient_form_values pfv
+       ON pfv.patient_form_item_id = pfi.id
      WHERE pfi.appointment_id = $1
      ORDER BY pfi.order_index`,
     [appointmentId],
@@ -137,12 +140,29 @@ export async function buildExport(appointmentId: string, staffId: string, ctx: S
   for (const item of items) {
     const hasStaffFile = !!item.staff_file_url;
     const hasPatientFile = !!item.patient_file_url;
-    if (!hasStaffFile && !hasPatientFile) continue;
+    const value = item.value as { text?: string; answer?: boolean; items?: string[]; accepted?: boolean } | null;
+    if (!hasStaffFile && !hasPatientFile && !value) continue;
 
     // Section header page
+    const valueLines: PdfLine[] = [];
+    if (value) {
+      if (typeof value.text === 'string') {
+        valueLines.push(...splitField('Answer:', value.text, { size: 12 }));
+      } else if (typeof value.answer === 'boolean') {
+        valueLines.push({ text: `Answer: ${value.answer ? 'Yes' : 'No'}`, size: 12 });
+        for (const entry of value.items ?? []) {
+          valueLines.push(...splitField('-', entry, { size: 11 }));
+        }
+      } else if (typeof value.accepted === 'boolean') {
+        valueLines.push({ text: `Accepted: ${value.accepted ? 'Yes' : 'No'}`, size: 12 });
+      }
+    }
+
     addTextPage([
       ...splitField('Section:', item.label as string, { size: 14, bold: true }),
       { text: `Type: ${item.item_type}  Status: ${item.status}`, size: 10 },
+      { text: '', size: 8 },
+      ...valueLines,
     ]);
 
     // Embed staff consent PDF pages

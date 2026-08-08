@@ -5,9 +5,10 @@ interface InputFieldProps {
   helperText?: string;
   value?: string;
   onChange?: (value: string) => void;
+  onBlur?: () => void;
 }
 
-export function InputField({ label, placeholder, error, helperText, value, onChange }: InputFieldProps) {
+export function InputField({ label, placeholder, error, helperText, value, onChange, onBlur }: InputFieldProps) {
   return (
     <div className="w-full">
       <label className="block text-[16px] leading-[24px] text-[#1E293B] mb-2 font-medium text-right">
@@ -19,6 +20,7 @@ export function InputField({ label, placeholder, error, helperText, value, onCha
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
+        onBlur={onBlur}
         className={`w-full h-[52px] px-4 text-[16px] leading-[24px] text-[#1E293B] text-right bg-white rounded-lg transition-colors duration-150 placeholder:text-[#94A3B8] ${
           error
             ? 'border-2 border-error focus:outline-none focus:border-error'

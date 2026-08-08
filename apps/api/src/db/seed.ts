@@ -168,32 +168,53 @@ async function seed() {
     `, [HOSPITAL_ID, JSON.stringify(items)]);
 
     // ─── Form template items ───────────────────────────────────────────────────
+    // Full 5-section intake form matching the Figma design (personal / medical /
+    // financial / documents / consent). Patient-supplied fields (allergies,
+    // medications, national ID) are permitted per constitution v1.1.
     const formTemplates = [
-      { procedure_type: 'pre-op-cardiac', label: 'תעודת זהות', item_type: 'patient_upload', required: true, order_index: 0 },
-      { procedure_type: 'pre-op-cardiac', label: 'הסכמה לניתוח', item_type: 'staff_upload_sign', required: true, order_index: 1 },
-      { procedure_type: null, label: 'טופס הסכמה כללי', item_type: 'staff_upload_sign', required: false, order_index: 99 },
+      { procedure_type: null, label: 'שם מלא', item_type: 'text_field', required: true, order_index: 0, section: 'personal', sub_label: null, placeholder: 'הזן שם מלא', list_item_placeholder: null },
+      { procedure_type: null, label: 'תעודת זהות', item_type: 'text_field', required: true, order_index: 1, section: 'personal', sub_label: null, placeholder: '000000000', list_item_placeholder: null },
+      { procedure_type: null, label: 'האם יש לך אלרגיות?', item_type: 'yes_no_list', required: false, order_index: 2, section: 'medical', sub_label: null, placeholder: null, list_item_placeholder: 'פרט את האלרגיה' },
+      { procedure_type: null, label: 'האם אתה נוטל תרופות באופן קבוע?', item_type: 'yes_no_list', required: false, order_index: 3, section: 'medical', sub_label: null, placeholder: null, list_item_placeholder: 'שם התרופה' },
+      { procedure_type: null, label: 'התחייבות כספית מקופת החולים — טופס 17', item_type: 'patient_upload', required: true, order_index: 4, section: 'financial', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'צילום תעודת זהות (כולל הספח)', item_type: 'patient_upload', required: true, order_index: 5, section: 'financial', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'סיכום רפואי מהרופא המפנה', item_type: 'patient_upload', required: true, order_index: 6, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'תוצאות בדיקות דם עדכניות (תפקודי קרישה)', item_type: 'patient_upload', required: true, order_index: 7, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'בדיקות דימות — פענוח CT / רנטגן / אולטרסאונד', item_type: 'patient_upload', required: false, order_index: 8, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'הסכמה לניתוח', item_type: 'staff_upload_sign', required: true, order_index: 9, section: 'consent', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'טופס ויתור סודיות רפואית', item_type: 'consent', required: true, order_index: 10, section: 'consent', sub_label: 'אני מסכים/ה לשיתוף מידע רפואי עם הצוות המטפל', placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'הצהרת בריאות בסיסית', item_type: 'consent', required: true, order_index: 11, section: 'consent', sub_label: 'אני מצהיר/ה שהפרטים הרפואיים שמסרתי נכונים ומדויקים', placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'צלם כרטיס קופת חולים', item_type: 'patient_upload', required: false, order_index: 12, section: 'consent', sub_label: null, placeholder: null, list_item_placeholder: null },
     ] as const;
 
     for (const tmpl of formTemplates) {
       const { rows: [fti] } = await client.query<{ id: string }>(`
-        INSERT INTO form_template_items (procedure_type, label, item_type, required, order_index)
-        SELECT $1, $2, $3, $4, $5
+        INSERT INTO form_template_items
+          (procedure_type, label, item_type, required, order_index, section, sub_label, placeholder, list_item_placeholder)
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
         WHERE NOT EXISTS (
           SELECT 1 FROM form_template_items
           WHERE (procedure_type IS NOT DISTINCT FROM $1) AND label = $2
         )
         RETURNING id
-      `, [tmpl.procedure_type, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index]);
+      `, [
+        tmpl.procedure_type, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index,
+        tmpl.section, tmpl.sub_label, tmpl.placeholder, tmpl.list_item_placeholder,
+      ]);
 
       if (!fti) continue;
 
       // Snapshot to the seeded appointment
       await client.query(`
         INSERT INTO patient_form_items
-          (appointment_id, form_template_item_id, label, item_type, required, order_index)
-        VALUES ($1, $2, $3, $4, $5, $6)
+          (appointment_id, form_template_item_id, label, item_type, required, order_index,
+           section, sub_label, placeholder, list_item_placeholder)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (appointment_id, form_template_item_id) WHERE form_template_item_id IS NOT NULL DO NOTHING
-      `, [appointmentId, fti.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index]);
+      `, [
+        appointmentId, fti.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index,
+        tmpl.section, tmpl.sub_label, tmpl.placeholder, tmpl.list_item_placeholder,
+      ]);
     }
 
     await client.query('COMMIT');
