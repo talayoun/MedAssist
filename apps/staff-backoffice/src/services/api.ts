@@ -7,7 +7,10 @@ import type { z } from 'zod';
 
 type PatientStation = z.infer<typeof PatientStationDTO>;
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+// Staff Back-Office is desktop-only (never LAN/phone-accessed, per constitution) --
+// uses its own API URL var so it never inherits patient-pwa's LAN IP override,
+// which breaks the SameSite=Lax session cookie on localhost<->LAN-IP requests.
+const BASE_URL = import.meta.env.VITE_STAFF_API_URL ?? 'http://localhost:3000';
 
 class ApiError extends Error {
   constructor(
