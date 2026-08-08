@@ -8,6 +8,7 @@ import Admin from './pages/Admin';
 import NavigationRoutes from './pages/Admin/NavigationRoutes';
 import Trash from './pages/Admin/Trash';
 import { FormTemplates } from './pages/Admin/FormTemplates';
+import { Departments } from './pages/Admin/Departments';
 import { getSessionUser } from './services/api';
 import AppShell from './components/AppShell';
 
@@ -90,6 +91,7 @@ function App() {
               <Route path="checklists" element={<Admin />} />
               <Route path="navigation-routes" element={<NavigationRoutes />} />
               <Route path="form-templates" element={<FormTemplates />} />
+              <Route path="departments" element={<Departments />} />
               <Route path="trash" element={<Trash />} />
             </Route>
           </Route>

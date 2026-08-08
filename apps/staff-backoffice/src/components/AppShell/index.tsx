@@ -110,6 +110,9 @@ export default function AppShell() {
               <NavLink to="/admin/form-templates" style={linkStyle}>
                 תבניות טפסים
               </NavLink>
+              <NavLink to="/admin/departments" style={linkStyle}>
+                פרטי הגעה
+              </NavLink>
               <NavLink to="/admin/trash" style={linkStyle}>
                 פח אשפה
               </NavLink>
