@@ -163,7 +163,7 @@ netsh interface ipv4 show excludedportrange protocol=tcp
 - `VITE_API_URL` — API base URL
 
 **Staff Backoffice (`apps/staff-backoffice/.env`):**
-- `VITE_API_URL` — API base URL
+- `VITE_STAFF_API_URL` — API base URL. Desktop-only app (constitution) — keep this on `localhost`, never a LAN IP, or the staff session cookie (`SameSite=Lax`) won't survive the cross-site request from a localhost-served page. Distinct from patient-pwa's `VITE_API_URL`, which legitimately needs a LAN IP for phone testing.
 
 ---
 
