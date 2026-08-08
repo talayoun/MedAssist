@@ -72,16 +72,6 @@ export function getWaitingStatus(token: string): Promise<WaitingResponse> {
   return apiRequest<WaitingResponse>(`/visit/${token}/waiting`);
 }
 
-export function sendContactMessage(
-  token: string,
-  messageType: 'need_help' | 'confirm_here' | 'question'
-): Promise<{ sent: boolean }> {
-  return apiRequest(`/visit/${token}/waiting/contact`, {
-    method: 'POST',
-    body: JSON.stringify({ message_type: messageType }),
-  });
-}
-
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
 export function getForms(token: string): Promise<{ items: FormItemDTO[] }> {
