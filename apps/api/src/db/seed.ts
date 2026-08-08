@@ -53,13 +53,13 @@ async function seed() {
     // ─── Patient ──────────────────────────────────────────────────────────────
     const { rows: [patient] } = await client.query<{ id: string }>(`
       INSERT INTO patients (name, phone_number)
-      VALUES ('רועי דוידוביץ', '+972526068400')
+      VALUES ('ישראל ישראלי', '+972501234567')
       ON CONFLICT (phone_number) DO NOTHING
       RETURNING id
     `);
 
     const patientId: string = patient?.id ?? (
-      await client.query<{ id: string }>(`SELECT id FROM patients WHERE phone_number = '+972526068400'`)
+      await client.query<{ id: string }>(`SELECT id FROM patients WHERE phone_number = '+972501234567'`)
     ).rows[0].id;
 
     // ─── Reset prior seed state for this patient ────────────────────────────
@@ -223,8 +223,8 @@ async function seed() {
     const magicLinkUrl = `${patientAppUrl}/${token}`;
 
     // ─── Enqueue magic link SMS ───────────────────────────────────────────────
-    const PHONE_NUMBER = '+972526068400';
-    const smsMessage = `שלום רועי! הקישור שלך לביקור במחלקת קרדיולוגיה: ${magicLinkUrl}`;
+    const PHONE_NUMBER = '+972501234567';
+    const smsMessage = `שלום ישראל! הקישור שלך לביקור במחלקת קרדיולוגיה: ${magicLinkUrl}`;
 
     const { rows: [notif] } = await pool.query<{ id: string }>(`
       INSERT INTO notifications (patient_id, appointment_id, type, status, triggering_event)
