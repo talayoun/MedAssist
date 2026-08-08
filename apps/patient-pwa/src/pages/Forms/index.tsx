@@ -8,7 +8,7 @@ import AppHeader from '../../components/AppHeader';
 import { Card } from '../../components/ui/Card';
 import { InputField } from '../../components/ui/InputField';
 import { useVisitInfo } from '../../context/VisitPhaseContext';
-import type { FormItemDTO, FormItemValueDTO } from '@medassist/shared-types';
+import type { FormItemDTO } from '@medassist/shared-types';
 
 type Section = 'personal' | 'medical' | 'financial' | 'documents' | 'consent';
 
