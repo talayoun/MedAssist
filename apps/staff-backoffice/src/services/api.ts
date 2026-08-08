@@ -2,6 +2,7 @@ import type {
   StaffUser, QueueResponse, PatientStationDTO, AppointmentPhase, Department,
   TimingRule, AdminRoute, AdminRouteStep, ChecklistTemplate,
   FormItemDTO, StaffFormsResponseDTO, FormTemplateItemDTO,
+  DepartmentArrivalInfo, UpdateDepartmentArrivalInfoRequest,
 } from '@medassist/shared-types';
 import type { z } from 'zod';
 
@@ -518,6 +519,19 @@ export async function uploadFormTemplateBlank(id: string, file: File): Promise<F
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
   return body as FormTemplateItemDTO;
+}
+
+// ─── Admin — Departments (clinic-arrival info) ────────────────────────────────
+
+export function listDepartments(): Promise<{ departments: DepartmentArrivalInfo[] }> {
+  return apiRequest('/admin/departments');
+}
+
+export function patchDepartmentArrival(
+  id: string,
+  patch: UpdateDepartmentArrivalInfoRequest
+): Promise<DepartmentArrivalInfo> {
+  return apiRequest(`/admin/departments/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
 
 export interface AppointmentDetail {
