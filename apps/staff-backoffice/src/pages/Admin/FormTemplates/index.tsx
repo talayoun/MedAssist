@@ -4,6 +4,10 @@ import {
   deleteFormTemplate, uploadFormTemplateBlank, ApiError,
 } from '../../../services/api';
 import type { FormTemplateItemDTO } from '@medassist/shared-types';
+import { useRowSelection } from '../../../hooks/useRowSelection';
+import { runBulkDelete, summaryMessage } from '../../../lib/bulkDelete';
+import { BulkActionBar } from '../../../components/BulkActionBar';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 const card: React.CSSProperties = {
   background: '#fff',
@@ -65,8 +69,17 @@ export function FormTemplates() {
   const [saving, setSaving] = useState(false);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const draftFileRef = useRef<HTMLInputElement | null>(null);
   const uploadRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const selection = useRowSelection(
+    items,
+    (item) => item.id,
+    (item) => item.is_protected,
+  );
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -74,8 +87,10 @@ export function FormTemplates() {
     try {
       const { items: tpls } = await listFormTemplates();
       setItems(tpls);
+      return true;
     } catch {
       setError('שגיאה בטעינת תבניות');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -120,14 +135,37 @@ export function FormTemplates() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('למחוק תבנית זו?')) return;
     setDeleteErr(null);
     try {
       await deleteFormTemplate(id);
+      setConfirmDeleteId(null);
+      selection.remove(id);
       setItems((prev) => prev.filter((i) => i.id !== id));
     } catch {
       setDeleteErr('שגיאה במחיקת התבנית');
     }
+  };
+
+  const handleBulkDelete = async () => {
+    const targets = items
+      .filter((item) => selection.isSelected(item.id))
+      .map((item) => ({ id: item.id, label: item.label }));
+
+    setBulkBusy(true);
+    const summary = await runBulkDelete(targets, deleteFormTemplate);
+    setBulkBusy(false);
+    setBulkConfirmOpen(false);
+    selection.clear();
+
+    const reloadOk = await load();
+    if (!reloadOk) return;
+
+    const failed = summary.results.filter((r) => r.outcome === 'failed');
+    setDeleteErr(
+      failed.length
+        ? `${summaryMessage(summary)}. נכשלו: ${failed.map((r) => r.label).join(', ')}`
+        : null
+    );
   };
 
   const handleBlankUpload = async (item: FormTemplateItemDTO, file: File) => {
@@ -313,10 +351,25 @@ export function FormTemplates() {
           <p style={{ fontSize: '13px' }}>לחץ על &quot;+ תבנית חדשה&quot; כדי להוסיף את הטופס הראשון.</p>
         </div>
       ) : (
-        <div style={card}>
+        <>
+          <BulkActionBar
+            count={selection.selectedCount}
+            onDelete={() => setBulkConfirmOpen(true)}
+            onClear={selection.clear}
+          />
+          <div style={card}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ textAlign: 'center', padding: '8px 4px', color: '#64748b', fontWeight: 600 }}>
+                  <input
+                    type="checkbox"
+                    aria-label="בחר הכל"
+                    checked={selection.headerState === 'all'}
+                    ref={(el) => { if (el) el.indeterminate = selection.headerState === 'some'; }}
+                    onChange={selection.toggleAllVisible}
+                  />
+                </th>
                 <th style={{ textAlign: 'right', padding: '8px 4px', color: '#64748b', fontWeight: 600 }}>שם הטופס</th>
                 <th style={{ textAlign: 'center', padding: '8px 4px', color: '#64748b', fontWeight: 600 }}>חובה</th>
                 <th style={{ textAlign: 'center', padding: '8px 4px', color: '#64748b', fontWeight: 600 }}>PDF</th>
@@ -326,6 +379,15 @@ export function FormTemplates() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '10px 4px', textAlign: 'center' }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`בחר ${item.label}`}
+                      disabled={item.is_protected}
+                      checked={selection.isSelected(item.id)}
+                      onChange={() => selection.toggle(item.id)}
+                    />
+                  </td>
                   <td style={{ padding: '10px 4px', fontWeight: 600 }}>{item.label}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>{item.required ? '✓' : ''}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>
@@ -375,27 +437,54 @@ export function FormTemplates() {
                     )}
                   </td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id)}
-                      style={{
-                        padding: '3px 10px',
-                        background: 'transparent',
-                        color: '#ef4444',
-                        border: '1px solid #fca5a5',
-                        borderRadius: '6px',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      מחק
-                    </button>
+                    {item.is_protected && (
+                      <span style={{ background: '#f3f4f6', color: '#6b7280', borderRadius: 12, padding: '2px 8px', fontSize: 11, fontWeight: 600, marginInlineEnd: 6 }}>מערכת</span>
+                    )}
+                    {!item.is_protected && (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDeleteId(item.id)}
+                        style={{
+                          padding: '3px 10px',
+                          background: 'transparent',
+                          color: '#ef4444',
+                          border: '1px solid #fca5a5',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        מחק
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
+      )}
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="מחיקת תבנית"
+          body="למחוק תבנית זו?"
+          confirmLabel="מחק"
+          onConfirm={() => handleDelete(confirmDeleteId!)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+
+      {bulkConfirmOpen && (
+        <ConfirmDialog
+          title="מחיקת תבניות טפסים"
+          body={`להסיר ${selection.selectedCount} תבניות טפסים?`}
+          confirmLabel="הסר"
+          busy={bulkBusy}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkConfirmOpen(false)}
+        />
       )}
     </div>
   );
