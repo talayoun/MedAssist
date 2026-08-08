@@ -55,8 +55,10 @@ export default function Admin() {
     try {
       const { templates: tpls } = await listChecklists(showArchived);
       setTemplates(tpls);
+      return true;
     } catch {
       setError('שגיאה בטעינת תבניות');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -153,8 +155,11 @@ export default function Admin() {
 
     // fetchTemplates() clears `error` synchronously at its start, so the summary
     // message must be set after the refetch finishes, not before, or it is wiped
-    // before it ever renders.
-    await fetchTemplates();
+    // before it ever renders. And if the refetch itself fails, its own catch
+    // already set `error` to a fetch-failure message: do not clobber that with
+    // a "deleted N" banner when the table failed to reload.
+    const refetchOk = await fetchTemplates();
+    if (!refetchOk) return;
 
     const failed = summary.results.filter((r) => r.outcome === 'failed');
     setError(
