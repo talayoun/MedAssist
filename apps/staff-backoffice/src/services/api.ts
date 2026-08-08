@@ -477,16 +477,24 @@ export function listFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
 export function createFormTemplate(body: {
   procedure_type?: string | null;
   label: string;
-  item_type: 'patient_upload' | 'staff_upload_sign';
+  item_type: 'patient_upload' | 'staff_upload_sign' | 'text_field' | 'yes_no_list' | 'consent';
   required: boolean;
   order_index: number;
+  section?: 'personal' | 'medical' | 'financial' | 'documents' | 'consent';
+  sub_label?: string | null;
+  placeholder?: string | null;
+  list_item_placeholder?: string | null;
 }): Promise<FormTemplateItemDTO> {
   return apiRequest('/admin/form-templates', { method: 'POST', body: JSON.stringify(body) });
 }
 
 export function patchFormTemplate(
   id: string,
-  patch: Partial<{ label: string; required: boolean; order_index: number; is_active: boolean }>
+  patch: Partial<{
+    label: string; required: boolean; order_index: number; is_active: boolean;
+    section: 'personal' | 'medical' | 'financial' | 'documents' | 'consent';
+    sub_label: string | null; placeholder: string | null; list_item_placeholder: string | null;
+  }>
 ): Promise<FormTemplateItemDTO> {
   return apiRequest(`/admin/form-templates/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }

@@ -41,14 +41,14 @@ test.describe('patient: forms (mobile)', () => {
 
   test('html element has dir=rtl', async ({ page }) => {
     await page.goto(`/visit/${token}/forms`);
-    await expect(page.getByRole('heading', { name: 'מסמכים' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: 'מסמכים', exact: true })).toBeVisible({ timeout: 10_000 });
     const dir = await page.locator('html').getAttribute('dir');
     expect(dir).toBe('rtl');
   });
 
   test('documents section appears on the forms tab', async ({ page }) => {
     await page.goto(`/visit/${token}/forms`);
-    await expect(page.getByRole('heading', { name: 'מסמכים' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: 'מסמכים', exact: true })).toBeVisible({ timeout: 10_000 });
   });
 
   test('forms tab is reachable from bottom nav on checklist', async ({ page }) => {
@@ -56,12 +56,12 @@ test.describe('patient: forms (mobile)', () => {
     await page.waitForSelector('[role="checkbox"]', { timeout: 10_000 });
     await page.getByRole('button', { name: 'טפסים', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/visit/${token}/forms$`));
-    await expect(page.getByRole('heading', { name: 'מסמכים' })).toBeVisible({ timeout: 8_000 });
+    await expect(page.getByRole('heading', { name: 'מסמכים', exact: true })).toBeVisible({ timeout: 8_000 });
   });
 
   test('tap targets are at least 44x44px', async ({ page }) => {
     await page.goto(`/visit/${token}/forms`);
-    await expect(page.getByRole('heading', { name: 'מסמכים' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: 'מסמכים', exact: true })).toBeVisible({ timeout: 10_000 });
     // Wait for form items to load
     await page.waitForTimeout(500);
 
@@ -76,7 +76,7 @@ test.describe('patient: forms (mobile)', () => {
 
   test('signature page renders canvas', async ({ page }) => {
     await page.goto(`/visit/${token}/forms`);
-    await expect(page.getByRole('heading', { name: 'מסמכים' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole('heading', { name: 'מסמכים', exact: true })).toBeVisible({ timeout: 10_000 });
 
     const signBtn = page.getByText('חתום').first();
     if ((await signBtn.count()) === 0) {

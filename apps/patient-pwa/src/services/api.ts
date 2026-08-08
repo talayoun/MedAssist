@@ -1,4 +1,4 @@
-import type { VisitContext, ChecklistResponse, NavigationRoute, WaitingResponse, FormItemDTO } from '@medassist/shared-types';
+import type { VisitContext, ChecklistResponse, NavigationRoute, WaitingResponse, FormItemDTO, FormValueRequest } from '@medassist/shared-types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -116,6 +116,19 @@ export function submitFormSignature(token: string, itemId: string, signatureData
   return apiRequest(`/visit/${token}/forms/${itemId}/signature`, {
     method: 'POST',
     body: JSON.stringify({ signature_data: signatureData }),
+  });
+}
+
+export function setFormValue(token: string, itemId: string, body: FormValueRequest): Promise<FormItemDTO> {
+  return apiRequest(`/visit/${token}/forms/${itemId}/value`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteFormDocument(token: string, itemId: string): Promise<FormItemDTO> {
+  return apiRequest(`/visit/${token}/forms/${itemId}/document`, {
+    method: 'DELETE',
   });
 }
 
