@@ -148,6 +148,8 @@ export const ChecklistTemplateItemDTO = z.object({
   text: z.string().min(1),
   category: z.enum(['bring', 'fast', 'medication', 'other']),
   time_sensitive: z.boolean(),
+  description: z.string().nullable().default(null),
+  link_target: z.enum(['forms']).nullable().default(null),
 });
 
 export const ChecklistTemplateDTO = z.object({

@@ -1,10 +1,13 @@
 export type ChecklistCategory = 'bring' | 'fast' | 'medication' | 'other';
+export type ChecklistLinkTarget = 'forms';
 
 export interface ChecklistTemplateItem {
   id: string;
   text: string;
   category: ChecklistCategory;
   time_sensitive: boolean;
+  description?: string | null;
+  link_target?: ChecklistLinkTarget | null;
 }
 
 export interface ChecklistCustomItem extends ChecklistTemplateItem {}
@@ -16,6 +19,8 @@ export interface ResolvedChecklistItem {
   time_sensitive: boolean;
   completed: boolean;
   source: 'template' | 'custom';
+  description: string | null;
+  link_target: ChecklistLinkTarget | null;
 }
 
 export interface MergeInput {
@@ -46,6 +51,8 @@ export function mergeChecklistItems(input: MergeInput): MergeResult {
       time_sensitive: item.time_sensitive && withinTimeWindow,
       completed: completed.has(item.id),
       source: 'template',
+      description: item.description ?? null,
+      link_target: item.link_target ?? null,
     }));
 
   const fromCustom: ResolvedChecklistItem[] = input.customItems.map((item) => ({
@@ -55,6 +62,8 @@ export function mergeChecklistItems(input: MergeInput): MergeResult {
     time_sensitive: item.time_sensitive && withinTimeWindow,
     completed: completed.has(item.id),
     source: 'custom',
+    description: item.description ?? null,
+    link_target: item.link_target ?? null,
   }));
 
   const items = [...fromTemplate, ...fromCustom];

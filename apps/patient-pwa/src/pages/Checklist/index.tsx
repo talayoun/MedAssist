@@ -5,15 +5,23 @@ import AppHeader from '../../components/AppHeader';
 import { Card } from '../../components/ui/Card';
 import { CheckboxRow } from '../../components/ui/CheckboxRow';
 import { StatusPill } from '../../components/ui/StatusPill';
-import { Button } from '../../components/ui/Button';
 import type { ChecklistResponse, ChecklistItem } from '@medassist/shared-types';
 
-const CATEGORY_LABELS: Record<ChecklistItem['category'], string> = {
-  bring: 'מה להביא',
-  fast: 'צום',
-  medication: 'תרופות',
-  other: 'הוראות נוספות',
-};
+// Figma groups checklist items into 3 headings, in this fixed order — 'fast' and
+// 'medication' share a heading even though they're separate categories server-side.
+const GROUP_ORDER: { key: string; label: string; categories: ChecklistItem['category'][] }[] = [
+  { key: 'bring', label: 'מה להביא', categories: ['bring'] },
+  { key: 'fast_medication', label: 'צום ותרופות', categories: ['fast', 'medication'] },
+  { key: 'other', label: 'הוראות מיוחדות', categories: ['other'] },
+];
+
+function CheckIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
 
 export default function Checklist() {
   const { token } = useParams<{ token: string }>();
@@ -49,6 +57,10 @@ export default function Checklist() {
     [token, data, completedIds]
   );
 
+  const goToForms = useCallback(() => {
+    if (token) navigate(`/visit/${token}/forms`);
+  }, [token, navigate]);
+
   if (error) {
     return (
       <div className="min-h-screen flex flex-col bg-bg">
@@ -71,16 +83,29 @@ export default function Checklist() {
   const allComplete = totalCount > 0 && completedCount === totalCount;
   const isUrgentWindow = data.hours_until_visit !== null && data.hours_until_visit < 24;
 
-  const groupedItems = data.items.reduce<Record<string, ChecklistItem[]>>((acc, item) => {
-    (acc[item.category] ??= []).push(item);
-    return acc;
-  }, {});
+  // No checklist items — typically the ER track, which has no pre-visit preparation.
+  if (totalCount === 0) {
+    return (
+      <div className="min-h-screen flex flex-col bg-bg">
+        <AppHeader />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 text-center">
+          <div className="w-24 h-24 bg-[#F0FDFA] rounded-full flex items-center justify-center mb-6">
+            <CheckIcon />
+          </div>
+          <Card className="text-center">
+            <h2 className="text-[28px] font-bold text-text mb-3">אין הכנות מוקדמות</h2>
+            <p className="text-[18px] text-text-muted">נחזור אליך כשהמיון יזמין אותך לחדר הטיפול</p>
+          </Card>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
       <AppHeader />
-      <div className="max-w-[480px] w-full mx-auto px-4 pt-4 pb-8">
-        <Card className="mb-6">
+      <div className="sticky top-0 z-10 bg-bg px-4 pt-4 pb-4">
+        <Card>
           <div className="flex items-center justify-between mb-3">
             <span className="text-lg font-semibold text-text">התקדמות</span>
             <StatusPill status={allComplete ? 'completed' : 'info'}>
@@ -94,7 +119,9 @@ export default function Checklist() {
             />
           </div>
         </Card>
+      </div>
 
+      <div className="max-w-[480px] w-full mx-auto px-4 pb-8">
         <div className="text-right mb-6">
           <h1 className="text-[28px] font-bold text-text mb-2">מה להביא ולהכין</h1>
           <p className="text-base text-text-muted">
@@ -109,40 +136,63 @@ export default function Checklist() {
           </Card>
         )}
 
-        {Object.entries(groupedItems).map(([category, items]) => (
-          <div key={category} className="mb-6">
-            <h2 className="text-[22px] font-semibold text-text mb-4 text-right">
-              {CATEGORY_LABELS[category as ChecklistItem['category']]}
-            </h2>
-            <div className="space-y-4">
-              {items.map((item) => {
-                const isCompleted = completedIds.has(item.id);
-                const isUrgent = item.time_sensitive && !isCompleted;
-                return (
-                  <Card key={item.id} variant={isUrgent ? 'warning' : 'default'}>
-                    <CheckboxRow
-                      label={isUrgent ? `דחוף: ${item.text}` : item.text}
-                      checked={isCompleted}
-                      onChange={() => toggleItem(item)}
-                    />
-                  </Card>
-                );
-              })}
+        {GROUP_ORDER.map(({ key, label, categories }) => {
+          const items = data.items.filter((i) => categories.includes(i.category));
+          if (items.length === 0) return null;
+          return (
+            <div key={key} className="mb-6">
+              <h2 className="text-[22px] font-semibold text-text mb-4 text-right">{label}</h2>
+              <div className="space-y-4">
+                {items.map((item) => {
+                  const isCompleted = completedIds.has(item.id);
+                  const isUrgent = item.time_sensitive && !isCompleted;
+                  return (
+                    <Card key={item.id} variant={isUrgent ? 'warning' : 'default'}>
+                      {item.link_target === 'forms' ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <CheckboxRow
+                              label={isUrgent ? `דחוף: ${item.text}` : item.text}
+                              description={item.description}
+                              checked={isCompleted}
+                              onChange={() => toggleItem(item)}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={goToForms}
+                            className="flex-shrink-0 flex flex-col items-center justify-center gap-1 w-10 h-14 rounded-xl hover:bg-[#F0FDFA] active:bg-[#CCFBF1] text-teal transition-colors duration-150"
+                          >
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="15 18 9 12 15 6" />
+                            </svg>
+                            <span className="text-[10px] font-semibold leading-none">פתח</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <CheckboxRow
+                          label={isUrgent ? `דחוף: ${item.text}` : item.text}
+                          description={item.description}
+                          checked={isCompleted}
+                          onChange={() => toggleItem(item)}
+                        />
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
-        {allComplete && (
-          <Button
-            onClick={() => token && navigate(`/visit/${token}/navigation`)}
-            className="w-full flex items-center justify-center gap-3 mt-6 !rounded-2xl shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            <span>המשך לניווט</span>
-          </Button>
-        )}
+        <button
+          type="button"
+          onClick={goToForms}
+          className="w-full h-[64px] rounded-2xl font-bold text-[20px] transition-colors duration-150 flex items-center justify-center gap-3 shadow-md bg-teal hover:bg-teal-hover text-white"
+        >
+          <CheckIcon />
+          <span>המשך להעלאת טפסים</span>
+        </button>
       </div>
     </div>
   );
