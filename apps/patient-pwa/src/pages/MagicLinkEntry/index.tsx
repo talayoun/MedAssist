@@ -5,6 +5,7 @@ import type { VisitContext } from '@medassist/shared-types';
 import AppHeader from '../../components/AppHeader';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
+import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 
 const PHASE_CTA: Record<VisitContext['phase'], string> = {
   checklist: 'התכוננות לביקור',
@@ -27,6 +28,7 @@ function toGCalStamp(d: Date): string {
 export default function MagicLinkEntry() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
+  const isOnline = useOnlineStatus();
   const [ctx, setCtx] = useState<VisitContext | null>(null);
 
   useEffect(() => {
@@ -75,7 +77,7 @@ export default function MagicLinkEntry() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <AppHeader patientName={ctx.patient.name} />
+      <AppHeader patientName={ctx.patient.name} isOnline={isOnline} />
 
       <main className="max-w-[480px] mx-auto px-4 py-8 flex flex-col gap-8">
         <Card className="!p-6 !rounded-3xl flex flex-col gap-4">
@@ -99,17 +101,19 @@ export default function MagicLinkEntry() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleCalendarExport}
-                className="flex items-center justify-center gap-3 w-full min-h-14 bg-white border border-border rounded-2xl text-base font-bold text-[#2d3748] hover:bg-bg transition-colors"
-              >
-                <span>הוסף ליומן Google</span>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                  <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="#4285F4" strokeWidth="2" />
-                  <path d="M16 2V6M8 2V6M3 10H21" stroke="#4285F4" strokeWidth="2" />
-                </svg>
-              </button>
+              {isOnline && (
+                <button
+                  type="button"
+                  onClick={handleCalendarExport}
+                  className="flex items-center justify-center gap-3 w-full min-h-14 bg-white border border-border rounded-2xl text-base font-bold text-[#2d3748] hover:bg-bg transition-colors"
+                >
+                  <span>הוסף ליומן Google</span>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <path d="M19 4H5C3.89543 4 3 4.89543 3 6V20C3 21.1046 3.89543 22 5 22H19C20.1046 22 21 21.1046 21 20V6C21 4.89543 20.1046 4 19 4Z" stroke="#4285F4" strokeWidth="2" />
+                    <path d="M16 2V6M8 2V6M3 10H21" stroke="#4285F4" strokeWidth="2" />
+                  </svg>
+                </button>
+              )}
             </>
           ) : (
             <div className="bg-[#fff3cd] border border-[#ffc107] rounded-2xl px-5 py-4 text-[17px] text-[#7a5c00] text-center">
@@ -118,12 +122,20 @@ export default function MagicLinkEntry() {
           )}
         </Card>
 
-        <Button onClick={handleStart} className="!rounded-2xl shadow-[0_2px_6px_rgba(13,148,136,0.35)] w-full flex items-center justify-center gap-3">
+        <Button
+          onClick={handleStart}
+          disabled={!isOnline}
+          className="!rounded-2xl shadow-[0_2px_6px_rgba(13,148,136,0.35)] w-full flex items-center justify-center gap-3"
+        >
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
           </svg>
           <span>{PHASE_CTA[ctx.phase]}</span>
         </Button>
+
+        {!isOnline && (
+          <p className="text-sm text-text-muted text-center -mt-4">תוכל להמשיך כשהחיבור יחזור</p>
+        )}
       </main>
     </div>
   );
