@@ -133,6 +133,9 @@ export async function createRoute(input: CreateRouteInput): Promise<NavigationRo
 export async function updateRoute(id: string, input: UpdateRouteInput): Promise<NavigationRouteRow | null> {
   const existing = await getRoute(id);
   if (!existing) return null;
+  if (existing.is_protected && input.archived === true) {
+    throw Object.assign(new Error('פריט מערכת מוגן. לא ניתן למחוק.'), { status: 409 });
+  }
 
   const nextName = input.name ?? existing.name;
   const nextFrom = input.from_department_id === undefined ? existing.from_department_id : input.from_department_id;

@@ -56,6 +56,16 @@ export async function createTemplateItem(input: CreateTemplateItemInput) {
 }
 
 export async function patchTemplateItem(id: string, input: PatchTemplateItemInput) {
+  if (input.is_active === false) {
+    const { rows: existing } = await query<{ is_protected: boolean }>(
+      `SELECT is_protected FROM form_template_items WHERE id = $1`,
+      [id],
+    );
+    if (!existing[0]) throw Object.assign(new Error('Not found'), { status: 404 });
+    if (existing[0].is_protected) {
+      throw Object.assign(new Error('פריט מערכת מוגן. לא ניתן למחוק.'), { status: 409 });
+    }
+  }
   const fields: string[] = [];
   const values: unknown[] = [];
   let i = 1;

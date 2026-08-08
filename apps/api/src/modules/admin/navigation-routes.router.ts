@@ -138,11 +138,13 @@ router.put('/navigation-routes/:id', async (req: Request, res: Response, next: N
     if (!row) { res.status(404).json({ error: 'not_found' }); return; }
     const steps = await getRouteSteps(row.id);
     res.json(serializeRoute(row, steps));
-  } catch (err) {
+  } catch (err: unknown) {
     if (isPgUniqueViolation(err)) {
       res.status(409).json({ error: 'duplicate_default_route' });
       return;
     }
+    const e = err as { status?: number; message?: string };
+    if (e.status === 409) { res.status(409).json({ error: 'item_protected', message: e.message }); return; }
     next(err);
   }
 });

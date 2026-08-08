@@ -243,6 +243,12 @@ async function seed() {
       ]);
     }
 
+    // Baseline system entity: admins may edit it but never deactivate it.
+    await client.query(
+      `UPDATE form_template_items SET is_protected = TRUE
+       WHERE procedure_type IS NULL AND label = 'שם מלא'`
+    );
+
     await client.query('COMMIT');
 
     const patientAppUrl = process.env.MAGIC_LINK_BASE_URL ?? 'http://localhost:5173/visit';

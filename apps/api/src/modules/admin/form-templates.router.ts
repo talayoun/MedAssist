@@ -58,7 +58,11 @@ router.patch('/form-templates/:id', async (req, res, next) => {
     }
     res.json(await svc.patchTemplateItem(req.params.id, parsed.data));
   }
-  catch (err) { next(err); }
+  catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
+    if (e.status === 409) { res.status(409).json({ error: 'item_protected', message: e.message }); return; }
+    next(err);
+  }
 });
 
 router.delete('/form-templates/:id', async (req, res, next) => {

@@ -64,4 +64,40 @@ test.describe('protected rows cannot be deleted', () => {
       .some((t: { is_protected: boolean }) => t.is_protected);
     expect(still).toBe(true);
   });
+
+  test('PATCH deactivating a protected form template item returns 409 item_protected', async ({ request }) => {
+    const list = await request.get('/api/admin/form-templates');
+    const protectedItem = (await list.json()).items
+      .find((it: { is_protected: boolean }) => it.is_protected);
+    expect(protectedItem, 'seed must contain a protected form template item').toBeTruthy();
+
+    const res = await request.patch(`/api/admin/form-templates/${protectedItem.id}`, {
+      data: { is_active: false },
+    });
+    expect(res.status()).toBe(409);
+    expect((await res.json()).error).toBe('item_protected');
+
+    const listAfter = await request.get('/api/admin/form-templates');
+    const stillActive = (await listAfter.json()).items
+      .some((it: { id: string; is_active: boolean }) => it.id === protectedItem.id && it.is_active);
+    expect(stillActive).toBe(true);
+  });
+
+  test('PUT archiving a protected navigation route returns 409 item_protected', async ({ request }) => {
+    const list = await request.get('/api/admin/navigation-routes');
+    const protectedRoute = (await list.json()).routes
+      .find((r: { is_protected: boolean }) => r.is_protected);
+    expect(protectedRoute, 'seed must contain a protected navigation route').toBeTruthy();
+
+    const res = await request.put(`/api/admin/navigation-routes/${protectedRoute.route_id}`, {
+      data: { archived: true },
+    });
+    expect(res.status()).toBe(409);
+    expect((await res.json()).error).toBe('item_protected');
+
+    const listAfter = await request.get('/api/admin/navigation-routes');
+    const stillUnarchived = (await listAfter.json()).routes
+      .some((r: { route_id: string; archived: boolean }) => r.route_id === protectedRoute.route_id && !r.archived);
+    expect(stillUnarchived).toBe(true);
+  });
 });
