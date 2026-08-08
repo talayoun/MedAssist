@@ -362,6 +362,8 @@ export interface ChecklistItemInput {
   text: string;
   category: 'bring' | 'fast' | 'medication' | 'other';
   time_sensitive: boolean;
+  description?: string | null;
+  link_target?: 'forms' | null;
 }
 
 export function createChecklist(

@@ -4,12 +4,16 @@ import { z } from 'zod';
 
 export const ChecklistCategorySchema = z.enum(['bring', 'fast', 'medication', 'other']);
 
+export const ChecklistLinkTargetSchema = z.enum(['forms']);
+
 export const ChecklistItemDTO = z.object({
   id: z.string().uuid(),
   text: z.string().min(1),
   category: ChecklistCategorySchema,
   time_sensitive: z.boolean(),
   completed: z.boolean(),
+  description: z.string().nullable(),
+  link_target: ChecklistLinkTargetSchema.nullable(),
 });
 
 export const ChecklistResponseDTO = z.object({

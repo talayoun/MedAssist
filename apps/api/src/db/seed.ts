@@ -136,10 +136,30 @@ async function seed() {
 
     // ─── Checklist Template ───────────────────────────────────────────────────
     const items = [
-      { id: randomUUID(), text: 'הגע בצום של 6 שעות לפחות', category: 'fast', time_sensitive: true },
-      { id: randomUUID(), text: 'הבא תעודת זהות', category: 'bring', time_sensitive: false },
-      { id: randomUUID(), text: 'הבא כרטיס ביטוח בריאות', category: 'bring', time_sensitive: false },
-      { id: randomUUID(), text: 'הפסק נטילת מדללי דם 48 שעות לפני', category: 'medication', time_sensitive: true },
+      {
+        id: randomUUID(), text: 'הבא תעודת זהות', category: 'bring', time_sensitive: false,
+        description: 'נדרשת תעודת זהות מקורית, לא צילום', link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'הבא כרטיס ביטוח בריאות', category: 'bring', time_sensitive: false,
+        description: null, link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'הגע בצום החל משעה 22:00', category: 'fast', time_sensitive: true,
+        description: 'אין לאכול או לשתות החל משעה זו', link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'הפסק נטילת מדללי דם', category: 'medication', time_sensitive: true,
+        description: 'חשוב - בצע עד מחר בשעה 08:00', link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'מלא טופס הסכמה מדעת', category: 'other', time_sensitive: false,
+        description: 'הטפסים נשלחו אליך וממתינים להעלאה', link_target: 'forms',
+      },
+      {
+        id: randomUUID(), text: 'הגע 30 דקות מוקדם', category: 'other', time_sensitive: false,
+        description: null, link_target: null,
+      },
     ];
     await client.query(`
       INSERT INTO checklist_templates (procedure_type, hospital_id, items_json)

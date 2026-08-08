@@ -71,7 +71,7 @@ export default function Admin() {
   function addItem() {
     setEditState((prev) => prev && ({
       ...prev,
-      items: [...prev.items, { _key: `k${Date.now()}`, text: '', category: 'other', time_sensitive: false }],
+      items: [...prev.items, { _key: `k${Date.now()}`, text: '', category: 'other', time_sensitive: false, description: null, link_target: null }],
     }));
   }
 
@@ -230,12 +230,20 @@ export default function Admin() {
                     <button type="button" disabled={idx === 0} onClick={() => moveItem(it._key, -1)} style={s.moveBtn}>↑</button>
                     <button type="button" disabled={idx === editState.items.length - 1} onClick={() => moveItem(it._key, 1)} style={s.moveBtn}>↓</button>
                   </div>
-                  <input
-                    value={it.text}
-                    onChange={(e) => updateItem(it._key, { text: e.target.value })}
-                    placeholder="טקסט הפריט..."
-                    style={{ ...s.input, flex: 1 }}
-                  />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <input
+                      value={it.text}
+                      onChange={(e) => updateItem(it._key, { text: e.target.value })}
+                      placeholder="טקסט הפריט..."
+                      style={s.input}
+                    />
+                    <input
+                      value={it.description ?? ''}
+                      onChange={(e) => updateItem(it._key, { description: e.target.value || null })}
+                      placeholder="תיאור (אופציונלי)..."
+                      style={s.input}
+                    />
+                  </div>
                   <select
                     value={it.category}
                     onChange={(e) => updateItem(it._key, { category: e.target.value as Category })}
@@ -252,6 +260,14 @@ export default function Admin() {
                       onChange={(e) => updateItem(it._key, { time_sensitive: e.target.checked })}
                     />
                     דחוף
+                  </label>
+                  <label style={s.tsLabel}>
+                    <input
+                      type="checkbox"
+                      checked={it.link_target === 'forms'}
+                      onChange={(e) => updateItem(it._key, { link_target: e.target.checked ? 'forms' : null })}
+                    />
+                    מקשר לטפסים
                   </label>
                   <button type="button" onClick={() => removeItem(it._key)} style={s.removeBtn}>×</button>
                 </div>

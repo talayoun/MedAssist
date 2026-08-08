@@ -15,6 +15,8 @@ export interface ChecklistItemJson {
   text: string;
   category: 'bring' | 'fast' | 'medication' | 'other';
   time_sensitive: boolean;
+  description: string | null;
+  link_target: 'forms' | null;
 }
 
 export async function listTemplates(includeArchived = false): Promise<ChecklistTemplateRow[]> {
@@ -36,9 +38,18 @@ export async function getTemplate(id: string): Promise<ChecklistTemplateRow | nu
   return rows[0] ?? null;
 }
 
+type TemplateItemInput = {
+  id?: string;
+  text: string;
+  category: 'bring' | 'fast' | 'medication' | 'other';
+  time_sensitive: boolean;
+  description?: string | null;
+  link_target?: 'forms' | null;
+};
+
 export interface CreateTemplateInput {
   procedure_type: string;
-  items: Array<{ id?: string; text: string; category: 'bring' | 'fast' | 'medication' | 'other'; time_sensitive: boolean }>;
+  items: TemplateItemInput[];
 }
 
 export async function createTemplate(input: CreateTemplateInput): Promise<ChecklistTemplateRow> {
@@ -47,6 +58,8 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Checkl
     text: it.text,
     category: it.category,
     time_sensitive: it.time_sensitive,
+    description: it.description ?? null,
+    link_target: it.link_target ?? null,
   }));
 
   // Resolve hospital_id from departments (single-hospital MVP)
@@ -67,7 +80,7 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Checkl
 
 export interface UpdateTemplateInput {
   procedure_type?: string;
-  items?: Array<{ id?: string; text: string; category: 'bring' | 'fast' | 'medication' | 'other'; time_sensitive: boolean }>;
+  items?: TemplateItemInput[];
 }
 
 export async function updateTemplate(id: string, input: UpdateTemplateInput): Promise<ChecklistTemplateRow | null> {
@@ -81,6 +94,8 @@ export async function updateTemplate(id: string, input: UpdateTemplateInput): Pr
         text: it.text,
         category: it.category,
         time_sensitive: it.time_sensitive,
+        description: it.description ?? null,
+        link_target: it.link_target ?? null,
       }))
     : existing.items_json;
 

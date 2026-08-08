@@ -54,7 +54,7 @@ test.describe('patient: forms (mobile)', () => {
   test('forms tab is reachable from bottom nav on checklist', async ({ page }) => {
     await page.goto(`/visit/${token}/checklist`);
     await page.waitForSelector('[role="checkbox"]', { timeout: 10_000 });
-    await page.getByRole('button', { name: 'טפסים' }).click();
+    await page.getByRole('button', { name: 'טפסים', exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/visit/${token}/forms$`));
     await expect(page.getByRole('heading', { name: 'מסמכים' })).toBeVisible({ timeout: 8_000 });
   });
