@@ -20,17 +20,28 @@ interface MagicLinkRow {
   visit_datetime: Date | null;
   track: AppointmentTrack;
   appt_status: string;
+  current_phase: AppointmentPhase;
+  deleted_at: Date | null;
   expires_at: Date;
   used_at: Date | null;
   link_type: 'patient' | 'companion';
 }
 
-/** Resolve token → visit context, marking used_at on first valid open */
+/**
+ * Resolve token → visit context.
+ *
+ * A magic link is reusable for the entire visit — a patient tapping the SMS
+ * link again mid-checklist must land back where they were, and the app
+ * itself polls this on every visit page for the whole session. `used_at` is
+ * therefore first-open analytics only and never gates access. The link stops
+ * working when its TTL passes (expires_at), the visit reaches its terminal
+ * phase ('done'), or staff removes the appointment (soft-delete).
+ */
 export async function resolveToken(token: string): Promise<VisitContext> {
   const { rows } = await query<MagicLinkRow>(`
     SELECT ml.appointment_id, a.patient_id, p.name AS patient_name,
            d.name AS department_name, a.visit_datetime,
-           ml.track, a.status AS appt_status,
+           ml.track, a.status AS appt_status, a.current_phase, a.deleted_at,
            ml.expires_at, ml.used_at, ml.link_type
     FROM magic_links ml
     JOIN appointments a  ON a.id  = ml.appointment_id
@@ -46,8 +57,14 @@ export async function resolveToken(token: string): Promise<VisitContext> {
 
   const row = rows[0];
 
-  // A 'done' appointment means the visit is over — link is no longer valid
-  if (row.appt_status === 'done') {
+  // Patient removed via the back-office (trash) — treat as if the link never existed
+  if (row.deleted_at !== null) {
+    const err = Object.assign(new Error('link_not_found'), { status: 404 });
+    throw err;
+  }
+
+  // Visit reached its terminal phase — link is no longer valid
+  if (row.current_phase === 'done') {
     const err = Object.assign(new Error('link_used'), {
       status: 409,
       message: 'הביקור הסתיים. אם אתה זקוק לגישה מחדש, פנה לצוות המחלקה.',

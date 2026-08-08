@@ -108,9 +108,12 @@ export function requireMagicLinkToken(req: Request, res: Response, next: NextFun
     track: 'elective' | 'er';
     expires_at: Date;
     used_at: Date | null;
+    current_phase: string;
+    deleted_at: Date | null;
   }>(
     `SELECT ml.id AS ml_id, ml.appointment_id, a.patient_id, a.department_id,
-            ml.link_type, ml.track, ml.expires_at, ml.used_at
+            ml.link_type, ml.track, ml.expires_at, ml.used_at,
+            a.current_phase, a.deleted_at
      FROM magic_links ml
      JOIN appointments a ON a.id = ml.appointment_id
      WHERE ml.token = $1`,
@@ -122,6 +125,24 @@ export function requireMagicLinkToken(req: Request, res: Response, next: NextFun
         return;
       }
       const row = rows[0];
+
+      // Patient removed via the back-office (trash) — treat as if the link never existed
+      if (row.deleted_at !== null) {
+        res.status(401).json({ error: 'link_not_found' });
+        return;
+      }
+
+      // Visit reached its terminal phase — link is no longer valid.
+      // A page already open when the visit completes (e.g. mid-poll on Waiting)
+      // must also stop working, not just the initial resolve — hence this check
+      // lives here too, not only in magic-links.service.ts's resolveToken.
+      if (row.current_phase === 'done') {
+        res.status(409).json({
+          error: 'link_used',
+          message: 'הביקור הסתיים. אם אתה זקוק לגישה מחדש, פנה לצוות המחלקה.',
+        });
+        return;
+      }
 
       if (new Date(row.expires_at) <= new Date()) {
         res.status(410).json({

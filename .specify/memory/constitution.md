@@ -17,7 +17,7 @@ Features that apply to only one track must be clearly scoped. The underlying not
 
 ### IV. Security & Privacy by Default
 - All client–server communication over HTTPS / TLS 1.3.
-- Magic Links are one-time-use, encrypted, contain no medical data in the URL, and expire after 72 hours (elective) or 12 hours (ER).
+- **Magic Link validity (clarified in v1.2)**: a Magic Link is reusable for the duration of the visit — a patient reopening the SMS link (or an already-open page polling for updates) must keep working throughout checklist → forms → navigation → waiting. A link stops working when: its TTL expires (72 hours elective / 12 hours ER), the visit reaches its terminal phase (treatment done), or staff removes the appointment via the back-office. It is never invalidated merely by having been opened once. Links are encrypted and contain no medical data in the URL.
 - Staff passwords hashed (minimum bcrypt or equivalent, 12+ characters). Account locked after 5 failed attempts for 15 minutes. Session timeout after 60 minutes of inactivity.
 - Only name, date, and procedure name are stored as **appointment metadata** on MedAssist servers.
 - **Patient-supplied intake data (added in v1.1)**: the digital-forms flow may additionally store data the patient directly enters or uploads about themself — national ID number, a free-text list of allergies, a free-text list of regular medications, consent acknowledgements, and uploaded documents (ID photo, insurance card, referral letters, prior test results, imaging reports). This is explicitly scoped:
@@ -105,8 +105,9 @@ Patient-declared intake data (national ID, self-reported allergy/medication list
 - Amendments require team consensus and must update the version and amendment date below.
 - The Zero-Search principle and Zero-Installation principle are non-negotiable for v1.0; no exception without a constitution amendment.
 
-**Version**: 1.1 | **Ratified**: 2026-03-28 | **Last Amended**: 2026-08-08
+**Version**: 1.2 | **Ratified**: 2026-03-28 | **Last Amended**: 2026-08-08
 
 ### Amendment history
 
+- **1.2 (2026-08-08)**: §IV's "Magic Links are one-time-use" replaced with the actual intended model (reusable for the whole visit; invalidated by TTL expiry, visit completion, or staff removal). Rationale: a code audit found "one-time-use" had never been implemented — worse, the code's own attempt to reject a finished visit's link checked the wrong database column and had never once fired, so links kept working forever even after treatment ended. The literal "one-time-use" wording does not match how the app actually needs to behave (it polls the same token for hours across an entire visit) and was the direct cause of the gap going unnoticed; the constitution now states the real requirement so spec and implementation agree.
 - **1.1 (2026-08-08)**: §IV amended to permit patient-supplied intake data (national ID, self-reported allergy/medication lists, consent, document uploads) for the digital-forms Must-Have feature, matching the approved Figma design. Rationale: the digital-forms flow cannot function without capturing this patient-entered data, and v1.0's blanket "no clinical data" rule was written before the full forms design existed. Scoped tightly (patient-entered only, non-editable by staff, same retention/residency rules) to avoid opening the door to EMR integration or clinical record-keeping, both of which remain out of scope.
