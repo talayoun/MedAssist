@@ -59,6 +59,7 @@ function serializeRoute(row: NavigationRouteRow, steps?: NavigationStepRow[]) {
     to_department_id: row.to_department_id,
     is_default: row.is_default,
     archived: row.archived,
+    is_protected: row.is_protected,
     steps_count: row.steps_count,
     ...(steps
       ? {

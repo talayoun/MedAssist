@@ -215,6 +215,7 @@ export const FormTemplateItemDTOSchema = z.object({
   sub_label: z.string().nullable(),
   placeholder: z.string().nullable(),
   list_item_placeholder: z.string().nullable(),
+  is_protected: z.boolean().default(false),
 });
 
 export type FormTemplateItemDTO = z.infer<typeof FormTemplateItemDTOSchema>;

@@ -167,6 +167,16 @@ async function seed() {
       ON CONFLICT (procedure_type, hospital_id) DO NOTHING
     `, [HOSPITAL_ID, JSON.stringify(items)]);
 
+    // Baseline system entities: admins may edit them but never delete them.
+    await client.query(
+      `UPDATE checklist_templates SET is_protected = TRUE
+       WHERE procedure_type = 'pre-op-cardiac' AND hospital_id = $1`,
+      [HOSPITAL_ID]
+    );
+    await client.query(
+      `UPDATE navigation_routes SET is_protected = TRUE WHERE is_default = TRUE`
+    );
+
     // ─── Form template items ───────────────────────────────────────────────────
     // Full 5-section intake form matching the Figma design (personal / medical /
     // financial / documents / consent). Patient-supplied fields (allergies,

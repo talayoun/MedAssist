@@ -130,6 +130,7 @@ export const AdminRouteDTO = z.object({
   to_department_id: z.string().uuid(),
   is_default: z.boolean(),
   archived: z.boolean(),
+  is_protected: z.boolean().default(false),
   steps_count: z.number().int(),
   steps: z.array(AdminRouteStepDTO).optional(),
 });
@@ -175,6 +176,7 @@ export const ChecklistTemplateDTO = z.object({
   procedure_type: z.string().min(1),
   item_count: z.number().int(),
   archived: z.boolean(),
+  is_protected: z.boolean().default(false),
   items: z.array(ChecklistTemplateItemDTO).optional(),
 });
 

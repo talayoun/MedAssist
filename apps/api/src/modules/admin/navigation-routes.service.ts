@@ -8,6 +8,7 @@ export interface NavigationRouteRow {
   to_department_id: string;
   is_default: boolean;
   archived: boolean;
+  is_protected: boolean;
   steps_count: number;
   created_at: string;
   updated_at: string;
@@ -40,7 +41,7 @@ export interface UpdateRouteInput {
 
 export async function listRoutes(includeArchived = false): Promise<NavigationRouteRow[]> {
   const { rows } = await query<NavigationRouteRow>(
-    `SELECT id, name, from_department_id, to_department_id, is_default, archived,
+    `SELECT id, name, from_department_id, to_department_id, is_default, archived, is_protected,
             steps_count, created_at, updated_at
      FROM navigation_routes
      ${includeArchived ? '' : 'WHERE archived = FALSE'}
@@ -51,7 +52,7 @@ export async function listRoutes(includeArchived = false): Promise<NavigationRou
 
 export async function getRoute(id: string): Promise<NavigationRouteRow | null> {
   const { rows } = await query<NavigationRouteRow>(
-    `SELECT id, name, from_department_id, to_department_id, is_default, archived,
+    `SELECT id, name, from_department_id, to_department_id, is_default, archived, is_protected,
             steps_count, created_at, updated_at
      FROM navigation_routes WHERE id = $1`,
     [id]
@@ -105,7 +106,7 @@ export async function createRoute(input: CreateRouteInput): Promise<NavigationRo
       `INSERT INTO navigation_routes
          (name, from_department_id, to_department_id, is_default, archived, steps_count)
        VALUES ($1, $2, $3, $4, FALSE, $5)
-       RETURNING id, name, from_department_id, to_department_id, is_default, archived,
+       RETURNING id, name, from_department_id, to_department_id, is_default, archived, is_protected,
                  steps_count, created_at, updated_at`,
       [
         input.name,
@@ -153,7 +154,7 @@ export async function updateRoute(id: string, input: UpdateRouteInput): Promise<
            archived = $5,
            updated_at = NOW()
        WHERE id = $6
-       RETURNING id, name, from_department_id, to_department_id, is_default, archived,
+       RETURNING id, name, from_department_id, to_department_id, is_default, archived, is_protected,
                  steps_count, created_at, updated_at`,
       [nextName, nextFrom, nextTo, nextIsDefault, nextArchived, id]
     );
