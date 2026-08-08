@@ -6,9 +6,10 @@ export type AppPhase = VisitContext['phase'] | null;
 export type VisitInfo = {
   phase: AppPhase;
   patientName: string | null;
+  isOnline: boolean;
 };
 
-export const VisitPhaseContext = createContext<VisitInfo>({ phase: null, patientName: null });
+export const VisitPhaseContext = createContext<VisitInfo>({ phase: null, patientName: null, isOnline: true });
 
 export function useVisitPhase(): AppPhase {
   return useContext(VisitPhaseContext).phase;

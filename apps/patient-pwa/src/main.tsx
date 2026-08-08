@@ -13,6 +13,7 @@ import BottomNav from './components/BottomNav';
 import { resolveVisit, ApiError } from './services/api';
 import { VisitPhaseContext } from './context/VisitPhaseContext';
 import type { VisitInfo } from './context/VisitPhaseContext';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 
 // Hebrew RTL for all patient-facing content
 document.documentElement.setAttribute('dir', 'rtl');
@@ -24,7 +25,8 @@ document.documentElement.setAttribute('lang', 'he');
 function VisitLayout() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const [info, setInfo] = useState<VisitInfo>({ phase: null, patientName: null });
+  const isOnline = useOnlineStatus();
+  const [info, setInfo] = useState<Omit<VisitInfo, 'isOnline'>>({ phase: null, patientName: null });
 
   useEffect(() => {
     if (!token) return;
@@ -47,7 +49,7 @@ function VisitLayout() {
   }, [token, navigate]);
 
   return (
-    <VisitPhaseContext.Provider value={info}>
+    <VisitPhaseContext.Provider value={{ ...info, isOnline }}>
       <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
         <Outlet />
         <BottomNav />
