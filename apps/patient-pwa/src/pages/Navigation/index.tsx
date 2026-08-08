@@ -75,6 +75,7 @@ export default function Navigation() {
   const [error, setError] = useState<string | null>(null);
   const [viewOrder, setViewOrder] = useState<number | null>(null);
   const [reviewStep, setReviewStep] = useState<number | null>(null);
+  const [arrivedAtClinic, setArrivedAtClinic] = useState(false);
   const stepCache = useRef<Map<number, NavigationStep>>(new Map());
 
   const loadNavigation = useCallback(() => {
@@ -142,6 +143,74 @@ export default function Navigation() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg">
         <p className="text-[#555]">טוען הוראות ניווט...</p>
+      </div>
+    );
+  }
+
+  // ─── Clinic-arrival phase: how to get to the hospital, before indoor steps ────
+  if (data.arrival && !arrivedAtClinic && !data.completed) {
+    const { address, parking_info, transit_info, map_lat, map_lng } = data.arrival;
+    const hasCoords = map_lat != null && map_lng != null;
+    return (
+      <div className="min-h-screen flex flex-col bg-bg">
+        <AppHeader />
+        <div className="max-w-[480px] w-full mx-auto px-4 py-6 flex-1">
+          <div className="text-right mb-5">
+            <h1 className="text-[28px] font-bold text-text mb-2">בדרך לבית החולים</h1>
+            <p className="text-base text-text-muted">כל מה שצריך לדעת לפני שמגיעים</p>
+          </div>
+
+          <div className="bg-white border-2 border-teal rounded-2xl p-5 mb-4 space-y-4 text-right">
+            {address && (
+              <div>
+                <p className="text-sm font-semibold text-teal mb-1">כתובת</p>
+                <p className="text-base text-text">{address}</p>
+              </div>
+            )}
+            {parking_info && (
+              <div>
+                <p className="text-sm font-semibold text-teal mb-1">חניה</p>
+                <p className="text-base text-text">{parking_info}</p>
+              </div>
+            )}
+            {transit_info && (
+              <div>
+                <p className="text-sm font-semibold text-teal mb-1">תחבורה ציבורית</p>
+                <p className="text-base text-text">{transit_info}</p>
+              </div>
+            )}
+          </div>
+
+          {hasCoords && (
+            <div className="flex flex-col gap-3 mb-5">
+              <button
+                type="button"
+                onClick={() => window.open(`https://www.waze.com/ul?ll=${map_lat}%2C${map_lng}&navigate=yes`, '_blank')}
+                className="w-full min-h-14 flex items-center justify-center gap-2.5 bg-teal text-white rounded-[14px] text-[17px] font-bold"
+              >
+                <PinIcon color="#fff" />
+                <span>פתיחה ב-Waze</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${map_lat},${map_lng}`, '_blank')}
+                className="w-full min-h-14 flex items-center justify-center gap-2.5 bg-white border border-border rounded-[14px] text-[17px] font-bold text-[#1a202c]"
+              >
+                <PinIcon color="#1a202c" />
+                <span>פתיחה ב-Google Maps</span>
+              </button>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setArrivedAtClinic(true)}
+            className="w-full min-h-16 flex items-center justify-center gap-3 bg-teal text-white rounded-2xl text-xl font-bold shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
+          >
+            <CheckIcon />
+            <span>הגעתי למרפאה</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -267,7 +336,7 @@ export default function Navigation() {
           </button>
         )}
 
-        {data.parking_coordinates && (
+        {!data.arrival && data.parking_coordinates && (
           <div className="flex flex-col gap-3">
             <button
               type="button"

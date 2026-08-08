@@ -43,6 +43,14 @@ export const ParkingCoordinatesDTO = z.object({
   lng: z.number(),
 });
 
+export const ArrivalInfoDTO = z.object({
+  address: z.string().nullable(),
+  parking_info: z.string().nullable(),
+  transit_info: z.string().nullable(),
+  map_lat: z.number().nullable(),
+  map_lng: z.number().nullable(),
+});
+
 export const NavigationRouteDTO = z.object({
   route_id: z.string().uuid(),
   route_name: z.string(),
@@ -51,6 +59,7 @@ export const NavigationRouteDTO = z.object({
   parking_coordinates: ParkingCoordinatesDTO.nullable(),
   steps: z.array(NavigationStepDTO),
   completed: z.boolean().optional(),
+  arrival: ArrivalInfoDTO.nullable(),
 });
 
 export const StepConfirmResponseDTO = z.union([

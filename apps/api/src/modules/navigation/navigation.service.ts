@@ -9,6 +9,14 @@ export interface NavigationStepResponse {
   is_current: boolean;
 }
 
+export interface ArrivalInfo {
+  address: string | null;
+  parking_info: string | null;
+  transit_info: string | null;
+  map_lat: number | null;
+  map_lng: number | null;
+}
+
 export interface NavigationRouteResponse {
   route_id: string;
   route_name: string;
@@ -17,6 +25,7 @@ export interface NavigationRouteResponse {
   parking_coordinates: { lat: number; lng: number } | null;
   steps: NavigationStepResponse[];
   completed?: boolean;
+  arrival: ArrivalInfo | null;
 }
 
 export interface StepConfirmResult {
@@ -33,6 +42,9 @@ interface RouteRow {
   steps_count: number;
   dept_lat: number | null;
   dept_lng: number | null;
+  dept_address: string | null;
+  dept_parking_info: string | null;
+  dept_transit_info: string | null;
 }
 
 interface StepRow {
@@ -50,8 +62,10 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
   //      (from_department_id IS NULL, is_default = TRUE, not archived).
   const { rows: [routeRow] } = await query<RouteRow>(`
     SELECT nr.id AS route_id, nr.name AS route_name, nr.steps_count,
-           NULL::float AS dept_lat, NULL::float AS dept_lng
+           d.map_lat::float8 AS dept_lat, d.map_lng::float8 AS dept_lng,
+           d.address AS dept_address, d.parking_info AS dept_parking_info, d.transit_info AS dept_transit_info
     FROM appointments a
+    JOIN departments d ON d.id = a.department_id
     JOIN navigation_routes nr
       ON nr.id = COALESCE(
            a.navigation_route_id,
@@ -70,6 +84,17 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
   if (!routeRow) {
     throw Object.assign(new Error('route_not_found'), { status: 404 });
   }
+
+  const arrival: ArrivalInfo | null =
+    routeRow.dept_address || routeRow.dept_parking_info || routeRow.dept_transit_info || routeRow.dept_lat != null
+      ? {
+          address: routeRow.dept_address,
+          parking_info: routeRow.dept_parking_info,
+          transit_info: routeRow.dept_transit_info,
+          map_lat: routeRow.dept_lat,
+          map_lng: routeRow.dept_lng,
+        }
+      : null;
 
   // Determine current step from WaitingQueue or default to 1
   // (Navigation progress tracked via appointment status / separate approach: use a simple column)
@@ -101,9 +126,12 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
       route_name: routeRow.route_name,
       total_steps: routeRow.steps_count,
       current_step: routeRow.steps_count,
-      parking_coordinates: null,
+      parking_coordinates: routeRow.dept_lat != null && routeRow.dept_lng != null
+        ? { lat: routeRow.dept_lat, lng: routeRow.dept_lng }
+        : null,
       steps: responseSteps,
       completed: true,
+      arrival,
     };
   }
 
@@ -133,8 +161,11 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
     route_name: routeRow.route_name,
     total_steps: routeRow.steps_count,
     current_step: currentStepOrder,
-    parking_coordinates: null, // populated when dept has coordinates
+    parking_coordinates: routeRow.dept_lat != null && routeRow.dept_lng != null
+      ? { lat: routeRow.dept_lat, lng: routeRow.dept_lng }
+      : null,
     steps: responseSteps,
+    arrival,
   };
 }
 
