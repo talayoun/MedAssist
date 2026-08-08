@@ -128,6 +128,13 @@ router.delete('/checklists/:id', async (req: Request, res: Response, next: NextF
       res.status(404).json({ error: 'not_found' });
       return;
     }
+    if (result.error === 'item_protected') {
+      res.status(409).json({
+        error: 'item_protected',
+        message: 'פריט מערכת מוגן. לא ניתן למחוק.',
+      });
+      return;
+    }
     if (result.error === 'template_in_active_use') {
       res.status(409).json({
         error: 'template_in_active_use',

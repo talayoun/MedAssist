@@ -43,3 +43,25 @@ test.describe('is_protected exposure', () => {
     for (const it of body.items) expect(typeof it.is_protected).toBe('boolean');
   });
 });
+
+test.describe('protected rows cannot be deleted', () => {
+  test.beforeEach(async ({ request }) => { await loginAs(request, ADMIN_EMAIL, ADMIN_PASSWORD); });
+
+  test('DELETE on a protected checklist template returns 409 item_protected', async ({ request }) => {
+    const list = await request.get('/api/admin/checklists');
+    const protectedTpl = (await list.json()).templates
+      .find((t: { is_protected: boolean }) => t.is_protected);
+    expect(protectedTpl, 'seed must contain a protected template').toBeTruthy();
+
+    const res = await request.delete(`/api/admin/checklists/${protectedTpl.template_id}`);
+    expect(res.status()).toBe(409);
+    expect((await res.json()).error).toBe('item_protected');
+  });
+
+  test('the protected template still exists after the rejected delete', async ({ request }) => {
+    const list = await request.get('/api/admin/checklists');
+    const still = (await list.json()).templates
+      .some((t: { is_protected: boolean }) => t.is_protected);
+    expect(still).toBe(true);
+  });
+});

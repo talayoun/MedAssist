@@ -167,10 +167,26 @@ async function seed() {
       ON CONFLICT (procedure_type, hospital_id) DO NOTHING
     `, [HOSPITAL_ID, JSON.stringify(items)]);
 
-    // Baseline system entities: admins may edit them but never delete them.
+    // Second, unused template: kept separate from pre-op-cardiac (which is
+    // referenced by the seeded appointment) so the "protected" flag and the
+    // "in active use" state never land on the same row in tests/dev data.
+    await client.query(`
+      INSERT INTO checklist_templates (procedure_type, hospital_id, items_json)
+      VALUES ('general-baseline', $1, $2)
+      ON CONFLICT (procedure_type, hospital_id) DO NOTHING
+    `, [HOSPITAL_ID, JSON.stringify(items)]);
+
+    // Baseline system entity: admins may edit it but never delete it.
+    // Explicitly reset pre-op-cardiac too, in case an older seed run (or this
+    // script re-run against an existing DB) left it protected.
+    await client.query(
+      `UPDATE checklist_templates SET is_protected = FALSE
+       WHERE procedure_type = 'pre-op-cardiac' AND hospital_id = $1`,
+      [HOSPITAL_ID]
+    );
     await client.query(
       `UPDATE checklist_templates SET is_protected = TRUE
-       WHERE procedure_type = 'pre-op-cardiac' AND hospital_id = $1`,
+       WHERE procedure_type = 'general-baseline' AND hospital_id = $1`,
       [HOSPITAL_ID]
     );
     await client.query(

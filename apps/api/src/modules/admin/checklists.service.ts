@@ -117,6 +117,7 @@ export async function deleteTemplate(
 ): Promise<{ deleted: boolean; archived?: boolean; active_count?: number; error?: string }> {
   const existing = await getTemplate(id);
   if (!existing) return { deleted: false, error: 'not_found' };
+  if (existing.is_protected) return { deleted: false, error: 'item_protected' };
 
   // Count appointments actively using this template (phase not terminal)
   const { rows: activeRows } = await query<ActiveUseCount>(

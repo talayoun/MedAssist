@@ -81,6 +81,14 @@ export async function patchTemplateItem(id: string, input: PatchTemplateItemInpu
 }
 
 export async function softDeleteTemplateItem(id: string) {
+  const { rows: existing } = await query<{ is_protected: boolean }>(
+    `SELECT is_protected FROM form_template_items WHERE id = $1`,
+    [id],
+  );
+  if (!existing[0]) throw Object.assign(new Error('Not found'), { status: 404 });
+  if (existing[0].is_protected) {
+    throw Object.assign(new Error('פריט מערכת מוגן. לא ניתן למחוק.'), { status: 409 });
+  }
   const { rows } = await query(
     `UPDATE form_template_items SET is_active = false WHERE id = $1 RETURNING id`,
     [id],

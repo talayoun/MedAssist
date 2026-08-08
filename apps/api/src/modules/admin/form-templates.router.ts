@@ -63,7 +63,11 @@ router.patch('/form-templates/:id', async (req, res, next) => {
 
 router.delete('/form-templates/:id', async (req, res, next) => {
   try { await svc.softDeleteTemplateItem(req.params.id); res.sendStatus(204); }
-  catch (err) { next(err); }
+  catch (err: unknown) {
+    const e = err as { status?: number; message?: string };
+    if (e.status === 409) { res.status(409).json({ error: 'item_protected', message: e.message }); return; }
+    next(err);
+  }
 });
 
 router.post('/form-templates/:id/blank', ...pdfUpload, async (req, res, next) => {

@@ -155,6 +155,13 @@ router.delete('/navigation-routes/:id', async (req: Request, res: Response, next
       res.status(404).json({ error: 'not_found' });
       return;
     }
+    if (result.error === 'item_protected') {
+      res.status(409).json({
+        error: 'item_protected',
+        message: 'פריט מערכת מוגן. לא ניתן למחוק.',
+      });
+      return;
+    }
     if (result.error === 'route_in_active_use') {
       res.status(409).json({
         error: 'route_in_active_use',

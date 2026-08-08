@@ -166,7 +166,7 @@ export interface DeleteRouteResult {
   deleted: boolean;
   archived?: boolean;
   active_count?: number;
-  error?: 'not_found' | 'route_in_active_use';
+  error?: 'not_found' | 'route_in_active_use' | 'item_protected';
 }
 
 /**
@@ -200,6 +200,7 @@ async function countActiveAppointments(routeId: string): Promise<number> {
 export async function deleteRoute(id: string): Promise<DeleteRouteResult> {
   const existing = await getRoute(id);
   if (!existing) return { deleted: false, error: 'not_found' };
+  if (existing.is_protected) return { deleted: false, error: 'item_protected' };
 
   const activeCount = await countActiveAppointments(id);
   if (activeCount > 0) {
