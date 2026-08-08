@@ -86,6 +86,8 @@ export const WaitingResponseDTO = z.object({
   broadcast_message: z.string().nullable(),
   broadcast_sent_at: z.string().datetime().nullable(),
   updated_at: z.string().datetime(),
+  queue_position: z.number().int().nullable(),
+  people_ahead: z.number().int().nullable(),
 });
 
 export const ContactMessageTypeSchema = z.enum(['need_help', 'confirm_here', 'question']);

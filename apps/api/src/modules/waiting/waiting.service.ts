@@ -8,9 +8,24 @@ export interface WaitingStatus {
   broadcast_message: string | null;
   broadcast_sent_at: string | null;
   updated_at: string;
+  queue_position: number | null;
+  people_ahead: number | null;
 }
 
 const BROADCAST_STALE_MS = 60 * 60 * 1000; // 60 minutes
+
+async function fetchQueuePosition(appointmentId: string): Promise<number | null> {
+  const { rows } = await query<{ position: string | null }>(`
+    WITH ranked AS (
+      SELECT appointment_id,
+             ROW_NUMBER() OVER (PARTITION BY department_id ORDER BY arrival_time) AS position
+      FROM waiting_queue
+      WHERE status = 'waiting'
+    )
+    SELECT position::text AS position FROM ranked WHERE appointment_id = $1
+  `, [appointmentId]);
+  return rows[0]?.position ? parseInt(rows[0].position, 10) : null;
+}
 
 export async function getWaitingStatus(appointmentId: string): Promise<WaitingStatus> {
   const { rows } = await query<{
@@ -44,7 +59,8 @@ export async function getWaitingStatus(appointmentId: string): Promise<WaitingSt
         (SELECT name FROM departments WHERE id = (SELECT department_id FROM appointments WHERE id = $1)) AS department_name
     `, [appointmentId]);
 
-    return buildWaitingStatus(created.status, created.department_name, null, null, null, created.updated_at);
+    const position = await fetchQueuePosition(appointmentId);
+    return buildWaitingStatus(created.status, created.department_name, null, null, null, created.updated_at, position);
   }
 
   const row = rows[0];
@@ -55,13 +71,16 @@ export async function getWaitingStatus(appointmentId: string): Promise<WaitingSt
       ? row.broadcast_message
       : null;
 
+  const position = await fetchQueuePosition(appointmentId);
+
   return buildWaitingStatus(
     row.status,
     row.department_name,
     row.estimated_wait_minutes,
     broadcastMessage,
     row.broadcast_sent_at ? row.broadcast_sent_at.toISOString() : null,
-    row.updated_at
+    row.updated_at,
+    position
   );
 }
 
@@ -71,7 +90,8 @@ function buildWaitingStatus(
   estimatedWaitMinutes: number | null,
   broadcastMessage: string | null,
   broadcastSentAt: string | null,
-  updatedAt: Date
+  updatedAt: Date,
+  queuePosition: number | null
 ): WaitingStatus {
   return {
     status,
@@ -81,6 +101,8 @@ function buildWaitingStatus(
     broadcast_message: broadcastMessage,
     broadcast_sent_at: broadcastSentAt,
     updated_at: new Date(updatedAt).toISOString(),
+    queue_position: queuePosition,
+    people_ahead: queuePosition !== null ? queuePosition - 1 : null,
   };
 }
 
