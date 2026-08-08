@@ -8,22 +8,33 @@ async function loginAdmin(request: APIRequestContext) {
   expect(res.status(), `admin login failed: ${await res.text()}`).toBe(200);
 }
 
+// Creates its own appointment rather than borrowing "whatever is first" from the
+// shared list — other spec files (magic-link-validity.spec.ts in particular) can
+// legitimately mark an appointment done/deleted, which would otherwise poison
+// getValidToken() for every test in this file.
 async function getValidToken(request: APIRequestContext): Promise<string> {
   await loginAdmin(request);
-  const appts = await request.get('/api/staff/appointments');
-  expect(appts.status()).toBe(200);
-  const { appointments } = await appts.json();
-  expect(appointments.length).toBeGreaterThan(0);
-  const appt = appointments[0];
-  const linkRes = await request.post(`/api/staff/appointments/${appt.id}/magic-link`);
-  if (linkRes.status() !== 200 && linkRes.status() !== 201) {
-    // link already sent — fetch from admin
-    const detailRes = await request.get(`/api/staff/appointments/${appt.id}`);
-    const detail = await detailRes.json();
-    return detail.magic_link_token ?? detail.token;
-  }
-  const { token } = await linkRes.json();
-  return token;
+  const deptRes = await request.get('/api/staff/departments');
+  const { departments } = await deptRes.json();
+  const dept = departments.find((d: { name: string }) => d.name === 'קרדיולוגיה');
+  expect(dept, 'seeded department must exist').toBeTruthy();
+
+  const res = await request.post('/api/staff/appointments', {
+    data: {
+      patient_name: 'בדיקת טפסים',
+      phone_number: `+97253${Date.now().toString().slice(-7)}`,
+      department_id: dept.id,
+      procedure_type: 'pre-op-cardiac',
+      visit_datetime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+      custom_items: [],
+      suppressed_template_item_ids: [],
+      send_now: true,
+    },
+  });
+  expect(res.status(), await res.text()).toBe(201);
+  const body = await res.json();
+  expect(body.magic_link_token).toBeTruthy();
+  return body.magic_link_token;
 }
 
 const createdTemplateIds: string[] = [];
