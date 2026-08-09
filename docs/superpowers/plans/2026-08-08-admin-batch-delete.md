@@ -1475,6 +1475,32 @@ doppler run -- pnpm test
 
 ---
 
+## Addendum (2026-08-10): checkbox-only rule, retroactively enforced
+
+Scope clarification found missing during implementation: "bulk delete" means **only rows the
+admin explicitly checked**, everywhere in the back office, no exceptions. A single button that
+deletes an entire filtered set (e.g. "every patient in department X") without a per-row checkbox
+is not bulk delete under this feature, it is a blast-radius footgun, even if scoped by a filter
+and even if the delete is soft/reversible.
+
+This surfaced because `/admin` Queue page (`apps/staff-backoffice/src/pages/Queue/index.tsx`) had
+a pre-existing "נקה מחלקה" (clear department) button, added in an earlier, unrelated session
+(commit `19aabc9`, predates this plan) that called `POST /admin/trash/bulk-clear` to soft-delete
+every non-deleted appointment in whichever department was selected in the filter dropdown, one
+click, no per-row selection. It was not part of this plan's 4-table scope, but it violates the
+same principle the rest of this feature enforces, so it is now fixed to match: `Queue` gets the
+same `useRowSelection` / `BulkActionBar` / `ConfirmDialog` wiring as the four admin tables,
+selecting individual patients and bulk-trashing only those via the existing per-row
+`softDeleteAppointment` (no new bulk API route, same sequential fan-out pattern). The
+`bulk-clear` route and `bulkSoftDeleteByDepartment` service function are deleted outright, not
+deprecated, since nothing else called them.
+
+If a future page wants a "select everything visible" convenience, that is exactly what
+`toggleAllVisible` / the header checkbox already provide, checked rows, not a standalone
+delete-by-filter button.
+
+---
+
 ## Deferred: Part 2, the Desktop BO UI/UX audit
 
 Part 2 of the original request (system-wide back-office UI/UX audit plus a standalone HTML document
