@@ -5,6 +5,7 @@ import { isTokenRevoked } from '../db/redis';
 
 export interface StaffJwtPayload {
   sub: string;      // staff_user id
+  jti: string;       // unique per login — see auth.service.ts login()
   name: string;
   role: 'staff' | 'admin';
   departmentId: string | null;

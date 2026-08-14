@@ -7,7 +7,7 @@
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { login, logout, verifyToken } from './auth.service';
+import { login, logout } from './auth.service';
 import { requireStaffAuth } from '../../middleware/auth';
 
 const router = Router();
