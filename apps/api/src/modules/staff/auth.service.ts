@@ -5,11 +5,13 @@
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { query } from '../../db/db';
 import { addToRevocationSet } from '../../db/redis';
 
 export interface StaffJwtPayload {
   sub: string; // staff user id
+  jti: string; // unique per login — see login() for why this can't be omitted
   name: string;
   email: string;
   role: 'staff' | 'admin';
@@ -75,10 +77,15 @@ export async function login(email: string, password: string) {
   // Update last_active_at
   await query('UPDATE staff_users SET last_active_at = NOW() WHERE id = $1', [user.id]);
 
-  // Issue JWT
+  // Issue JWT. jti makes every login's token unique even when two logins to the
+  // same account land in the same second — without it, `jwt.sign` is deterministic
+  // (same payload + same iat second + same secret = byte-identical token), so
+  // logging out of one session would revoke the other, since revocation is keyed
+  // on the token string itself.
   const token = jwt.sign(
     {
       sub: user.id,
+      jti: randomUUID(),
       name: user.name,
       email: user.email,
       role: user.role,
