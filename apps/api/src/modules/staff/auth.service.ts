@@ -6,7 +6,7 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { query } from '../../db/db';
-import { redisClient } from '../../db/redis';
+import { addToRevocationSet } from '../../db/redis';
 
 export interface StaffJwtPayload {
   sub: string; // staff user id
@@ -108,28 +108,11 @@ export async function logout(token: string) {
     const decoded = jwt.verify(token, JWT_SECRET) as StaffJwtPayload;
     const ttl = decoded.exp - Math.floor(Date.now() / 1000);
     if (ttl > 0) {
-      await redisClient.setex(`revoked:${token}`, ttl, '1');
+      await addToRevocationSet(token, ttl);
     }
   } catch (err) {
     // Token already expired or invalid — no need to revoke
   }
-}
-
-/**
- * Verify JWT token and check if revoked
- */
-export async function verifyToken(token: string): Promise<StaffJwtPayload> {
-  // Check if token is revoked
-  const isRevoked = await redisClient.get(`revoked:${token}`);
-  if (isRevoked) {
-    const err = new Error('Token has been revoked');
-    (err as any).status = 401;
-    throw err;
-  }
-
-  // Verify JWT signature
-  const payload = jwt.verify(token, JWT_SECRET) as StaffJwtPayload;
-  return payload;
 }
 
 /**
