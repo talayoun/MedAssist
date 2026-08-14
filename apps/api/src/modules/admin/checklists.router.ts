@@ -43,6 +43,7 @@ router.get('/checklists', async (req: Request, res: Response, next: NextFunction
       procedure_type: r.procedure_type,
       item_count: Array.isArray(r.items_json) ? r.items_json.length : 0,
       archived: r.archived,
+      is_protected: r.is_protected,
     }));
     res.json({ templates });
   } catch (err) { next(err); }
@@ -58,6 +59,7 @@ router.get('/checklists/:id', async (req: Request, res: Response, next: NextFunc
       procedure_type: row.procedure_type,
       item_count: Array.isArray(row.items_json) ? row.items_json.length : 0,
       archived: row.archived,
+      is_protected: row.is_protected,
       items: row.items_json,
     });
   } catch (err) { next(err); }
@@ -77,6 +79,7 @@ router.post('/checklists', async (req: Request, res: Response, next: NextFunctio
       procedure_type: row.procedure_type,
       item_count: Array.isArray(row.items_json) ? row.items_json.length : 0,
       archived: row.archived,
+      is_protected: row.is_protected,
       items: row.items_json,
     });
   } catch (err: unknown) {
@@ -104,6 +107,7 @@ router.put('/checklists/:id', async (req: Request, res: Response, next: NextFunc
       procedure_type: row.procedure_type,
       item_count: Array.isArray(row.items_json) ? row.items_json.length : 0,
       archived: row.archived,
+      is_protected: row.is_protected,
       items: row.items_json,
     });
   } catch (err: unknown) {
@@ -122,6 +126,13 @@ router.delete('/checklists/:id', async (req: Request, res: Response, next: NextF
     const result = await deleteTemplate(String(req.params.id));
     if (result.error === 'not_found') {
       res.status(404).json({ error: 'not_found' });
+      return;
+    }
+    if (result.error === 'item_protected') {
+      res.status(409).json({
+        error: 'item_protected',
+        message: 'פריט מערכת מוגן. לא ניתן למחוק.',
+      });
       return;
     }
     if (result.error === 'template_in_active_use') {

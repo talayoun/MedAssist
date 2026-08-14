@@ -5,6 +5,11 @@ import { createNotificationWorker, NotificationJobData } from './queue';
 const MAX_RETRY_COUNT = 3;
 
 async function sendTelegram(message: string): Promise<string> {
+  if (process.env.TELEGRAM_SEND_ENABLED !== 'true') {
+    console.log(`[notifications] TELEGRAM_SEND_ENABLED != 'true', dry-run (not sent): ${message}`);
+    return `dry-run:${Date.now()}`;
+  }
+
   const token = process.env.TELEGRAM_BOT_TOKEN!;
   const chatIds = (process.env.TELEGRAM_CHAT_IDS ?? '')
     .split(',')

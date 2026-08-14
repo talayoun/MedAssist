@@ -4,6 +4,10 @@ import {
   ChecklistItemInput, ApiError,
 } from '../../services/api';
 import type { ChecklistTemplate } from '@medassist/shared-types';
+import { useRowSelection } from '../../hooks/useRowSelection';
+import { runBulkDelete, summaryMessage } from '../../lib/bulkDelete';
+import { BulkActionBar } from '../../components/BulkActionBar';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 
 type Category = 'bring' | 'fast' | 'medication' | 'other';
 
@@ -37,14 +41,24 @@ export default function Admin() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const selection = useRowSelection(
+    templates,
+    (t) => t.template_id,
+    (t) => t.is_protected,
+  );
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const fetchTemplates = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const { templates: tpls } = await listChecklists(showArchived);
       setTemplates(tpls);
+      return true;
     } catch {
       setError('שגיאה בטעינת תבניות');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -128,11 +142,39 @@ export default function Admin() {
     }
   }
 
+  async function handleBulkDelete() {
+    const items = templates
+      .filter((t) => selection.isSelected(t.template_id))
+      .map((t) => ({ id: t.template_id, label: t.procedure_type }));
+
+    setBulkBusy(true);
+    const summary = await runBulkDelete(items, deleteChecklist);
+    setBulkBusy(false);
+    setBulkConfirmOpen(false);
+    selection.clear();
+
+    // fetchTemplates() clears `error` synchronously at its start, so the summary
+    // message must be set after the refetch finishes, not before, or it is wiped
+    // before it ever renders. And if the refetch itself fails, its own catch
+    // already set `error` to a fetch-failure message: do not clobber that with
+    // a "deleted N" banner when the table failed to reload.
+    const refetchOk = await fetchTemplates();
+    if (!refetchOk) return;
+
+    const failed = summary.results.filter((r) => r.outcome === 'failed');
+    setError(
+      failed.length
+        ? `${summaryMessage(summary)}. נכשלו: ${failed.map((r) => r.label).join(', ')}`
+        : summaryMessage(summary)
+    );
+  }
+
   async function handleDelete(templateId: string) {
     setDeleteError(null);
     try {
       const result = await deleteChecklist(templateId);
       setConfirmDeleteId(null);
+      selection.remove(templateId);
       if (result.archived) {
         setError('התבנית הועברה לארכיון (יש מטופלים שסיימו שמשתמשים בה)');
       }
@@ -165,10 +207,25 @@ export default function Admin() {
       ) : templates.length === 0 ? (
         <p style={s.hint}>אין תבניות. לחץ "תבנית חדשה" כדי ליצור.</p>
       ) : (
-        <div style={s.tableWrap}>
+        <>
+          <BulkActionBar
+            count={selection.selectedCount}
+            onDelete={() => setBulkConfirmOpen(true)}
+            onClear={selection.clear}
+          />
+          <div style={s.tableWrap}>
           <table style={s.table}>
             <thead>
               <tr>
+                <th style={s.th}>
+                  <input
+                    type="checkbox"
+                    aria-label="בחר הכל"
+                    checked={selection.headerState === 'all'}
+                    ref={(el) => { if (el) el.indeterminate = selection.headerState === 'some'; }}
+                    onChange={selection.toggleAllVisible}
+                  />
+                </th>
                 <th style={s.th}>סוג פרוצדורה</th>
                 <th style={s.th}>פריטים</th>
                 <th style={s.th}>סטטוס</th>
@@ -178,9 +235,19 @@ export default function Admin() {
             <tbody>
               {templates.map((tpl) => (
                 <tr key={tpl.template_id} style={tpl.archived ? s.archivedRow : undefined}>
+                  <td style={s.td}>
+                    <input
+                      type="checkbox"
+                      aria-label={`בחר ${tpl.procedure_type}`}
+                      disabled={tpl.is_protected}
+                      checked={selection.isSelected(tpl.template_id)}
+                      onChange={() => selection.toggle(tpl.template_id)}
+                    />
+                  </td>
                   <td style={s.td}>{tpl.procedure_type}</td>
                   <td style={s.td}>{tpl.item_count}</td>
                   <td style={s.td}>
+                    {tpl.is_protected && <span style={s.archivedBadge}>מערכת</span>}
                     {tpl.archived
                       ? <span style={s.archivedBadge}>בארכיון</span>
                       : <span style={s.activeBadge}>פעיל</span>}
@@ -189,7 +256,9 @@ export default function Admin() {
                     {!tpl.archived && (
                       <>
                         <button onClick={() => openEdit(tpl.template_id)} style={s.editBtn}>עריכה</button>
-                        <button onClick={() => { setDeleteError(null); setConfirmDeleteId(tpl.template_id); }} style={s.deleteBtn}>מחיקה</button>
+                        {!tpl.is_protected && (
+                          <button onClick={() => { setDeleteError(null); setConfirmDeleteId(tpl.template_id); }} style={s.deleteBtn}>מחיקה</button>
+                        )}
                       </>
                     )}
                   </td>
@@ -197,7 +266,8 @@ export default function Admin() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Edit / Create modal */}
@@ -305,6 +375,17 @@ export default function Admin() {
             </div>
           </div>
         </div>
+      )}
+
+      {bulkConfirmOpen && (
+        <ConfirmDialog
+          title="מחיקת תבניות"
+          body={`למחוק ${selection.selectedCount} תבניות? תבניות שנמצאות בשימוש יועברו לארכיון.`}
+          confirmLabel="מחק"
+          busy={bulkBusy}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkConfirmOpen(false)}
+        />
       )}
     </div>
   );
