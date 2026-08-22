@@ -170,14 +170,25 @@ export function requireMagicLinkToken(req: Request, res: Response, next: NextFun
 // ─── Caller scope ─────────────────────────────────────────────────────────────
 
 /**
- * Narrows the JWT payload to the authorization context services take: a staff
- * user carries a department and is confined to it, an admin carries none and is
- * unrestricted. Lives here rather than inside one router so every module that
- * scopes by department derives it identically.
+ * Narrows the JWT payload to the authorization context services take: staff are
+ * confined to their own department, admins are unrestricted.
+ *
+ * Keyed on `role`, not on whether a department is present. Four copies of this
+ * had grown across the routers and they disagreed on exactly that point — an
+ * admin who was also assigned a department would have been silently demoted to
+ * department-scoped by three of them. Role is the authority on privilege; a
+ * department assignment is not a demotion. Unreachable today (no admin has a
+ * department and there is no UI to give them one), settled here so it stays
+ * that way.
+ *
+ * A 'staff' row with no department is a data error and gets the most
+ * restrictive outcome available rather than silently becoming an admin.
  */
 export function callerCtx(req: Request): StaffAuthContext {
-  const deptId = req.staffAuth!.departmentId;
-  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
+  const { role, departmentId } = req.staffAuth!;
+  if (role === 'admin') return { role: 'admin' };
+  if (!departmentId) throw Object.assign(new Error('forbidden'), { status: 403 });
+  return { role: 'staff', departmentId };
 }
 
 // ─── Companion read-only guard ────────────────────────────────────────────────

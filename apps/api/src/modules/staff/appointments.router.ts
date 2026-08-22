@@ -1,15 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { requireStaffAuth } from '../../middleware/auth';
+import { requireStaffAuth, callerCtx } from '../../middleware/auth';
 import { createElectiveAppointment } from './appointments.service';
 import { generateToken } from '../magic-links/magic-links.service';
 import { query } from '../../db/db';
-import type { StaffAuthContext } from '@medassist/shared-types';
-
-function callerCtx(req: Request): StaffAuthContext {
-  const deptId = req.staffAuth!.departmentId;
-  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
-}
 
 const router = Router();
 
