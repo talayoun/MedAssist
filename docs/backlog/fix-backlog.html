@@ -335,6 +335,7 @@
       <li><strong>Last known state is kept.</strong> Once the queue has loaded, a later failed check leaves the real queue position on screen rather than replacing it with an error.</li>
       <li class="turn"><strong>Two harness traps found while testing.</strong> Blocking "waiting" requests also blocked the page itself from loading, and the navigation screen opens on the "getting to the hospital" view — the step confirm sits behind it. Both cost a round of red tests before the specs were right.</li>
       <li><strong>Shipped.</strong> All four specs verified red pre-fix, green after. Patient PWA suite 17 passed / 1 pre-existing skip, typecheck clean. Committed (<span class="ref">b4e4537</span>), merged, pushed. Worktree removed.</li>
+      <li><strong>Follow-up correction</strong> (<span class="ref">542228e</span>): the first pass sent <em>every</em> confirm failure to the new inline message, including rejected requests like an expired link. Those are not fixed by tapping again, so they go back to taking over the page. Inline is now reserved for connection failures, which is what was actually agreed.</li>
     </ol>
   </div>
 
