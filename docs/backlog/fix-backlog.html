@@ -180,6 +180,7 @@
   .status.done { background: var(--ok-soft); color: var(--ok); }
   .status.wip  { background: var(--wip-soft); color: var(--wip); }
   .status.open { background: var(--surface-alt); color: var(--ink-faint); }
+  .status.closed { background: var(--surface-alt); color: var(--ink-muted); border: 1px solid var(--border-strong); }
 
   .sev {
     display: inline-flex; align-items: center; gap: 5px;
@@ -259,7 +260,7 @@
     </div>
 
     <div class="progress-wrap">
-      <div class="progress-label"><span>Progress</span><strong>8/25 done · 0 wip · 17 open</strong></div>
+      <div class="progress-label"><span>Progress</span><strong>8/25 done · 1 won't fix · 16 open</strong></div>
       <div class="bar">
         <div class="seg-done" style="width: 32%"></div>
       </div>
@@ -349,6 +350,18 @@
       <li><strong>Same rule now applies:</strong> staff act only within their own department, admins are unrestricted, and anything out of scope reads as "not found" rather than "forbidden", so it doesn't reveal that the patient exists.</li>
       <li><strong>Sending a patient onward to another department still works</strong> — that's routine, and the check is on which department owns the patient, not where they're being sent. Covered by a test so it can't be tightened by mistake later.</li>
       <li><strong>Shipped.</strong> The three cross-department tests verified red pre-fix, green after. Full API suite 83/83, typecheck clean. Committed (<span class="ref">1c1e820</span>), merged, pushed. Worktree removed.</li>
+      <li><strong>Follow-up</strong> (<span class="ref">e569de4</span>): reviewing this turned up four copies of the same permission-scope logic across the code, and they disagreed with each other about whether an admin assigned to a department counts as an admin. Consolidated into one, keyed on role. Not reachable today, settled so it stays that way.</li>
+    </ol>
+  </div>
+
+  <div class="story">
+    <h3>M4 — Medical detail in calendar exports <span class="status closed">Won't fix</span></h3>
+    <p class="story-dek">Closed by product decision, 2026-08-22. Not deferred for time — decided against.</p>
+    <ol class="timeline">
+      <li><strong>The decision:</strong> the "add to calendar" buttons stay exactly as they are. Being able to save "you need to fast" or "go get blood tests" into your own calendar is worth a small amount of medical detail leaving the app. The patient chooses to tap it.</li>
+      <li class="turn"><strong>The audit called this a constitution violation. It isn't.</strong> The constitution says links "contain no medical data in the URL" and that medical detail is never included in <em>a Magic Link URL</em> or written to logs. Both are scoped to Magic Links. The project's summary of that rule shortens it to "no medical data in URLs", which is what made this look like a breach. A Google Calendar link the patient deliberately opens is not a Magic Link.</li>
+      <li><strong>So no constitution amendment is needed,</strong> and the hard rules are untouched: nothing medical in Magic Link URLs, nothing medical in logs.</li>
+      <li><strong>Recorded so it does not come back</strong> as an open finding in a future audit.</li>
     </ol>
   </div>
 
@@ -369,8 +382,8 @@
       <p>Digital forms have no submit — the CTA just navigates, no finalize call, no required-field validation.</p>
     </div>
     <div class="item">
-      <div class="item-top"><span class="status open">Open</span><span class="item-id">M4</span><span class="sev high">High</span><span class="item-where">patient-pwa</span></div>
-      <p>Medical content (fasting/med instructions, department) leaks into Google Calendar export URLs.</p>
+      <div class="item-top"><span class="status closed">Won't fix</span><span class="item-id">M4</span><span class="sev high">High</span><span class="item-where">patient-pwa</span></div>
+      <p>Medical content (fasting/med instructions, department) leaks into Google Calendar export URLs. <strong>Closed as a deliberate product decision, and the constitution does not actually forbid it</strong> — see below.</p>
     </div>
     <div class="item">
       <div class="item-top"><span class="status open">Open</span><span class="item-id">M5</span><span class="sev high">High</span><span class="item-where">api tests</span></div>
