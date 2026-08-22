@@ -34,13 +34,20 @@ edge cases, until the flow itself is presentable. Nothing in that queue is visib
   (`cataract-surgery`), checklist and forms all match them. `קרדיולוגיה` stays seeded — twelve test
   files look it up by name.
 
-## Phase 1 — done for steps 1-9
+## Phase 1 — done for steps 1-9, merged
 
 See `docs/demo/WALKTHROUGH-FINDINGS.md` for the ranked list. Summary: **the flow works end to end**,
 including a real Telegram delivery and all seven navigation photos. One blocker (the free-text
 procedure field), several visible rough edges.
 
 Not yet walked: the ER track and the admin configuration screens.
+
+Fixed while walking, because they were caused by Phase 0 rather than found by it: the seed protected
+every default route (which locked the demo route against the admin screens and broke a test's expected
+error), and two specs matched text loosely — `עיניים` is a substring of the eye form labels on the same
+page. Also tightened the queue card's RTL spacing at the user's request.
+
+All suites green after: 83 API, 18 patient (1 pre-existing skip), 15 back office, typecheck clean.
 
 ## Phase 2 — not started
 
