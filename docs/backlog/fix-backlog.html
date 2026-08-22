@@ -254,14 +254,14 @@
     <p class="subtitle">The 25 items from the readiness audit, tracked as they get picked up — one per branch/worktree, verified before merge.</p>
     <div class="meta-row">
       <span><strong>Source</strong> <a href="https://claude.ai/code/artifact/f2aac20c-91b9-4d45-96eb-f0fb51383a1c">MedAssist Readiness Report</a></span>
-      <span><strong>Updated</strong> 2026-08-15</span>
-      <span><strong>Branch</strong> feat/final-figma-redesign</span>
+      <span><strong>Updated</strong> 2026-08-22</span>
+      <span><strong>Branch</strong> backlog-fixes</span>
     </div>
 
     <div class="progress-wrap">
-      <div class="progress-label"><span>Progress</span><strong>1/25 done · 0 wip · 24 open</strong></div>
+      <div class="progress-label"><span>Progress</span><strong>2/25 done · 0 wip · 23 open</strong></div>
       <div class="bar">
-        <div class="seg-done" style="width: 4%"></div>
+        <div class="seg-done" style="width: 8%"></div>
       </div>
       <div class="legend">
         <span><i style="background:var(--ok-fill)"></i>Done</span>
@@ -282,6 +282,20 @@
       <li><strong>Scope decision (asked user):</strong> folded into M1. Added <span class="ref">jti: randomUUID()</span> to the JWT payload so every login's token is unique regardless of timing.</li>
       <li><strong>Verified:</strong> full <span class="ref">tests/api</span> suite — 63/63 passing — after the <span class="ref">jti</span> fix.</li>
       <li><strong>Shipped.</strong> Committed (<span class="ref">28b4092</span>), merged, pushed. Worktree removed.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>M12 — Repo hygiene: stale main, dead branches, misleading tasks.md <span class="status done">Done</span></h3>
+    <p class="story-dek">Not a code fix — the groundwork batch. Done directly on <span class="ref">main</span> / <span class="ref">backlog-fixes</span>, no worktree.</p>
+    <ol class="timeline">
+      <li><strong>Execution plan written</strong> for the remaining items: batch order (demo-visible first, then constitution/security, then robustness) plus an explicit deferral list, so nothing runs out the clock by accident.</li>
+      <li><strong>PR #3 merged.</strong> <span class="ref">feat/final-figma-redesign</span> → <span class="ref">main</span> (<span class="ref">c6ebc94</span>). <span class="ref">main</span> is no longer 60+ commits behind the real work.</li>
+      <li><strong>Integration branch cut.</strong> <span class="ref">backlog-fixes</span> off the freshly-merged <span class="ref">main</span>. Each remaining item still gets its own <span class="ref">fix/&lt;slug&gt;</span> worktree branch, merged <span class="ref">--no-ff</span> into it.</li>
+      <li><strong>This page is now version-controlled.</strong> Its source moved into the repo at <span class="ref">docs/backlog/fix-backlog.html</span>, so status changes are git-diffable and survive across sessions instead of living in a temp dir.</li>
+      <li><span class="ref">specs/001-patient-visit-companion/tasks.md</span> <strong>flagged as superseded</strong> with a header pointing here, rather than retro-ticking months of boxes that would only drift again.</li>
+      <li class="turn"><strong>Branch prune.</strong> Local 60 → 2, remote 19 → 3. Every deleted branch was first verified to have zero commits not already on <span class="ref">main</span>.</li>
+      <li><strong>One branch deliberately kept:</strong> <span class="ref">chore/poster-demo-seed</span> holds <span class="ref">seed-demo-patients.ts</span> (demo-patient seed for the BO poster screenshots) which is not on <span class="ref">main</span>. Merge decision deferred to before the demo.</li>
     </ol>
   </div>
 
@@ -334,7 +348,7 @@
       <p>No shared design-system layer in the backoffice — styles copy-pasted per page.</p>
     </div>
     <div class="item">
-      <div class="item-top"><span class="status open">Open</span><span class="item-id">M12</span><span class="sev medium">Medium</span><span class="item-where">repo hygiene</span></div>
+      <div class="item-top"><span class="status done">Done</span><span class="item-id">M12</span><span class="sev medium">Medium</span><span class="item-where">repo hygiene</span></div>
       <p><span class="ref">main</span> is 55+ commits stale, 60+ mostly-dead branches, <span class="ref">tasks.md</span> shows zero progress despite months of shipped work.</p>
     </div>
   </section>
