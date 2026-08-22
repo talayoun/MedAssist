@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
+import './styles/index.css';
 import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate } from 'react-router-dom';
 import MagicLinkEntry from './pages/MagicLinkEntry';
 import Checklist from './pages/Checklist';
 import Navigation from './pages/Navigation';
 import Waiting from './pages/Waiting';
+import Forms from './pages/Forms';
 import { SignaturePage } from './pages/Forms/SignaturePage';
 import ErrorPage from './pages/Error';
 import BottomNav from './components/BottomNav';
 import { resolveVisit, ApiError } from './services/api';
-import { VisitPhaseContext, AppPhase } from './context/VisitPhaseContext';
+import { VisitPhaseContext } from './context/VisitPhaseContext';
+import type { VisitInfo } from './context/VisitPhaseContext';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 
 // Hebrew RTL for all patient-facing content
 document.documentElement.setAttribute('dir', 'rtl');
@@ -21,7 +25,8 @@ document.documentElement.setAttribute('lang', 'he');
 function VisitLayout() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const [phase, setPhase] = useState<AppPhase>(null);
+  const isOnline = useOnlineStatus();
+  const [info, setInfo] = useState<Omit<VisitInfo, 'isOnline'>>({ phase: null, patientName: null });
 
   useEffect(() => {
     if (!token) return;
@@ -29,7 +34,7 @@ function VisitLayout() {
 
     const fetchPhase = () => {
       resolveVisit(token)
-        .then(v => { if (!cancelled) setPhase(v.phase); })
+        .then(v => { if (!cancelled) setInfo({ phase: v.phase, patientName: v.patient.name }); })
         .catch(err => {
           if (cancelled) return;
           if (err instanceof ApiError && (err.status === 401 || err.status === 404)) {
@@ -44,7 +49,7 @@ function VisitLayout() {
   }, [token, navigate]);
 
   return (
-    <VisitPhaseContext.Provider value={phase}>
+    <VisitPhaseContext.Provider value={{ ...info, isOnline }}>
       <div style={{ paddingBottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
         <Outlet />
         <BottomNav />
@@ -61,6 +66,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <Route index element={<MagicLinkEntry />} />
           <Route element={<VisitLayout />}>
             <Route path="checklist" element={<Checklist />} />
+            <Route path="forms" element={<Forms />} />
             <Route path="navigation" element={<Navigation />} />
             <Route path="waiting" element={<Waiting />} />
           </Route>

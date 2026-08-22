@@ -72,6 +72,24 @@ export const DepartmentDTO = z.object({
   name: z.string(),
 });
 
+export const DepartmentArrivalInfoDTO = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  address: z.string().nullable(),
+  parking_info: z.string().nullable(),
+  transit_info: z.string().nullable(),
+  map_lat: z.number().nullable(),
+  map_lng: z.number().nullable(),
+});
+
+export const UpdateDepartmentArrivalInfoRequestDTO = z.object({
+  address: z.string().max(300).nullable().optional(),
+  parking_info: z.string().max(300).nullable().optional(),
+  transit_info: z.string().max(300).nullable().optional(),
+  map_lat: z.number().nullable().optional(),
+  map_lng: z.number().nullable().optional(),
+});
+
 export const BroadcastRequestDTO = z.object({
   message: z.string().min(1).max(280),
 });
@@ -112,6 +130,7 @@ export const AdminRouteDTO = z.object({
   to_department_id: z.string().uuid(),
   is_default: z.boolean(),
   archived: z.boolean(),
+  is_protected: z.boolean().default(false),
   steps_count: z.number().int(),
   steps: z.array(AdminRouteStepDTO).optional(),
 });
@@ -148,6 +167,8 @@ export const ChecklistTemplateItemDTO = z.object({
   text: z.string().min(1),
   category: z.enum(['bring', 'fast', 'medication', 'other']),
   time_sensitive: z.boolean(),
+  description: z.string().nullable().default(null),
+  link_target: z.enum(['forms']).nullable().default(null),
 });
 
 export const ChecklistTemplateDTO = z.object({
@@ -155,6 +176,7 @@ export const ChecklistTemplateDTO = z.object({
   procedure_type: z.string().min(1),
   item_count: z.number().int(),
   archived: z.boolean(),
+  is_protected: z.boolean().default(false),
   items: z.array(ChecklistTemplateItemDTO).optional(),
 });
 
@@ -209,6 +231,8 @@ export type AppointmentPhase = z.infer<typeof AppointmentPhaseSchema>;
 export type QueuePatient = z.infer<typeof QueuePatientDTO>;
 export type QueueResponse = z.infer<typeof QueueResponseDTO>;
 export type Department = z.infer<typeof DepartmentDTO>;
+export type DepartmentArrivalInfo = z.infer<typeof DepartmentArrivalInfoDTO>;
+export type UpdateDepartmentArrivalInfoRequest = z.infer<typeof UpdateDepartmentArrivalInfoRequestDTO>;
 export type AdminRoute = z.infer<typeof AdminRouteDTO>;
 export type AdminRouteStep = z.infer<typeof AdminRouteStepDTO>;
 export type AdminRouteStepInput = z.infer<typeof AdminRouteStepInputDTO>;

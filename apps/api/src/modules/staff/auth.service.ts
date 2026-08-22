@@ -5,11 +5,13 @@
 
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import { query } from '../../db/db';
-import { redisClient } from '../../db/redis';
+import { addToRevocationSet } from '../../db/redis';
 
 export interface StaffJwtPayload {
   sub: string; // staff user id
+  jti: string; // unique per login — see login() for why this can't be omitted
   name: string;
   email: string;
   role: 'staff' | 'admin';
@@ -75,10 +77,15 @@ export async function login(email: string, password: string) {
   // Update last_active_at
   await query('UPDATE staff_users SET last_active_at = NOW() WHERE id = $1', [user.id]);
 
-  // Issue JWT
+  // Issue JWT. jti makes every login's token unique even when two logins to the
+  // same account land in the same second — without it, `jwt.sign` is deterministic
+  // (same payload + same iat second + same secret = byte-identical token), so
+  // logging out of one session would revoke the other, since revocation is keyed
+  // on the token string itself.
   const token = jwt.sign(
     {
       sub: user.id,
+      jti: randomUUID(),
       name: user.name,
       email: user.email,
       role: user.role,
@@ -108,28 +115,11 @@ export async function logout(token: string) {
     const decoded = jwt.verify(token, JWT_SECRET) as StaffJwtPayload;
     const ttl = decoded.exp - Math.floor(Date.now() / 1000);
     if (ttl > 0) {
-      await redisClient.setex(`revoked:${token}`, ttl, '1');
+      await addToRevocationSet(token, ttl);
     }
   } catch (err) {
     // Token already expired or invalid — no need to revoke
   }
-}
-
-/**
- * Verify JWT token and check if revoked
- */
-export async function verifyToken(token: string): Promise<StaffJwtPayload> {
-  // Check if token is revoked
-  const isRevoked = await redisClient.get(`revoked:${token}`);
-  if (isRevoked) {
-    const err = new Error('Token has been revoked');
-    (err as any).status = 401;
-    throw err;
-  }
-
-  // Verify JWT signature
-  const payload = jwt.verify(token, JWT_SECRET) as StaffJwtPayload;
-  return payload;
 }
 
 /**

@@ -6,6 +6,10 @@ import {
   uploadNavigationStepImage, getDepartments, ApiError,
 } from '../../../services/api';
 import type { AdminRoute, Department } from '@medassist/shared-types';
+import { useRowSelection } from '../../../hooks/useRowSelection';
+import { runBulkDelete, summaryMessage } from '../../../lib/bulkDelete';
+import { BulkActionBar } from '../../../components/BulkActionBar';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 interface StepDraft {
   _key: string;
@@ -38,6 +42,14 @@ export default function NavigationRoutes() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const selection = useRowSelection(
+    routes,
+    (r) => r.route_id,
+    (r) => r.is_protected,
+  );
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -48,8 +60,10 @@ export default function NavigationRoutes() {
       ]);
       setRoutes(routesRes.routes);
       setDepartments(deptRes.departments);
+      return true;
     } catch {
       setError('שגיאה בטעינת מסלולים');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -216,11 +230,39 @@ export default function NavigationRoutes() {
     }
   }
 
+  async function handleBulkDelete() {
+    const items = routes
+      .filter((r) => selection.isSelected(r.route_id))
+      .map((r) => ({ id: r.route_id, label: r.name }));
+
+    setBulkBusy(true);
+    const summary = await runBulkDelete(items, deleteNavigationRoute);
+    setBulkBusy(false);
+    setBulkConfirmOpen(false);
+    selection.clear();
+
+    // fetchData() clears `error` synchronously at its start, so the summary
+    // message must be set after the refetch finishes, not before, or it is wiped
+    // before it ever renders. And if the refetch itself fails, its own catch
+    // already set `error` to a fetch-failure message: do not clobber that with
+    // a "deleted N" banner when the table failed to reload.
+    const refetchOk = await fetchData();
+    if (!refetchOk) return;
+
+    const failed = summary.results.filter((r) => r.outcome === 'failed');
+    setError(
+      failed.length
+        ? `${summaryMessage(summary)}. נכשלו: ${failed.map((r) => r.label).join(', ')}`
+        : summaryMessage(summary)
+    );
+  }
+
   async function handleDelete(routeId: string) {
     setDeleteError(null);
     try {
       const result = await deleteNavigationRoute(routeId);
       setConfirmDeleteId(null);
+      selection.remove(routeId);
       if (result.archived) {
         setError('המסלול הועבר לארכיון (יש היסטוריה של מטופלים שהשתמשו בו)');
       }
@@ -253,10 +295,25 @@ export default function NavigationRoutes() {
       ) : routes.length === 0 ? (
         <p style={s.hint}>אין מסלולים. לחץ "מסלול חדש" כדי ליצור.</p>
       ) : (
-        <div style={s.tableWrap}>
+        <>
+          <BulkActionBar
+            count={selection.selectedCount}
+            onDelete={() => setBulkConfirmOpen(true)}
+            onClear={selection.clear}
+          />
+          <div style={s.tableWrap}>
           <table style={s.table}>
             <thead>
               <tr>
+                <th style={s.th}>
+                  <input
+                    type="checkbox"
+                    aria-label="בחר הכל"
+                    checked={selection.headerState === 'all'}
+                    ref={(el) => { if (el) el.indeterminate = selection.headerState === 'some'; }}
+                    onChange={selection.toggleAllVisible}
+                  />
+                </th>
                 <th style={s.th}>מקור</th>
                 <th style={s.th}>יעד</th>
                 <th style={s.th}>שם</th>
@@ -269,12 +326,22 @@ export default function NavigationRoutes() {
             <tbody>
               {routes.map((r) => (
                 <tr key={r.route_id} style={r.archived ? s.archivedRow : undefined}>
+                  <td style={s.td}>
+                    <input
+                      type="checkbox"
+                      aria-label={`בחר ${r.name}`}
+                      disabled={r.is_protected}
+                      checked={selection.isSelected(r.route_id)}
+                      onChange={() => selection.toggle(r.route_id)}
+                    />
+                  </td>
                   <td style={s.td}>{deptName(r.from_department_id)}</td>
                   <td style={s.td}>{deptName(r.to_department_id)}</td>
                   <td style={s.td}>{r.name}</td>
                   <td style={s.td}>{r.is_default ? '✓' : ''}</td>
                   <td style={s.td}>{r.steps_count}</td>
                   <td style={s.td}>
+                    {r.is_protected && <span style={s.archivedBadge}>מערכת</span>}
                     {r.archived
                       ? <span style={s.archivedBadge}>בארכיון</span>
                       : <span style={s.activeBadge}>פעיל</span>}
@@ -283,10 +350,12 @@ export default function NavigationRoutes() {
                     {!r.archived && (
                       <>
                         <button onClick={() => openEdit(r.route_id)} style={s.editBtn}>עריכה</button>
-                        <button
-                          onClick={() => { setDeleteError(null); setConfirmDeleteId(r.route_id); }}
-                          style={s.deleteBtn}
-                        >מחיקה</button>
+                        {!r.is_protected && (
+                          <button
+                            onClick={() => { setDeleteError(null); setConfirmDeleteId(r.route_id); }}
+                            style={s.deleteBtn}
+                          >מחיקה</button>
+                        )}
                       </>
                     )}
                   </td>
@@ -294,7 +363,8 @@ export default function NavigationRoutes() {
               ))}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Edit / Create modal */}
@@ -433,23 +503,30 @@ export default function NavigationRoutes() {
 
       {/* Delete confirmation modal */}
       {confirmDeleteId && (
-        <div style={s.backdrop} onClick={() => setConfirmDeleteId(null)}>
-          <div style={{ ...s.modal, maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-            <div style={s.modalHeader}>
-              <h2 style={s.modalTitle}>מחיקת מסלול</h2>
-              <button onClick={() => setConfirmDeleteId(null)} style={s.closeBtn}>×</button>
-            </div>
-            <div style={s.modalBody}>
+        <ConfirmDialog
+          title="מחיקת מסלול"
+          body={
+            <>
               <p>האם אתה בטוח שברצונך למחוק מסלול זה?</p>
               <p style={s.hint}>אם יש היסטוריה של מטופלים שהשתמשו בו, הוא יועבר לארכיון.</p>
-              {deleteError && <p style={s.errorMsg}>{deleteError}</p>}
-              <div style={s.modalActions}>
-                <button onClick={() => setConfirmDeleteId(null)} style={s.cancelBtn}>ביטול</button>
-                <button onClick={() => handleDelete(confirmDeleteId)} style={s.dangerBtn}>מחק</button>
-              </div>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          confirmLabel="מחק"
+          error={deleteError}
+          onConfirm={() => handleDelete(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+
+      {bulkConfirmOpen && (
+        <ConfirmDialog
+          title="מחיקת מסלולים"
+          body={`למחוק ${selection.selectedCount} מסלולים? מסלולים בשימוש יועברו לארכיון.`}
+          confirmLabel="מחק"
+          busy={bulkBusy}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkConfirmOpen(false)}
+        />
       )}
     </div>
   );

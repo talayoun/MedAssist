@@ -4,12 +4,16 @@ import { z } from 'zod';
 
 export const ChecklistCategorySchema = z.enum(['bring', 'fast', 'medication', 'other']);
 
+export const ChecklistLinkTargetSchema = z.enum(['forms']);
+
 export const ChecklistItemDTO = z.object({
   id: z.string().uuid(),
   text: z.string().min(1),
   category: ChecklistCategorySchema,
   time_sensitive: z.boolean(),
   completed: z.boolean(),
+  description: z.string().nullable(),
+  link_target: ChecklistLinkTargetSchema.nullable(),
 });
 
 export const ChecklistResponseDTO = z.object({
@@ -39,6 +43,14 @@ export const ParkingCoordinatesDTO = z.object({
   lng: z.number(),
 });
 
+export const ArrivalInfoDTO = z.object({
+  address: z.string().nullable(),
+  parking_info: z.string().nullable(),
+  transit_info: z.string().nullable(),
+  map_lat: z.number().nullable(),
+  map_lng: z.number().nullable(),
+});
+
 export const NavigationRouteDTO = z.object({
   route_id: z.string().uuid(),
   route_name: z.string(),
@@ -47,6 +59,7 @@ export const NavigationRouteDTO = z.object({
   parking_coordinates: ParkingCoordinatesDTO.nullable(),
   steps: z.array(NavigationStepDTO),
   completed: z.boolean().optional(),
+  arrival: ArrivalInfoDTO.nullable(),
 });
 
 export const StepConfirmResponseDTO = z.union([
@@ -73,6 +86,8 @@ export const WaitingResponseDTO = z.object({
   broadcast_message: z.string().nullable(),
   broadcast_sent_at: z.string().datetime().nullable(),
   updated_at: z.string().datetime(),
+  queue_position: z.number().int().nullable(),
+  people_ahead: z.number().int().nullable(),
 });
 
 export const ContactMessageTypeSchema = z.enum(['need_help', 'confirm_here', 'question']);
@@ -131,10 +146,20 @@ export type FormDetail = z.infer<typeof FormDetailDTO>;
 
 // ─── Digital Forms v2 ─────────────────────────────────────────────────────────
 
+export const FormSectionSchema = z.enum(['personal', 'medical', 'financial', 'documents', 'consent']);
+export const FormItemTypeSchema = z.enum([
+  'patient_upload', 'staff_upload_sign', 'text_field', 'yes_no_list', 'consent',
+]);
+
+export const TextFieldValueDTO = z.object({ text: z.string() });
+export const YesNoListValueDTO = z.object({ answer: z.boolean(), items: z.array(z.string()) });
+export const ConsentValueDTO = z.object({ accepted: z.boolean() });
+export const FormItemValueDTO = z.union([TextFieldValueDTO, YesNoListValueDTO, ConsentValueDTO]).nullable();
+
 export const FormItemDTOSchema = z.object({
   id: z.string().uuid(),
   label: z.string(),
-  item_type: z.enum(['patient_upload', 'staff_upload_sign']),
+  item_type: FormItemTypeSchema,
   status: z.enum(['pending', 'staff_uploaded', 'patient_submitted']),
   required: z.boolean(),
   order_index: z.number().int(),
@@ -142,7 +167,20 @@ export const FormItemDTOSchema = z.object({
   patient_file_url: z.string().url().nullable(),
   patient_file_download_url: z.string().url().nullable(),
   patient_submitted_at: z.string().datetime().nullable(),
+  section: FormSectionSchema,
+  sub_label: z.string().nullable(),
+  placeholder: z.string().nullable(),
+  list_item_placeholder: z.string().nullable(),
+  value: FormItemValueDTO,
 });
+
+// Per-item_type value payload for PATCH /:itemId/value — a discriminated request shape.
+export const FormValueRequestDTO = z.discriminatedUnion('item_type', [
+  z.object({ item_type: z.literal('text_field'), value: TextFieldValueDTO }),
+  z.object({ item_type: z.literal('yes_no_list'), value: YesNoListValueDTO }),
+  z.object({ item_type: z.literal('consent'), value: ConsentValueDTO }),
+]);
+export type FormValueRequest = z.infer<typeof FormValueRequestDTO>;
 
 export type FormItemDTO = z.infer<typeof FormItemDTOSchema>;
 
@@ -168,11 +206,16 @@ export const FormTemplateItemDTOSchema = z.object({
   id: z.string().uuid(),
   procedure_type: z.string().nullable(),
   label: z.string(),
-  item_type: z.enum(['patient_upload', 'staff_upload_sign']),
+  item_type: FormItemTypeSchema,
   blank_form_url: z.string().url().nullable(),
   required: z.boolean(),
   order_index: z.number().int(),
   is_active: z.boolean(),
+  section: FormSectionSchema,
+  sub_label: z.string().nullable(),
+  placeholder: z.string().nullable(),
+  list_item_placeholder: z.string().nullable(),
+  is_protected: z.boolean().default(false),
 });
 
 export type FormTemplateItemDTO = z.infer<typeof FormTemplateItemDTOSchema>;

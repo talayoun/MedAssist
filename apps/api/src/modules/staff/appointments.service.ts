@@ -107,7 +107,10 @@ export async function createElectiveAppointment(
   );
 
   // Snapshot form templates: explicit selection or auto-select by procedure type
-  type FormTemplateRow = { id: string; label: string; item_type: string; required: boolean; order_index: number };
+  type FormTemplateRow = {
+    id: string; label: string; item_type: string; required: boolean; order_index: number;
+    section: string; sub_label: string | null; placeholder: string | null; list_item_placeholder: string | null;
+  };
   let formTemplatesToSnapshot: FormTemplateRow[];
 
   if (input.form_template_ids !== undefined) {
@@ -115,7 +118,7 @@ export async function createElectiveAppointment(
     if (input.form_template_ids.length > 0) {
       const placeholders = input.form_template_ids.map((_, i) => `$${i + 1}`).join(', ');
       const { rows } = await query<FormTemplateRow>(
-        `SELECT id, label, item_type, required, order_index
+        `SELECT id, label, item_type, required, order_index, section, sub_label, placeholder, list_item_placeholder
          FROM form_template_items
          WHERE id IN (${placeholders}) AND is_active = true
          ORDER BY order_index`,
@@ -128,7 +131,7 @@ export async function createElectiveAppointment(
   } else {
     // Backward compat: auto-select by procedure type + global
     const { rows } = await query<FormTemplateRow>(
-      `SELECT id, label, item_type, required, order_index
+      `SELECT id, label, item_type, required, order_index, section, sub_label, placeholder, list_item_placeholder
        FROM form_template_items
        WHERE (procedure_type = $1 OR procedure_type IS NULL) AND is_active = true
        ORDER BY order_index`,
@@ -140,10 +143,14 @@ export async function createElectiveAppointment(
   for (const tmpl of formTemplatesToSnapshot) {
     await query(
       `INSERT INTO patient_form_items
-         (appointment_id, form_template_item_id, label, item_type, required, order_index)
-       VALUES ($1, $2, $3, $4, $5, $6)
+         (appointment_id, form_template_item_id, label, item_type, required, order_index,
+          section, sub_label, placeholder, list_item_placeholder)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        ON CONFLICT (appointment_id, form_template_item_id) WHERE form_template_item_id IS NOT NULL DO NOTHING`,
-      [appointmentId, tmpl.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index],
+      [
+        appointmentId, tmpl.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index,
+        tmpl.section, tmpl.sub_label, tmpl.placeholder, tmpl.list_item_placeholder,
+      ],
     );
   }
 

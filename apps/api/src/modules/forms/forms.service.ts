@@ -79,11 +79,18 @@ export async function listForAppointment(appointmentId: string) {
        pfi.required,
        pfi.order_index,
        pfi.staff_file_url,
+       pfi.section,
+       pfi.sub_label,
+       pfi.placeholder,
+       pfi.list_item_placeholder,
        pd.file_url          AS patient_file_url,
-       pd.submitted_at      AS patient_submitted_at
+       pd.submitted_at      AS patient_submitted_at,
+       pfv.value            AS value
      FROM patient_form_items pfi
      LEFT JOIN patient_documents pd
        ON pd.patient_form_item_id = pfi.id AND pd.is_current = true
+     LEFT JOIN patient_form_values pfv
+       ON pfv.patient_form_item_id = pfi.id
      WHERE pfi.appointment_id = $1
      ORDER BY pfi.order_index`,
     [appointmentId],
@@ -139,6 +146,123 @@ export async function uploadPatientImage(
   });
 
   return updatedRow;
+}
+
+export async function uploadPatientPdf(
+  itemId: string,
+  appointmentId: string,
+  buffer: Buffer,
+): Promise<Record<string, unknown>> {
+  // Quick IDOR check before transaction
+  const { rows: ownerCheck } = await query(
+    `SELECT id FROM patient_form_items WHERE id = $1 AND appointment_id = $2`,
+    [itemId, appointmentId],
+  );
+  if (!ownerCheck[0]) throw Object.assign(new Error('Forbidden'), { status: 403 });
+
+  const ts = Date.now();
+  const key = `forms/appointments/${appointmentId}/pdfs/${ts}-${randomUUID()}.pdf`;
+
+  let updatedRow: Record<string, unknown> = {};
+
+  await withTransaction(async (client) => {
+    await verifyOwnershipTx(client, itemId, appointmentId);
+
+    await client.query(
+      `UPDATE patient_documents SET is_current = false
+       WHERE patient_form_item_id = $1 AND is_current = true`,
+      [itemId],
+    );
+
+    await client.query(
+      `INSERT INTO patient_documents
+         (appointment_id, patient_form_item_id, file_url, doc_type, uploaded_by_patient, is_current)
+       VALUES ($1, $2, $3, 'pdf_upload', true, true)`,
+      [appointmentId, itemId, key],
+    );
+
+    const { rows } = await client.query(
+      `UPDATE patient_form_items
+       SET status = 'patient_submitted', updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [itemId],
+    );
+    updatedRow = rows[0];
+
+    await uploadEncrypted(key, buffer, 'application/pdf');
+  });
+
+  return updatedRow;
+}
+
+export async function setItemValue(
+  itemId: string,
+  appointmentId: string,
+  itemType: 'text_field' | 'yes_no_list' | 'consent',
+  value: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  let updatedRow: Record<string, unknown> = {};
+
+  await withTransaction(async (client) => {
+    const { rows: itemRows } = await client.query(
+      `SELECT id, item_type FROM patient_form_items
+       WHERE id = $1 AND appointment_id = $2
+       FOR UPDATE`,
+      [itemId, appointmentId],
+    );
+    const item = itemRows[0];
+    if (!item) throw Object.assign(new Error('Forbidden'), { status: 403 });
+    if (item.item_type !== itemType) {
+      throw Object.assign(new Error('item_type mismatch'), { status: 400 });
+    }
+
+    await client.query(
+      `INSERT INTO patient_form_values (appointment_id, patient_form_item_id, value)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (patient_form_item_id) DO UPDATE SET value = $3, updated_at = NOW()`,
+      [appointmentId, itemId, JSON.stringify(value)],
+    );
+
+    const { rows } = await client.query(
+      `UPDATE patient_form_items
+       SET status = 'patient_submitted', updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [itemId],
+    );
+    updatedRow = { ...rows[0], value };
+  });
+
+  return hydrateItem(updatedRow);
+}
+
+export async function deleteDocument(
+  itemId: string,
+  appointmentId: string,
+): Promise<Record<string, unknown>> {
+  let updatedRow: Record<string, unknown> = {};
+
+  await withTransaction(async (client) => {
+    await verifyOwnershipTx(client, itemId, appointmentId);
+
+    await client.query(
+      `UPDATE patient_documents SET is_current = false
+       WHERE patient_form_item_id = $1 AND is_current = true`,
+      [itemId],
+    );
+
+    const { rows } = await client.query(
+      `UPDATE patient_form_items
+       SET status = 'pending', updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [itemId],
+    );
+    updatedRow = rows[0];
+  });
+
+  return hydrateItem(updatedRow);
 }
 
 export async function submitSignature(

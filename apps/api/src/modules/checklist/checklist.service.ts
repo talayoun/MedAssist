@@ -13,6 +13,8 @@ export interface ChecklistItemResponse {
   time_sensitive: boolean;
   completed: boolean;
   source: 'template' | 'custom';
+  description: string | null;
+  link_target: 'forms' | null;
 }
 
 export interface ChecklistResponse {

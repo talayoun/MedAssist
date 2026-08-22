@@ -53,13 +53,13 @@ async function seed() {
     // ─── Patient ──────────────────────────────────────────────────────────────
     const { rows: [patient] } = await client.query<{ id: string }>(`
       INSERT INTO patients (name, phone_number)
-      VALUES ('רועי דוידוביץ', '+972526068400')
+      VALUES ('ישראל ישראלי', '+972501234567')
       ON CONFLICT (phone_number) DO NOTHING
       RETURNING id
     `);
 
     const patientId: string = patient?.id ?? (
-      await client.query<{ id: string }>(`SELECT id FROM patients WHERE phone_number = '+972526068400'`)
+      await client.query<{ id: string }>(`SELECT id FROM patients WHERE phone_number = '+972501234567'`)
     ).rows[0].id;
 
     // ─── Reset prior seed state for this patient ────────────────────────────
@@ -136,10 +136,30 @@ async function seed() {
 
     // ─── Checklist Template ───────────────────────────────────────────────────
     const items = [
-      { id: randomUUID(), text: 'הגע בצום של 6 שעות לפחות', category: 'fast', time_sensitive: true },
-      { id: randomUUID(), text: 'הבא תעודת זהות', category: 'bring', time_sensitive: false },
-      { id: randomUUID(), text: 'הבא כרטיס ביטוח בריאות', category: 'bring', time_sensitive: false },
-      { id: randomUUID(), text: 'הפסק נטילת מדללי דם 48 שעות לפני', category: 'medication', time_sensitive: true },
+      {
+        id: randomUUID(), text: 'הבא תעודת זהות', category: 'bring', time_sensitive: false,
+        description: 'נדרשת תעודת זהות מקורית, לא צילום', link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'הבא כרטיס ביטוח בריאות', category: 'bring', time_sensitive: false,
+        description: null, link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'הגע בצום החל משעה 22:00', category: 'fast', time_sensitive: true,
+        description: 'אין לאכול או לשתות החל משעה זו', link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'הפסק נטילת מדללי דם', category: 'medication', time_sensitive: true,
+        description: 'חשוב - בצע עד מחר בשעה 08:00', link_target: null,
+      },
+      {
+        id: randomUUID(), text: 'מלא טופס הסכמה מדעת', category: 'other', time_sensitive: false,
+        description: 'הטפסים נשלחו אליך וממתינים להעלאה', link_target: 'forms',
+      },
+      {
+        id: randomUUID(), text: 'הגע 30 דקות מוקדם', category: 'other', time_sensitive: false,
+        description: null, link_target: null,
+      },
     ];
     await client.query(`
       INSERT INTO checklist_templates (procedure_type, hospital_id, items_json)
@@ -147,34 +167,87 @@ async function seed() {
       ON CONFLICT (procedure_type, hospital_id) DO NOTHING
     `, [HOSPITAL_ID, JSON.stringify(items)]);
 
+    // Second, unused template: kept separate from pre-op-cardiac (which is
+    // referenced by the seeded appointment) so the "protected" flag and the
+    // "in active use" state never land on the same row in tests/dev data.
+    await client.query(`
+      INSERT INTO checklist_templates (procedure_type, hospital_id, items_json)
+      VALUES ('general-baseline', $1, $2)
+      ON CONFLICT (procedure_type, hospital_id) DO NOTHING
+    `, [HOSPITAL_ID, JSON.stringify(items)]);
+
+    // Baseline system entity: admins may edit it but never delete it.
+    // Explicitly reset pre-op-cardiac too, in case an older seed run (or this
+    // script re-run against an existing DB) left it protected.
+    await client.query(
+      `UPDATE checklist_templates SET is_protected = FALSE
+       WHERE procedure_type = 'pre-op-cardiac' AND hospital_id = $1`,
+      [HOSPITAL_ID]
+    );
+    await client.query(
+      `UPDATE checklist_templates SET is_protected = TRUE
+       WHERE procedure_type = 'general-baseline' AND hospital_id = $1`,
+      [HOSPITAL_ID]
+    );
+    await client.query(
+      `UPDATE navigation_routes SET is_protected = TRUE WHERE is_default = TRUE`
+    );
+
     // ─── Form template items ───────────────────────────────────────────────────
+    // Full 5-section intake form matching the Figma design (personal / medical /
+    // financial / documents / consent). Patient-supplied fields (allergies,
+    // medications, national ID) are permitted per constitution v1.1.
     const formTemplates = [
-      { procedure_type: 'pre-op-cardiac', label: 'תעודת זהות', item_type: 'patient_upload', required: true, order_index: 0 },
-      { procedure_type: 'pre-op-cardiac', label: 'הסכמה לניתוח', item_type: 'staff_upload_sign', required: true, order_index: 1 },
-      { procedure_type: null, label: 'טופס הסכמה כללי', item_type: 'staff_upload_sign', required: false, order_index: 99 },
+      { procedure_type: null, label: 'שם מלא', item_type: 'text_field', required: true, order_index: 0, section: 'personal', sub_label: null, placeholder: 'הזן שם מלא', list_item_placeholder: null },
+      { procedure_type: null, label: 'תעודת זהות', item_type: 'text_field', required: true, order_index: 1, section: 'personal', sub_label: null, placeholder: '000000000', list_item_placeholder: null },
+      { procedure_type: null, label: 'האם יש לך אלרגיות?', item_type: 'yes_no_list', required: false, order_index: 2, section: 'medical', sub_label: null, placeholder: null, list_item_placeholder: 'פרט את האלרגיה' },
+      { procedure_type: null, label: 'האם אתה נוטל תרופות באופן קבוע?', item_type: 'yes_no_list', required: false, order_index: 3, section: 'medical', sub_label: null, placeholder: null, list_item_placeholder: 'שם התרופה' },
+      { procedure_type: null, label: 'התחייבות כספית מקופת החולים — טופס 17', item_type: 'patient_upload', required: true, order_index: 4, section: 'financial', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'צילום תעודת זהות (כולל הספח)', item_type: 'patient_upload', required: true, order_index: 5, section: 'financial', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'סיכום רפואי מהרופא המפנה', item_type: 'patient_upload', required: true, order_index: 6, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'תוצאות בדיקות דם עדכניות (תפקודי קרישה)', item_type: 'patient_upload', required: true, order_index: 7, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'בדיקות דימות — פענוח CT / רנטגן / אולטרסאונד', item_type: 'patient_upload', required: false, order_index: 8, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'הסכמה לניתוח', item_type: 'staff_upload_sign', required: true, order_index: 9, section: 'consent', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'טופס ויתור סודיות רפואית', item_type: 'consent', required: true, order_index: 10, section: 'consent', sub_label: 'אני מסכים/ה לשיתוף מידע רפואי עם הצוות המטפל', placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'הצהרת בריאות בסיסית', item_type: 'consent', required: true, order_index: 11, section: 'consent', sub_label: 'אני מצהיר/ה שהפרטים הרפואיים שמסרתי נכונים ומדויקים', placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'צלם כרטיס קופת חולים', item_type: 'patient_upload', required: false, order_index: 12, section: 'consent', sub_label: null, placeholder: null, list_item_placeholder: null },
     ] as const;
 
     for (const tmpl of formTemplates) {
       const { rows: [fti] } = await client.query<{ id: string }>(`
-        INSERT INTO form_template_items (procedure_type, label, item_type, required, order_index)
-        SELECT $1, $2, $3, $4, $5
+        INSERT INTO form_template_items
+          (procedure_type, label, item_type, required, order_index, section, sub_label, placeholder, list_item_placeholder)
+        SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9
         WHERE NOT EXISTS (
           SELECT 1 FROM form_template_items
           WHERE (procedure_type IS NOT DISTINCT FROM $1) AND label = $2
         )
         RETURNING id
-      `, [tmpl.procedure_type, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index]);
+      `, [
+        tmpl.procedure_type, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index,
+        tmpl.section, tmpl.sub_label, tmpl.placeholder, tmpl.list_item_placeholder,
+      ]);
 
       if (!fti) continue;
 
       // Snapshot to the seeded appointment
       await client.query(`
         INSERT INTO patient_form_items
-          (appointment_id, form_template_item_id, label, item_type, required, order_index)
-        VALUES ($1, $2, $3, $4, $5, $6)
+          (appointment_id, form_template_item_id, label, item_type, required, order_index,
+           section, sub_label, placeholder, list_item_placeholder)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (appointment_id, form_template_item_id) WHERE form_template_item_id IS NOT NULL DO NOTHING
-      `, [appointmentId, fti.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index]);
+      `, [
+        appointmentId, fti.id, tmpl.label, tmpl.item_type, tmpl.required, tmpl.order_index,
+        tmpl.section, tmpl.sub_label, tmpl.placeholder, tmpl.list_item_placeholder,
+      ]);
     }
+
+    // Baseline system entity: admins may edit it but never deactivate it.
+    await client.query(
+      `UPDATE form_template_items SET is_protected = TRUE
+       WHERE procedure_type IS NULL AND label = 'שם מלא'`
+    );
 
     await client.query('COMMIT');
 
@@ -182,8 +255,8 @@ async function seed() {
     const magicLinkUrl = `${patientAppUrl}/${token}`;
 
     // ─── Enqueue magic link SMS ───────────────────────────────────────────────
-    const PHONE_NUMBER = '+972526068400';
-    const smsMessage = `שלום רועי! הקישור שלך לביקור במחלקת קרדיולוגיה: ${magicLinkUrl}`;
+    const PHONE_NUMBER = '+972501234567';
+    const smsMessage = `שלום ישראל! הקישור שלך לביקור במחלקת קרדיולוגיה: ${magicLinkUrl}`;
 
     const { rows: [notif] } = await pool.query<{ id: string }>(`
       INSERT INTO notifications (patient_id, appointment_id, type, status, triggering_event)

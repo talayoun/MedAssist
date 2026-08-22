@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { getTrash, restoreAppointment, hardDeleteAppointment, ApiError } from '../../../services/api';
 import type { TrashEntry } from '../../../services/api';
+import { useRowSelection } from '../../../hooks/useRowSelection';
+import { runBulkDelete, summaryMessage } from '../../../lib/bulkDelete';
+import { BulkActionBar } from '../../../components/BulkActionBar';
+import { ConfirmDialog } from '../../../components/ConfirmDialog';
 
 function daysSince(isoDate: string): number {
   return Math.floor((Date.now() - new Date(isoDate).getTime()) / 86_400_000);
@@ -17,6 +21,11 @@ export default function Trash() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const selection = useRowSelection(entries, (e) => e.appointment_id);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   async function load() {
     try {
@@ -42,15 +51,36 @@ export default function Trash() {
     }
   }
 
-  async function handleHardDelete(id: string, name: string) {
-    if (!window.confirm(`למחוק לצמיתות את ${name}? פעולה זו בלתי הפיכה.`)) return;
+  async function handleHardDelete(id: string) {
     setActingId(id);
     try {
       await hardDeleteAppointment(id);
+      setConfirmDeleteId(null);
+      selection.remove(id);
       await load();
     } finally {
       setActingId(null);
     }
+  }
+
+  async function handleBulkDelete() {
+    const targets = entries
+      .filter((e) => selection.isSelected(e.appointment_id))
+      .map((e) => ({ id: e.appointment_id, label: e.patient_name }));
+
+    setBulkBusy(true);
+    const summary = await runBulkDelete(targets, hardDeleteAppointment);
+    setBulkBusy(false);
+    setBulkConfirmOpen(false);
+    selection.clear();
+
+    const failed = summary.results.filter((r) => r.outcome === 'failed');
+    setError(
+      failed.length
+        ? `${summaryMessage(summary)}. נכשלו: ${failed.map((r) => r.label).join(', ')}`
+        : null
+    );
+    await load();
   }
 
   return (
@@ -70,10 +100,25 @@ export default function Trash() {
       )}
 
       {entries.length > 0 && (
-        <div style={s.tableWrap}>
+        <>
+          <BulkActionBar
+            count={selection.selectedCount}
+            onDelete={() => setBulkConfirmOpen(true)}
+            onClear={selection.clear}
+          />
+          <div style={s.tableWrap}>
           <table style={s.table}>
             <thead>
               <tr>
+                <th style={s.th}>
+                  <input
+                    type="checkbox"
+                    aria-label="בחר הכל"
+                    checked={selection.headerState === 'all'}
+                    ref={(el) => { if (el) el.indeterminate = selection.headerState === 'some'; }}
+                    onChange={selection.toggleAllVisible}
+                  />
+                </th>
                 <th style={s.th}>שם מטופל</th>
                 <th style={s.th}>מחלקה</th>
                 <th style={s.th}>סוג הליך</th>
@@ -88,6 +133,14 @@ export default function Trash() {
                 const urgency = days <= 1 ? '#fef2f2' : days <= 3 ? '#fffbeb' : '#fff';
                 return (
                   <tr key={e.appointment_id} style={{ background: urgency }}>
+                    <td style={s.td}>
+                      <input
+                        type="checkbox"
+                        aria-label={`בחר ${e.patient_name}`}
+                        checked={selection.isSelected(e.appointment_id)}
+                        onChange={() => selection.toggle(e.appointment_id)}
+                      />
+                    </td>
                     <td style={s.td}>{e.patient_name}</td>
                     <td style={s.td}>{e.department_name}</td>
                     <td style={s.td}>{e.procedure_type}</td>
@@ -111,7 +164,7 @@ export default function Trash() {
                           שחזר
                         </button>
                         <button
-                          onClick={() => handleHardDelete(e.appointment_id, e.patient_name)}
+                          onClick={() => setConfirmDeleteId(e.appointment_id)}
                           disabled={actingId === e.appointment_id}
                           style={s.hardDeleteBtn}
                         >
@@ -124,7 +177,30 @@ export default function Trash() {
               })}
             </tbody>
           </table>
-        </div>
+          </div>
+        </>
+      )}
+
+      {confirmDeleteId && (
+        <ConfirmDialog
+          title="מחיקה לצמיתות"
+          body={`למחוק לצמיתות את ${entries.find((e) => e.appointment_id === confirmDeleteId)?.patient_name ?? ''}? לא ניתן לשחזר.`}
+          confirmLabel="מחק לצמיתות"
+          busy={actingId === confirmDeleteId}
+          onConfirm={() => handleHardDelete(confirmDeleteId!)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
+
+      {bulkConfirmOpen && (
+        <ConfirmDialog
+          title="מחיקה לצמיתות"
+          body={`למחוק לצמיתות ${selection.selectedCount} מטופלים? לא ניתן לשחזר.`}
+          confirmLabel="מחק לצמיתות"
+          busy={bulkBusy}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkConfirmOpen(false)}
+        />
       )}
     </div>
   );

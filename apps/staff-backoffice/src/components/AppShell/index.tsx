@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../main';
 import { logout } from '../../services/api';
 import logo from '../../assets/medassist-logo.png';
@@ -9,7 +9,8 @@ const TEAL_SOFT = '#F0FDFA';
 
 const styles: Record<string, React.CSSProperties> = {
   shell: {
-    minHeight: '100vh',
+    height: '100vh',
+    overflow: 'hidden',
     display: 'flex',
     flexDirection: 'row-reverse',
     background: '#f4f6f8',
@@ -19,12 +20,15 @@ const styles: Record<string, React.CSSProperties> = {
   sidebar: {
     width: '256px',
     flexShrink: 0,
+    height: '100%',
+    minHeight: 0,
     background: '#fff',
     borderInlineStart: '1px solid #e2e8f0',
     display: 'flex',
     flexDirection: 'column',
     padding: '20px 16px',
   },
+  sidebarScroll: { flex: 1, minWidth: 0, minHeight: 0, overflowY: 'auto' },
   logoRow: { display: 'flex', alignItems: 'center', gap: '10px', padding: '4px 8px 20px' },
   logoImg: { height: '30px', objectFit: 'contain' },
   logoSub: { fontSize: '0.75rem', color: '#718096', fontWeight: 600 },
@@ -50,7 +54,6 @@ const styles: Record<string, React.CSSProperties> = {
     minHeight: '44px',
   },
   navLinkActive: { background: TEAL_SOFT, color: TEAL },
-  spacer: { flex: 1 },
   userBox: { borderTop: '1px solid #e2e8f0', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '6px' },
   userName: { fontSize: '0.875rem', fontWeight: 700, color: '#1a202c' },
   userDept: { fontSize: '0.75rem', color: '#718096' },
@@ -66,7 +69,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     cursor: 'pointer',
   },
-  main: { flex: 1, minWidth: 0, overflowY: 'auto' },
+  main: { flex: 1, minWidth: 0, height: '100%', overflowY: 'auto' },
 };
 
 function linkStyle({ isActive }: { isActive: boolean }): React.CSSProperties {
@@ -76,6 +79,12 @@ function linkStyle({ isActive }: { isActive: boolean }): React.CSSProperties {
 export default function AppShell() {
   const { user, setUser } = useAuth();
   const navigate = useNavigate();
+  const mainRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0 });
+  }, [pathname]);
 
   async function handleLogout() {
     await logout().catch(() => {});
@@ -86,38 +95,41 @@ export default function AppShell() {
   return (
     <div style={styles.shell}>
       <aside style={styles.sidebar}>
-        <div style={styles.logoRow}>
-          <img src={logo} alt="MedAssist" style={styles.logoImg} />
-          <span style={styles.logoSub}>צוות</span>
+        <div style={styles.sidebarScroll}>
+          <div style={styles.logoRow}>
+            <img src={logo} alt="MedAssist" style={styles.logoImg} />
+            <span style={styles.logoSub}>צוות</span>
+          </div>
+
+          <nav style={styles.navGroup}>
+            <NavLink to="/queue" style={linkStyle}>
+              תור מטופלים
+            </NavLink>
+          </nav>
+
+          {user?.role === 'admin' && (
+            <>
+              <div style={styles.navGroupLabel}>ניהול</div>
+              <nav style={styles.navGroup}>
+                <NavLink to="/admin/checklists" style={linkStyle}>
+                  תבניות צ׳קליסט
+                </NavLink>
+                <NavLink to="/admin/navigation-routes" style={linkStyle}>
+                  מסלולי ניווט
+                </NavLink>
+                <NavLink to="/admin/form-templates" style={linkStyle}>
+                  תבניות טפסים
+                </NavLink>
+                <NavLink to="/admin/departments" style={linkStyle}>
+                  פרטי הגעה
+                </NavLink>
+                <NavLink to="/admin/trash" style={linkStyle}>
+                  פח אשפה
+                </NavLink>
+              </nav>
+            </>
+          )}
         </div>
-
-        <nav style={styles.navGroup}>
-          <NavLink to="/queue" style={linkStyle}>
-            תור מטופלים
-          </NavLink>
-        </nav>
-
-        {user?.role === 'admin' && (
-          <>
-            <div style={styles.navGroupLabel}>ניהול</div>
-            <nav style={styles.navGroup}>
-              <NavLink to="/admin/checklists" style={linkStyle}>
-                תבניות צ׳קליסט
-              </NavLink>
-              <NavLink to="/admin/navigation-routes" style={linkStyle}>
-                מסלולי ניווט
-              </NavLink>
-              <NavLink to="/admin/form-templates" style={linkStyle}>
-                תבניות טפסים
-              </NavLink>
-              <NavLink to="/admin/trash" style={linkStyle}>
-                פח אשפה
-              </NavLink>
-            </nav>
-          </>
-        )}
-
-        <div style={styles.spacer} />
 
         <div style={styles.userBox}>
           <span style={styles.userName}>{user?.name}</span>
@@ -130,7 +142,7 @@ export default function AppShell() {
         </div>
       </aside>
 
-      <main style={styles.main}>
+      <main ref={mainRef} style={styles.main}>
         <Outlet />
       </main>
     </div>

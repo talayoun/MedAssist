@@ -2,12 +2,16 @@ import type {
   StaffUser, QueueResponse, PatientStationDTO, AppointmentPhase, Department,
   TimingRule, AdminRoute, AdminRouteStep, ChecklistTemplate,
   FormItemDTO, StaffFormsResponseDTO, FormTemplateItemDTO,
+  DepartmentArrivalInfo, UpdateDepartmentArrivalInfoRequest,
 } from '@medassist/shared-types';
 import type { z } from 'zod';
 
 type PatientStation = z.infer<typeof PatientStationDTO>;
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+// Staff Back-Office is desktop-only (never LAN/phone-accessed, per constitution) --
+// uses its own API URL var so it never inherits patient-pwa's LAN IP override,
+// which breaks the SameSite=Lax session cookie on localhost<->LAN-IP requests.
+const BASE_URL = import.meta.env.VITE_STAFF_API_URL ?? 'http://localhost:3000';
 
 class ApiError extends Error {
   constructor(
@@ -362,6 +366,8 @@ export interface ChecklistItemInput {
   text: string;
   category: 'bring' | 'fast' | 'medication' | 'other';
   time_sensitive: boolean;
+  description?: string | null;
+  link_target?: 'forms' | null;
 }
 
 export function createChecklist(
@@ -423,15 +429,6 @@ export function hardDeleteAppointment(
   return apiRequest(`/admin/trash/${appointmentId}`, { method: 'DELETE' });
 }
 
-export function clearDepartmentQueue(
-  departmentId: string,
-): Promise<{ deleted_count: number }> {
-  return apiRequest('/admin/trash/bulk-clear', {
-    method: 'POST',
-    body: JSON.stringify({ department_id: departmentId }),
-  });
-}
-
 export function listTimingRules(): Promise<{ rules: TimingRule[] }> {
   return apiRequest('/admin/timing-rules');
 }
@@ -475,16 +472,24 @@ export function listFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
 export function createFormTemplate(body: {
   procedure_type?: string | null;
   label: string;
-  item_type: 'patient_upload' | 'staff_upload_sign';
+  item_type: 'patient_upload' | 'staff_upload_sign' | 'text_field' | 'yes_no_list' | 'consent';
   required: boolean;
   order_index: number;
+  section?: 'personal' | 'medical' | 'financial' | 'documents' | 'consent';
+  sub_label?: string | null;
+  placeholder?: string | null;
+  list_item_placeholder?: string | null;
 }): Promise<FormTemplateItemDTO> {
   return apiRequest('/admin/form-templates', { method: 'POST', body: JSON.stringify(body) });
 }
 
 export function patchFormTemplate(
   id: string,
-  patch: Partial<{ label: string; required: boolean; order_index: number; is_active: boolean }>
+  patch: Partial<{
+    label: string; required: boolean; order_index: number; is_active: boolean;
+    section: 'personal' | 'medical' | 'financial' | 'documents' | 'consent';
+    sub_label: string | null; placeholder: string | null; list_item_placeholder: string | null;
+  }>
 ): Promise<FormTemplateItemDTO> {
   return apiRequest(`/admin/form-templates/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
@@ -505,6 +510,19 @@ export async function uploadFormTemplateBlank(id: string, file: File): Promise<F
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
   return body as FormTemplateItemDTO;
+}
+
+// ─── Admin — Departments (clinic-arrival info) ────────────────────────────────
+
+export function listDepartments(): Promise<{ departments: DepartmentArrivalInfo[] }> {
+  return apiRequest('/admin/departments');
+}
+
+export function patchDepartmentArrival(
+  id: string,
+  patch: UpdateDepartmentArrivalInfoRequest
+): Promise<DepartmentArrivalInfo> {
+  return apiRequest(`/admin/departments/${id}`, { method: 'PATCH', body: JSON.stringify(patch) });
 }
 
 export interface AppointmentDetail {

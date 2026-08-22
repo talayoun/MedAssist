@@ -3,10 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import {
   getQueue, getDepartments, updatePatientStatus, setWaitEstimate,
   sendBroadcast, resetArrivalToNow, resendInvite, softDeleteAppointment,
-  clearDepartmentQueue, ApiError,
+  ApiError,
 } from '../../services/api';
 import { useAuth } from '../../main';
 import NewAppointment from '../NewAppointment';
+import { useRowSelection } from '../../hooks/useRowSelection';
+import { runBulkDelete, summaryMessage } from '../../lib/bulkDelete';
+import { BulkActionBar } from '../../components/BulkActionBar';
+import { ConfirmDialog } from '../../components/ConfirmDialog';
 import type {
   QueueResponse, QueuePatient, AppointmentPhase, Department,
 } from '@medassist/shared-types';
@@ -63,10 +67,11 @@ export default function Queue() {
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [filterDept, setFilterDept] = useState<string>('');
-  const [clearing, setClearing] = useState(false);
   const [filterPhases, setFilterPhases] = useState<Set<AppointmentPhase>>(new Set());
   const [showNewAppointment, setShowNewAppointment] = useState(false);
   const [createResult, setCreateResult] = useState<string | null>(null);
+  const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const fetchQueue = useCallback(async () => {
     try {
@@ -92,6 +97,12 @@ export default function Queue() {
       .catch(() => { /* non-fatal */ });
   }, []);
 
+  const visiblePatients = filterPhases.size === 0
+    ? (queue?.patients ?? [])
+    : (queue?.patients ?? []).filter((p) => filterPhases.has(p.current_phase));
+
+  const selection = useRowSelection(visiblePatients, (p) => p.appointment_id);
+
   async function handleStatusChange(appointmentId: string, status: Exclude<Patient['queue_status'], null>) {
     setUpdatingId(appointmentId);
     try {
@@ -112,29 +123,36 @@ export default function Queue() {
     }
   }
 
-  async function handleClearDepartment() {
-    if (!filterDept) return;
-    const dept = departments.find((d) => d.id === filterDept);
-    if (!window.confirm(`למחוק את כל המטופלים במחלקה "${dept?.name ?? filterDept}"?\nהפעולה ניתנת לביטול מהפח תוך 7 ימים.`)) return;
-    setClearing(true);
-    try {
-      const { deleted_count } = await clearDepartmentQueue(filterDept);
-      await fetchQueue();
-      if (deleted_count === 0) window.alert('אין מטופלים פעילים במחלקה זו.');
-    } finally {
-      setClearing(false);
-    }
-  }
-
   async function handleTrashPatient(appointmentId: string) {
     if (!window.confirm('להעביר מטופל זה לפח האשפה?')) return;
     setUpdatingId(appointmentId);
     try {
       await softDeleteAppointment(appointmentId);
+      selection.remove(appointmentId);
       await fetchQueue();
     } finally {
       setUpdatingId(null);
     }
+  }
+
+  async function handleBulkTrash() {
+    const targets = visiblePatients
+      .filter((p) => selection.isSelected(p.appointment_id))
+      .map((p) => ({ id: p.appointment_id, label: p.patient_name }));
+
+    setBulkBusy(true);
+    const summary = await runBulkDelete(targets, softDeleteAppointment);
+    setBulkBusy(false);
+    setBulkConfirmOpen(false);
+    selection.clear();
+
+    const failed = summary.results.filter((r) => r.outcome === 'failed');
+    setLoadError(
+      failed.length
+        ? `${summaryMessage(summary)}. נכשלו: ${failed.map((r) => r.label).join(', ')}`
+        : null
+    );
+    await fetchQueue();
   }
 
   async function handleResendInvite(appointmentId: string) {
@@ -167,10 +185,6 @@ export default function Queue() {
 
   const adminBroadcastDisabled = isAdmin && !filterDept;
 
-  const visiblePatients = filterPhases.size === 0
-    ? (queue?.patients ?? [])
-    : (queue?.patients ?? []).filter((p) => filterPhases.has(p.current_phase));
-
   return (
     <div style={styles.page}>
       <div style={styles.body}>
@@ -201,27 +215,6 @@ export default function Queue() {
                   ))}
                 </select>
               </label>
-              {filterDept && (
-                <button
-                  type="button"
-                  onClick={handleClearDepartment}
-                  disabled={clearing}
-                  style={{
-                    padding: '5px 12px',
-                    background: clearing ? '#9f1239' : '#dc2626',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: clearing ? 'not-allowed' : 'pointer',
-                    opacity: clearing ? 0.7 : 1,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {clearing ? 'מוחק...' : 'נקה מחלקה'}
-                </button>
-              )}
             </>
           )}
           <div style={styles.phaseCheckboxGroup}>
@@ -295,6 +288,14 @@ export default function Queue() {
 
         {loadError && <p style={styles.errorBanner}>{loadError}</p>}
 
+        {isAdmin && (
+          <BulkActionBar
+            count={selection.selectedCount}
+            onDelete={() => setBulkConfirmOpen(true)}
+            onClear={selection.clear}
+          />
+        )}
+
         {!queue ? (
           <p style={styles.loading}>טוען תור...</p>
         ) : visiblePatients.length === 0 ? (
@@ -312,11 +313,24 @@ export default function Queue() {
                 onTrash={handleTrashPatient}
                 showDepartment={isAdmin && !filterDept}
                 isAdmin={isAdmin}
+                selected={selection.isSelected(patient.appointment_id)}
+                onToggleSelect={() => selection.toggle(patient.appointment_id)}
               />
             ))}
           </div>
         )}
       </div>
+
+      {bulkConfirmOpen && (
+        <ConfirmDialog
+          title="העברה לפח אשפה"
+          body={`להעביר ${selection.selectedCount} מטופלים לפח האשפה? הפעולה ניתנת לביטול מהפח תוך 7 ימים.`}
+          confirmLabel="העבר לפח"
+          busy={bulkBusy}
+          onConfirm={handleBulkTrash}
+          onCancel={() => setBulkConfirmOpen(false)}
+        />
+      )}
 
       {showNewAppointment && (
         <NewAppointment
@@ -349,6 +363,8 @@ function PatientCard({
   onTrash,
   showDepartment,
   isAdmin,
+  selected,
+  onToggleSelect,
 }: {
   patient: Patient;
   updating: boolean;
@@ -358,6 +374,8 @@ function PatientCard({
   onTrash: (id: string) => void;
   showDepartment: boolean;
   isAdmin: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
 }) {
   const navigate = useNavigate();
   const statusColor = patient.queue_status ? STATUS_COLORS[patient.queue_status] : '#9ca3af';
@@ -367,6 +385,15 @@ function PatientCard({
     <div style={{ ...styles.card, borderRightColor: phaseColor }}>
       <div style={styles.cardHeader}>
         <div>
+          {isAdmin && (
+            <input
+              type="checkbox"
+              aria-label={`בחר ${patient.patient_name}`}
+              checked={selected}
+              onChange={onToggleSelect}
+              style={styles.cardCheckbox}
+            />
+          )}
           <span style={{ ...styles.phaseBadge, background: phaseColor }}>
             {PHASE_LABELS[patient.current_phase]}
           </span>
@@ -478,7 +505,7 @@ function PatientCard({
 
 const styles: Record<string, React.CSSProperties> = {
   page: {
-    minHeight: '100vh',
+    minHeight: '100%',
     background: '#eef2f7',
     fontFamily: 'system-ui, -apple-system, sans-serif',
     direction: 'rtl',
@@ -617,6 +644,7 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 8,
   },
   patientName: { fontWeight: 700, fontSize: 16, color: '#111827', marginRight: 10 },
+  cardCheckbox: { marginLeft: 10 },
   phaseBadge: {
     display: 'inline-block',
     borderRadius: 20,

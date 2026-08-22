@@ -1,118 +1,33 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { getWaitingStatus, sendContactMessage, ApiError } from '../../services/api';
+import { getWaitingStatus } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
-import type { WaitingResponse, WaitingStatus } from '@medassist/shared-types';
-
-const TEAL = '#0D9488';
+import { useVisitInfo } from '../../context/VisitPhaseContext';
+import type { WaitingResponse } from '@medassist/shared-types';
 
 const POLL_INTERVAL_MS = parseInt(import.meta.env.VITE_POLLING_INTERVAL_MS ?? '60000', 10);
-const RING_RADIUS = 88;
+const RING_RADIUS = 80;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
-const STATUS_STAGE: Record<WaitingStatus, { progress: number; label: string; color: string }> = {
-  waiting: { progress: 1 / 3, label: 'ממתין', color: TEAL },
-  in_treatment: { progress: 2 / 3, label: 'בטיפול', color: '#0f766e' },
-  done: { progress: 1, label: 'הושלם', color: '#16a34a' },
-};
-
-const styles = {
-  page: {
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    background: '#f7fafc',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  } as React.CSSProperties,
-  content: { maxWidth: '480px', margin: '0 auto', width: '100%', padding: '24px 16px 32px', flex: 1 } as React.CSSProperties,
-  header: { textAlign: 'right', marginBottom: '24px' } as React.CSSProperties,
-  h1: { fontSize: '1.75rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' } as React.CSSProperties,
-  subheader: { fontSize: '1rem', color: '#475569' } as React.CSSProperties,
-  ringWrap: { display: 'flex', justifyContent: 'center', marginBottom: '24px' } as React.CSSProperties,
-  ringCenterLabel: { fontSize: '0.875rem', color: '#475569', marginBottom: '4px' } as React.CSSProperties,
-  ringCenterValue: { fontSize: '1.375rem', fontWeight: 700 } as React.CSSProperties,
-  card: {
-    background: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '16px',
-    padding: '20px',
-    marginBottom: '12px',
-  } as React.CSSProperties,
-  cardRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' } as React.CSSProperties,
-  cardLabel: { fontSize: '0.875rem', color: '#475569', marginBottom: '4px' } as React.CSSProperties,
-  cardValue: { fontSize: '1.375rem', fontWeight: 700, color: '#0f172a' } as React.CSSProperties,
-  iconCircle: {
-    flexShrink: 0,
-    background: '#f0fdfa',
-    borderRadius: '14px',
-    width: '48px',
-    height: '48px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  } as React.CSSProperties,
-  divider: { borderTop: '1px solid #e2e8f0', marginTop: '16px', paddingTop: '16px' } as React.CSSProperties,
-  warningCard: {
-    background: '#fffbeb',
-    border: '1px solid #d97706',
-    borderRadius: '16px',
-    padding: '18px 20px',
-    marginBottom: '12px',
-    fontSize: '0.9375rem',
-    color: '#92400e',
-    textAlign: 'right',
-  } as React.CSSProperties,
-  broadcastCard: {
-    background: '#fff3cd',
-    border: '1px solid #ffc107',
-    borderRadius: '16px',
-    padding: '18px 20px',
-    marginBottom: '12px',
-    fontSize: '1rem',
-    textAlign: 'right',
-  } as React.CSSProperties,
-  contactSection: { marginTop: '24px' } as React.CSSProperties,
-  contactBtn: {
-    display: 'block',
-    width: '100%',
-    minHeight: '56px',
-    padding: '14px',
-    background: '#fff',
-    border: '1px solid #e2e8f0',
-    borderRadius: '14px',
-    fontSize: '1.0625rem',
-    fontWeight: 600,
-    color: '#1a202c',
-    cursor: 'pointer',
-    marginBottom: '8px',
-    textAlign: 'center',
-  } as React.CSSProperties,
-};
-
-const CONTACT_MESSAGES = {
-  need_help: 'אני זקוק לעזרה',
-  confirm_here: 'אני כאן ומחכה',
-  question: 'יש לי שאלה',
-};
-
-function ClockIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={TEAL} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <polyline points="12 6 12 12 16 14" />
-    </svg>
-  );
-}
+type PhaseStep = { label: string; done: boolean; active: boolean };
 
 function formatTime(d: Date): string {
   return new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit', hour12: false }).format(d);
 }
 
+function buildPhaseSteps(status: WaitingResponse['status']): PhaseStep[] {
+  return [
+    { label: 'רישום', done: true, active: false },
+    { label: 'ניווט', done: true, active: false },
+    { label: 'המתנה', done: status !== 'waiting', active: status === 'waiting' },
+    { label: 'בדיקה', done: status === 'done', active: status === 'in_treatment' },
+  ];
+}
+
 export default function Waiting() {
   const { token } = useParams<{ token: string }>();
+  const { patientName, isOnline } = useVisitInfo();
   const [data, setData] = useState<WaitingResponse | null>(null);
-  const [contactSent, setContactSent] = useState(false);
-  const [showContactOptions, setShowContactOptions] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(() => {
@@ -132,141 +47,174 @@ export default function Waiting() {
     };
   }, [fetchStatus]);
 
-  const handleContact = useCallback(
-    async (type: 'need_help' | 'confirm_here' | 'question') => {
-      if (!token) return;
-      try {
-        await sendContactMessage(token, type);
-        setContactSent(true);
-        setShowContactOptions(false);
-      } catch (err: unknown) {
-        if (err instanceof ApiError && err.status === 403) {
-          // companion — silently ignore
-        }
-      }
-    },
-    [token]
-  );
-
   if (!data) {
     return (
-      <div style={{ ...styles.page, alignItems: 'center', justifyContent: 'center' }}>
-        <p style={{ color: '#555' }}>טוען מצב תור...</p>
+      <div className="min-h-screen flex items-center justify-center bg-bg">
+        <p className="text-[#555]">טוען מצב תור...</p>
       </div>
     );
   }
 
-  const stage = STATUS_STAGE[data.status];
-  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - stage.progress);
+  const firstName = patientName?.trim()?.split(' ')[0] ?? null;
+  const steps = buildPhaseSteps(data.status);
+  const hasPosition = data.queue_position !== null;
+  const ringProgress = hasPosition ? Math.max(0.08, 1 - Math.min(data.queue_position! - 1, 9) / 10) : 1;
+  const strokeDashoffset = RING_CIRCUMFERENCE * (1 - ringProgress);
   const estimatedCallTime =
     data.estimated_wait_minutes !== null
       ? formatTime(new Date(Date.now() + data.estimated_wait_minutes * 60000))
       : null;
 
   return (
-    <div style={styles.page}>
-      <AppHeader />
-      <div style={styles.content}>
-        <div style={styles.header}>
-          <h1 style={styles.h1}>סטטוס המתנה</h1>
-          <p style={styles.subheader}>הצוות ב{data.department} יודע שהגעת — נעדכן אותך כאן</p>
-        </div>
-
-        <div style={styles.ringWrap}>
-          <div style={{ position: 'relative', width: '192px', height: '192px' }}>
-            <svg width="192" height="192" viewBox="0 0 192 192" style={{ transform: 'rotate(-90deg)' }}>
-              <circle cx="96" cy="96" r={RING_RADIUS} stroke="#e2e8f0" strokeWidth="8" fill="none" />
-              <circle
-                cx="96"
-                cy="96"
-                r={RING_RADIUS}
-                stroke={stage.color}
-                strokeWidth="8"
-                fill="none"
-                strokeDasharray={RING_CIRCUMFERENCE}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                style={{ transition: 'stroke-dashoffset 0.5s' }}
-              />
-            </svg>
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={styles.ringCenterLabel}>סטטוס</span>
-              <span style={{ ...styles.ringCenterValue, color: stage.color }}>{stage.label}</span>
-            </div>
+    <div className="min-h-screen flex flex-col bg-bg">
+      <AppHeader offlineMessage="אין חיבור לאינטרנט — זמן ההמתנה לא מעודכן" />
+      <div className="max-w-[480px] w-full mx-auto px-4 py-5 flex flex-col gap-4">
+        {/* Reassurance card */}
+        <div className="bg-gradient-to-br from-teal to-teal-hover rounded-2xl p-5 shadow-lg">
+          <div className="flex items-center justify-end gap-2 mb-4">
+            <span className="text-xs font-bold text-white/80 uppercase tracking-wider">עדכון חי</span>
+            <span className="relative w-3 h-3">
+              <span className="absolute inset-0 rounded-full bg-[#4ADE80] animate-ping opacity-75" />
+              <span className="relative block rounded-full w-3 h-3 bg-[#22C55E]" />
+            </span>
           </div>
+          <h2 className="text-[22px] font-bold text-white text-right mb-3">
+            {firstName ? `${firstName}, ` : ''}המקום שלך בתור שמור ומעודכן
+          </h2>
+          <p className="text-[15px] leading-6 text-white/85 text-right">
+            הצוות ב{data.department} יודע שהגעת ורואה אותך במערכת. נעדכן אותך כאן בנייד ברגע שיהיו מוכנים לקבל אותך.
+          </p>
         </div>
 
-        {data.estimated_wait_minutes !== null && (
-          <div style={styles.card}>
-            <div style={styles.cardRow}>
-              <div style={{ textAlign: 'right' }}>
-                <div style={styles.cardLabel}>זמן המתנה משוער</div>
-                <div style={styles.cardValue}>כ-{data.estimated_wait_minutes} דקות</div>
-              </div>
-              <div style={styles.iconCircle}>
-                <ClockIcon />
-              </div>
-            </div>
-            {estimatedCallTime && (
-              <div style={styles.divider}>
-                <div style={{ ...styles.cardLabel, textAlign: 'right' }}>שעת קריאה משוערת</div>
-                <div style={{ fontSize: '1.125rem', fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>
-                  {estimatedCallTime}
+        {/* Real-time / triage explanation card */}
+        <div className="bg-[#EFF6FF] border-2 border-[#BFDBFE] rounded-2xl p-4">
+          <div className="flex items-center justify-end gap-2 mb-2">
+            <span className="text-sm font-bold text-[#1D4ED8]">חיבור בזמן אמת</span>
+            <span className="relative w-2.5 h-2.5 shrink-0">
+              <span className="absolute inset-0 rounded-full bg-[#3B82F6] animate-ping opacity-60" />
+              <span className="relative block rounded-full w-2.5 h-2.5 bg-[#2563EB]" />
+            </span>
+          </div>
+          <p className="text-[13px] leading-5 text-[#1E40AF] text-right">
+            שים לב: סדר הכניסה נקבע לפי דחיפות רפואית. אם מטופל אחר נכנס לפניך, זה קורה רק בגלל צורך רפואי דחוף — המערכת עוקבת אחרי המיקום שלך כל הזמן כך שלא נשכח אותך.
+          </p>
+        </div>
+
+        {/* Current-phase tracker */}
+        <div className="bg-white border border-border rounded-2xl p-4">
+          <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider text-right mb-3">שלב נוכחי</p>
+          <div className="flex items-center gap-0 flex-row-reverse">
+            {steps.map((step, i) => (
+              <div key={step.label} className="flex items-center flex-row-reverse flex-1">
+                <div className="flex flex-col items-center gap-1">
+                  <div
+                    className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
+                      step.done
+                        ? 'bg-teal text-white'
+                        : step.active
+                          ? 'bg-teal text-white ring-4 ring-[#CCFBF1]'
+                          : 'bg-border text-[#94A3B8]'
+                    }`}
+                  >
+                    {step.done ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    ) : (
+                      i + 1
+                    )}
+                  </div>
+                  <span className={`text-[10px] font-medium whitespace-nowrap ${step.active ? 'text-teal' : step.done ? 'text-text-muted' : 'text-[#94A3B8]'}`}>
+                    {step.label}
+                  </span>
                 </div>
+                {i < steps.length - 1 && (
+                  <div className={`flex-1 h-0.5 mb-4 mx-1 ${step.done ? 'bg-teal' : 'bg-border'}`} />
+                )}
               </div>
-            )}
+            ))}
           </div>
-        )}
+        </div>
+
+        {/* Queue position / wait time card */}
+        <div className="bg-white border border-border rounded-2xl p-5">
+          <div className="flex items-center gap-4">
+            <div className="relative w-24 h-24 shrink-0">
+              <svg className="w-24 h-24 -rotate-90" viewBox="0 0 176 176">
+                <circle cx="88" cy="88" r={RING_RADIUS} stroke="#E2E8F0" strokeWidth="8" fill="none" />
+                <circle
+                  cx="88"
+                  cy="88"
+                  r={RING_RADIUS}
+                  stroke="#0D9488"
+                  strokeWidth="8"
+                  fill="none"
+                  strokeDasharray={RING_CIRCUMFERENCE}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  className="transition-[stroke-dashoffset] duration-500"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                {hasPosition ? (
+                  <>
+                    <p className="text-[10px] text-text-muted leading-none mb-0.5">מיקום</p>
+                    <p className="font-bold text-[32px] leading-none text-teal-hover">{data.queue_position}</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[13px] text-text-muted mb-0.5">סטטוס</p>
+                    <p className="font-bold text-lg text-teal-hover">{data.status === 'in_treatment' ? 'בטיפול' : 'הושלם'}</p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="flex-1 text-right space-y-3">
+              {hasPosition && data.people_ahead !== null && (
+                <div>
+                  <p className="text-xs text-[#64748B]">לפניך בתור</p>
+                  <p className="font-bold text-2xl leading-tight text-text">{data.people_ahead}</p>
+                </div>
+              )}
+              {data.estimated_wait_minutes !== null && (
+                <div className="border-t border-[#F1F5F9] pt-3">
+                  <p className="text-xs text-[#64748B]">זמן המתנה משוער</p>
+                  <p className="font-semibold text-xl leading-tight text-text">כ-{data.estimated_wait_minutes} דקות</p>
+                </div>
+              )}
+              {estimatedCallTime && (
+                <div className="border-t border-[#F1F5F9] pt-3">
+                  <p className="text-xs text-[#64748B]">שעת קריאה משוערת</p>
+                  <p className="font-semibold text-xl leading-tight text-text">{estimatedCallTime}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {data.status === 'done' && (
-          <div style={{ ...styles.card, textAlign: 'center' }}>
-            <p style={{ fontSize: '1.125rem', fontWeight: 600, color: '#16a34a' }}>הביקור הסתיים — נתראה!</p>
+          <div className="bg-white border border-border rounded-2xl p-5 text-center">
+            <p className="text-lg font-semibold text-success">הביקור הסתיים — נתראה!</p>
           </div>
         )}
 
         {data.broadcast_message && (
-          <div style={styles.broadcastCard}>
+          <div className="bg-[#fff3cd] border border-[#ffc107] rounded-2xl px-5 py-4 text-base text-right">
             <strong>עדכון מהצוות: </strong>
             {data.broadcast_message}
           </div>
         )}
 
         {data.status !== 'done' && (
-          <div style={styles.warningCard}>
+          <div className="bg-warning-bg border border-warning rounded-2xl px-5 py-4 text-[15px] text-[#92400e] text-right">
             שים לב: זמן ההמתנה הוא הערכה בלבד ועשוי להשתנות בהתאם לעומס
           </div>
         )}
 
-        <div style={styles.contactSection}>
-          {!contactSent ? (
-            <>
-              {!showContactOptions ? (
-                <button type="button" style={styles.contactBtn} onClick={() => setShowContactOptions(true)}>
-                  צור קשר עם הצוות
-                </button>
-              ) : (
-                <>
-                  {(Object.entries(CONTACT_MESSAGES) as [keyof typeof CONTACT_MESSAGES, string][]).map(
-                    ([type, label]) => (
-                      <button key={type} type="button" style={styles.contactBtn} onClick={() => handleContact(type)}>
-                        {label}
-                      </button>
-                    )
-                  )}
-                  <button
-                    type="button"
-                    style={{ ...styles.contactBtn, color: '#888' }}
-                    onClick={() => setShowContactOptions(false)}
-                  >
-                    ביטול
-                  </button>
-                </>
-              )}
-            </>
-          ) : (
-            <p style={{ textAlign: 'center', color: '#16a34a', fontSize: '1rem' }}>✓ ההודעה נשלחה לצוות</p>
-          )}
-        </div>
+        {!isOnline && (
+          <p className="text-sm text-text-muted text-center">המידע המוצג נשמר מהעדכון האחרון</p>
+        )}
       </div>
     </div>
   );

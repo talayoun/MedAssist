@@ -4,7 +4,12 @@ import { createNotificationWorker, NotificationJobData } from './queue';
 
 const MAX_RETRY_COUNT = 3;
 
-async function sendTelegram(message: string): Promise<string> {
+async function sendTelegram(message: string, notificationId: string): Promise<string> {
+  if (process.env.TELEGRAM_SEND_ENABLED !== 'true') {
+    console.log(`[notifications] dry-run, not sent: notification ${notificationId}`);
+    return `dry-run:${Date.now()}`;
+  }
+
   const token = process.env.TELEGRAM_BOT_TOKEN!;
   const chatIds = (process.env.TELEGRAM_CHAT_IDS ?? '')
     .split(',')
@@ -42,7 +47,7 @@ async function processNotification(job: Job<NotificationJobData>): Promise<void>
   if (rows.length === 0 || rows[0].status === 'sent') return;
 
   try {
-    const providerMessageId = await sendTelegram(message);
+    const providerMessageId = await sendTelegram(message, notificationId);
     await query(
       `UPDATE notifications SET status = 'sent', provider_message_id = $1 WHERE id = $2`,
       [providerMessageId, notificationId]

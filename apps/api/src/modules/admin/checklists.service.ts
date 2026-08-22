@@ -6,6 +6,7 @@ export interface ChecklistTemplateRow {
   procedure_type: string;
   items_json: ChecklistItemJson[];
   archived: boolean;
+  is_protected: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -15,11 +16,13 @@ export interface ChecklistItemJson {
   text: string;
   category: 'bring' | 'fast' | 'medication' | 'other';
   time_sensitive: boolean;
+  description: string | null;
+  link_target: 'forms' | null;
 }
 
 export async function listTemplates(includeArchived = false): Promise<ChecklistTemplateRow[]> {
   const { rows } = await query<ChecklistTemplateRow>(
-    `SELECT id, procedure_type, items_json, archived, created_at, updated_at
+    `SELECT id, procedure_type, items_json, archived, is_protected, created_at, updated_at
      FROM checklist_templates
      ${includeArchived ? '' : 'WHERE archived = FALSE'}
      ORDER BY procedure_type ASC`
@@ -29,16 +32,25 @@ export async function listTemplates(includeArchived = false): Promise<ChecklistT
 
 export async function getTemplate(id: string): Promise<ChecklistTemplateRow | null> {
   const { rows } = await query<ChecklistTemplateRow>(
-    `SELECT id, procedure_type, items_json, archived, created_at, updated_at
+    `SELECT id, procedure_type, items_json, archived, is_protected, created_at, updated_at
      FROM checklist_templates WHERE id = $1`,
     [id]
   );
   return rows[0] ?? null;
 }
 
+type TemplateItemInput = {
+  id?: string;
+  text: string;
+  category: 'bring' | 'fast' | 'medication' | 'other';
+  time_sensitive: boolean;
+  description?: string | null;
+  link_target?: 'forms' | null;
+};
+
 export interface CreateTemplateInput {
   procedure_type: string;
-  items: Array<{ id?: string; text: string; category: 'bring' | 'fast' | 'medication' | 'other'; time_sensitive: boolean }>;
+  items: TemplateItemInput[];
 }
 
 export async function createTemplate(input: CreateTemplateInput): Promise<ChecklistTemplateRow> {
@@ -47,6 +59,8 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Checkl
     text: it.text,
     category: it.category,
     time_sensitive: it.time_sensitive,
+    description: it.description ?? null,
+    link_target: it.link_target ?? null,
   }));
 
   // Resolve hospital_id from departments (single-hospital MVP)
@@ -59,7 +73,7 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Checkl
   const { rows } = await query<ChecklistTemplateRow>(
     `INSERT INTO checklist_templates (procedure_type, hospital_id, items_json)
      VALUES ($1, $2, $3)
-     RETURNING id, procedure_type, items_json, archived, created_at, updated_at`,
+     RETURNING id, procedure_type, items_json, archived, is_protected, created_at, updated_at`,
     [input.procedure_type, hospitalId, JSON.stringify(items)]
   );
   return rows[0];
@@ -67,7 +81,7 @@ export async function createTemplate(input: CreateTemplateInput): Promise<Checkl
 
 export interface UpdateTemplateInput {
   procedure_type?: string;
-  items?: Array<{ id?: string; text: string; category: 'bring' | 'fast' | 'medication' | 'other'; time_sensitive: boolean }>;
+  items?: TemplateItemInput[];
 }
 
 export async function updateTemplate(id: string, input: UpdateTemplateInput): Promise<ChecklistTemplateRow | null> {
@@ -81,6 +95,8 @@ export async function updateTemplate(id: string, input: UpdateTemplateInput): Pr
         text: it.text,
         category: it.category,
         time_sensitive: it.time_sensitive,
+        description: it.description ?? null,
+        link_target: it.link_target ?? null,
       }))
     : existing.items_json;
 
@@ -88,7 +104,7 @@ export async function updateTemplate(id: string, input: UpdateTemplateInput): Pr
     `UPDATE checklist_templates
      SET procedure_type = $1, items_json = $2, updated_at = NOW()
      WHERE id = $3
-     RETURNING id, procedure_type, items_json, archived, created_at, updated_at`,
+     RETURNING id, procedure_type, items_json, archived, is_protected, created_at, updated_at`,
     [newProcedureType, JSON.stringify(newItems), id]
   );
   return rows[0] ?? null;
@@ -101,6 +117,7 @@ export async function deleteTemplate(
 ): Promise<{ deleted: boolean; archived?: boolean; active_count?: number; error?: string }> {
   const existing = await getTemplate(id);
   if (!existing) return { deleted: false, error: 'not_found' };
+  if (existing.is_protected) return { deleted: false, error: 'item_protected' };
 
   // Count appointments actively using this template (phase not terminal)
   const { rows: activeRows } = await query<ActiveUseCount>(

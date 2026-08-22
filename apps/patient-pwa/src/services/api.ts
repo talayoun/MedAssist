@@ -1,4 +1,4 @@
-import type { VisitContext, ChecklistResponse, NavigationRoute, WaitingResponse, FormItemDTO } from '@medassist/shared-types';
+import type { VisitContext, ChecklistResponse, NavigationRoute, WaitingResponse, FormItemDTO, FormValueRequest } from '@medassist/shared-types';
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
 
@@ -72,16 +72,6 @@ export function getWaitingStatus(token: string): Promise<WaitingResponse> {
   return apiRequest<WaitingResponse>(`/visit/${token}/waiting`);
 }
 
-export function sendContactMessage(
-  token: string,
-  messageType: 'need_help' | 'confirm_here' | 'question'
-): Promise<{ sent: boolean }> {
-  return apiRequest(`/visit/${token}/waiting/contact`, {
-    method: 'POST',
-    body: JSON.stringify({ message_type: messageType }),
-  });
-}
-
 // ─── Forms ────────────────────────────────────────────────────────────────────
 
 export function getForms(token: string): Promise<{ items: FormItemDTO[] }> {
@@ -100,10 +90,35 @@ export async function uploadFormImage(token: string, itemId: string, file: File)
   return body as FormItemDTO;
 }
 
+export async function uploadFormPdf(token: string, itemId: string, file: File): Promise<FormItemDTO> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await fetch(`${BASE_URL}/api/visit/${token}/forms/${itemId}/upload-pdf`, {
+    method: 'POST',
+    body: fd,
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, body.error ?? 'unknown_error', body.message ?? res.statusText);
+  return body as FormItemDTO;
+}
+
 export function submitFormSignature(token: string, itemId: string, signatureData: string): Promise<FormItemDTO> {
   return apiRequest(`/visit/${token}/forms/${itemId}/signature`, {
     method: 'POST',
     body: JSON.stringify({ signature_data: signatureData }),
+  });
+}
+
+export function setFormValue(token: string, itemId: string, body: FormValueRequest): Promise<FormItemDTO> {
+  return apiRequest(`/visit/${token}/forms/${itemId}/value`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteFormDocument(token: string, itemId: string): Promise<FormItemDTO> {
+  return apiRequest(`/visit/${token}/forms/${itemId}/document`, {
+    method: 'DELETE',
   });
 }
 

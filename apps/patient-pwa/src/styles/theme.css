@@ -1,0 +1,23 @@
+@theme {
+  --font-heebo: 'Heebo', system-ui, sans-serif;
+  --font-assistant: 'Assistant', system-ui, sans-serif;
+
+  --color-teal: #0d9488;
+  --color-teal-hover: #0f766e;
+
+  --color-text: #0f172a;
+  --color-text-muted: #475569;
+  --color-text-faint: #94a3b8;
+
+  --color-bg: #f7fafc;
+  --color-border: #e2e8f0;
+
+  --color-error: #dc2626;
+  --color-error-bg: #fef2f2;
+
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
+}

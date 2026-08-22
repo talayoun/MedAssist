@@ -59,6 +59,7 @@ function serializeRoute(row: NavigationRouteRow, steps?: NavigationStepRow[]) {
     to_department_id: row.to_department_id,
     is_default: row.is_default,
     archived: row.archived,
+    is_protected: row.is_protected,
     steps_count: row.steps_count,
     ...(steps
       ? {
@@ -137,11 +138,13 @@ router.put('/navigation-routes/:id', async (req: Request, res: Response, next: N
     if (!row) { res.status(404).json({ error: 'not_found' }); return; }
     const steps = await getRouteSteps(row.id);
     res.json(serializeRoute(row, steps));
-  } catch (err) {
+  } catch (err: unknown) {
     if (isPgUniqueViolation(err)) {
       res.status(409).json({ error: 'duplicate_default_route' });
       return;
     }
+    const e = err as { status?: number; message?: string };
+    if (e.status === 409) { res.status(409).json({ error: 'item_protected', message: e.message }); return; }
     next(err);
   }
 });
@@ -152,6 +155,13 @@ router.delete('/navigation-routes/:id', async (req: Request, res: Response, next
     const result = await deleteRoute(String(req.params.id));
     if (result.error === 'not_found') {
       res.status(404).json({ error: 'not_found' });
+      return;
+    }
+    if (result.error === 'item_protected') {
+      res.status(409).json({
+        error: 'item_protected',
+        message: 'פריט מערכת מוגן. לא ניתן למחוק.',
+      });
       return;
     }
     if (result.error === 'route_in_active_use') {
