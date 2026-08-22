@@ -259,9 +259,9 @@
     </div>
 
     <div class="progress-wrap">
-      <div class="progress-label"><span>Progress</span><strong>2/25 done · 0 wip · 23 open</strong></div>
+      <div class="progress-label"><span>Progress</span><strong>3/25 done · 0 wip · 22 open</strong></div>
       <div class="bar">
-        <div class="seg-done" style="width: 8%"></div>
+        <div class="seg-done" style="width: 12%"></div>
       </div>
       <div class="legend">
         <span><i style="background:var(--ok-fill)"></i>Done</span>
@@ -296,6 +296,19 @@
       <li><span class="ref">specs/001-patient-visit-companion/tasks.md</span> <strong>flagged as superseded</strong> with a header pointing here, rather than retro-ticking months of boxes that would only drift again.</li>
       <li class="turn"><strong>Branch prune.</strong> Local 60 → 2, remote 19 → 3. Every deleted branch was first verified to have zero commits not already on <span class="ref">main</span>.</li>
       <li><strong>One branch deliberately kept:</strong> <span class="ref">chore/poster-demo-seed</span> holds <span class="ref">seed-demo-patients.ts</span> (demo-patient seed for the BO poster screenshots) which is not on <span class="ref">main</span>. Merge decision deferred to before the demo.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>E3 — Two devices opening Waiting at the same moment <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/e3-waiting-upsert</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">03d111f</span>)</p>
+    <ol class="timeline">
+      <li><strong>Fix applied.</strong> The waiting-queue row is created lazily on first load, but <span class="ref">appointment_id</span> is <span class="ref">UNIQUE</span> and the insert had no <span class="ref">ON CONFLICT</span> — whoever lost the race got a raw duplicate-key 500. The arrival path in <span class="ref">navigation.service.ts</span> already wrote this same insert correctly; the two sibling paths now match.</li>
+      <li><strong>Scope past the ticket, deliberately.</strong> Restructured so the race loser re-reads the winner's actual row (real status, wait estimate, broadcast fields) instead of a hardcoded <span class="ref">'waiting'</span> plus nulls. That also closed an unguarded crash: an appointment with no matching row used to throw a 500, now returns a clean 404.</li>
+      <li class="turn"><strong>Reproducing it was the hard part.</strong> Firing requests in parallel never triggered it — 10 Playwright requests on one connection, 10 on separate connections, 20 raw fetches: all serialized (20 requests in 64ms, a straight line). The collision window is roughly a millisecond wide, and volume does not reliably land in it.</li>
+      <li><strong>Test made deterministic instead of lucky.</strong> A second database connection opens a transaction, inserts the row, and holds it uncommitted; the real request then goes in flight and blocks on the unique index. The race happens on purpose, every run.</li>
+      <li><strong>Verified both directions:</strong> fails against pre-fix code with the exact 500, passes after. Full <span class="ref">tests/api</span> suite — 66/66.</li>
+      <li><strong>Shipped.</strong> Committed (<span class="ref">acb57dc</span>), merged, pushed. Worktree removed.</li>
     </ol>
   </div>
 
@@ -359,7 +372,7 @@
 
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E1</span><span class="item-where">api</span></div><p>Notification cap silently exhausted by patient "contact staff" taps (broadcast rows count against the SMS cap).</p></div>
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E2</span><span class="item-where">api</span></div><p>Notification cap/dedup check races under concurrent triggers — no transaction/lock.</p></div>
-    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E3</span><span class="item-where">api</span></div><p>Two devices loading Waiting simultaneously for the first time — no <span class="ref">ON CONFLICT</span>, unique-violation 500.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E3</span><span class="item-where">api</span></div><p>Two devices loading Waiting simultaneously for the first time — no <span class="ref">ON CONFLICT</span>, unique-violation 500.</p></div>
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E4</span><span class="item-where">api</span></div><p>POST checklist progress for a procedure type with no seeded template — unguarded, uncaught 500.</p></div>
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E5</span><span class="item-where">api</span></div><p>Checklist template lookup ignores the <span class="ref">archived</span> flag and <span class="ref">hospital_id</span>.</p></div>
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E6</span><span class="item-where">api</span></div><p>Two admin routers skip <span class="ref">requireStaffAuth</span> — works only by mount-order accident in <span class="ref">app.ts</span>.</p></div>
