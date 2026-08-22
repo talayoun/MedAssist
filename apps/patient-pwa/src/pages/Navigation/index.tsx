@@ -73,6 +73,9 @@ export default function Navigation() {
   const [data, setData] = useState<NavigationRoute | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Distinct from `error`, which replaces the whole page: a failed "I'm here" tap
+  // must leave the step on screen so the patient can just tap again.
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   const [viewOrder, setViewOrder] = useState<number | null>(null);
   const [reviewStep, setReviewStep] = useState<number | null>(null);
   const [arrivedAtClinic, setArrivedAtClinic] = useState(false);
@@ -103,6 +106,7 @@ export default function Navigation() {
     const currentStep = stepCache.current.get(data.current_step) ?? data.steps.find((s) => s.is_current);
     if (!currentStep) return;
     setLoading(true);
+    setConfirmError(null);
     try {
       const result = await confirmStep(token, currentStep.step_id);
       if (result.phase === 'waiting') {
@@ -112,7 +116,14 @@ export default function Navigation() {
       if (result.next_step) stepCache.current.set(result.next_step.order, result.next_step);
       loadNavigation();
     } catch (err: unknown) {
-      if (err instanceof ApiError) setError(err.message);
+      // A dropped connection is not an ApiError, so it used to land here and do
+      // nothing at all: the spinner stopped and the patient got no sign the tap
+      // failed. Shown inline so the navigation step stays on screen to retry from.
+      setConfirmError(
+        err instanceof ApiError && err.message
+          ? err.message
+          : 'לא הצלחנו לעדכן שהגעת. בדוק את החיבור ונסה שוב.'
+      );
     } finally {
       setLoading(false);
     }
@@ -323,6 +334,12 @@ export default function Navigation() {
             <CheckIcon />
             <span>{loading ? 'מעבד...' : 'אני כאן'}</span>
           </button>
+        )}
+
+        {confirmError && (
+          <p role="alert" className="text-error text-base mb-3 text-right">
+            {confirmError}
+          </p>
         )}
 
         {canGoOlder && (
