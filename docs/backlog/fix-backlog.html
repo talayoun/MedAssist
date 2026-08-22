@@ -260,9 +260,9 @@
     </div>
 
     <div class="progress-wrap">
-      <div class="progress-label"><span>Progress</span><strong>8/25 done · 1 won't fix · 16 open</strong></div>
+      <div class="progress-label"><span>Progress</span><strong>9/25 done · 1 won't fix · 15 open</strong></div>
       <div class="bar">
-        <div class="seg-done" style="width: 32%"></div>
+        <div class="seg-done" style="width: 36%"></div>
       </div>
       <div class="legend">
         <span><i style="background:var(--ok-fill)"></i>Done</span>
@@ -354,6 +354,19 @@
     </ol>
   </div>
 
+  <div class="story is-done">
+    <h3>M3 — The forms button that didn't check anything <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/m3-forms-submit-validation</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">d219b26</span>)</p>
+    <ol class="timeline">
+      <li class="turn"><strong>Half the ticket was already built.</strong> The audit said there was no way to submit a form and no finalize step on the server. The server side turned out to be complete: every field — an uploaded photo, a typed answer, a signature — already records itself as submitted the moment the patient fills it in. Nothing was missing there, and nothing was added.</li>
+      <li><strong>The real gap was one button.</strong> Tapping "שלח טופס והמשך לניווט" simply moved the patient to the navigation screen. A patient could skip every required document and walk into their visit with nothing filled in, and the app would say nothing.</li>
+      <li><strong>It now checks first.</strong> If a required item is still incomplete, the patient stays on the page, sees what's missing, and the screen scrolls to the first item that needs them.</li>
+      <li class="turn"><strong>The trap we nearly shipped.</strong> The obvious rule — block on any incomplete required item — would have stranded patients. A document the staff hasn't uploaded yet shows no button for the patient to press, so they'd have been held at a gate they had no way to open. Those items deliberately don't block.</li>
+      <li><strong>The label was a small lie, so it changed.</strong> Nothing is sent when the button is tapped — the form saved itself as it was filled in. It now reads "המשך לניווט", which is what it actually does. Approved before changing anything the patient sees.</li>
+      <li><strong>Shipped.</strong> The new test was confirmed to fail against the old code before the fix went in. Patient app 18 passed, API 83 passed, typecheck clean.</li>
+    </ol>
+  </div>
+
   <div class="story">
     <h3>M4 — Medical detail in calendar exports <span class="status closed">Won't fix</span></h3>
     <p class="story-dek">Closed by product decision, 2026-08-22. Not deferred for time — decided against.</p>
@@ -377,9 +390,9 @@
       <div class="item-top"><span class="status open">Open</span><span class="item-id">M2</span><span class="sev critical">Critical</span><span class="item-where">patient-pwa</span></div>
       <p>Offline banner is fake — service worker is an empty stub, zero cached data anywhere. Violates constitution principle 6.</p>
     </div>
-    <div class="item">
-      <div class="item-top"><span class="status open">Open</span><span class="item-id">M3</span><span class="sev high">High</span><span class="item-where">patient-pwa + api</span></div>
-      <p>Digital forms have no submit — the CTA just navigates, no finalize call, no required-field validation.</p>
+    <div class="item is-done">
+      <div class="item-top"><span class="status done">Done</span><span class="item-id">M3</span><span class="sev high">High</span><span class="item-where">patient-pwa</span></div>
+      <p>Digital forms have no submit — the CTA just navigated on, with nothing checking that the required documents were actually filled in.</p>
     </div>
     <div class="item">
       <div class="item-top"><span class="status closed">Won't fix</span><span class="item-id">M4</span><span class="sev high">High</span><span class="item-where">patient-pwa</span></div>
