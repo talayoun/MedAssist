@@ -379,12 +379,22 @@ function renderItem(item: FormItemDTO, token: string, onUpdate: (u: FormItemDTO)
   }
 }
 
+// A required item blocks the CTA only when the patient has a control to act on.
+// A staff_upload_sign item still at 'pending' has no rendered affordance (staff has
+// not uploaded the blank form yet) — gating on it would strand the patient here.
+function blocksSubmit(item: FormItemDTO): boolean {
+  if (!item.required || item.status === 'patient_submitted') return false;
+  if (item.item_type === 'staff_upload_sign' && item.status === 'pending') return false;
+  return true;
+}
+
 export default function Forms() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const { isOnline } = useVisitInfo();
   const [formItems, setFormItems] = useState<FormItemDTO[]>([]);
   const [formsLoadErr, setFormsLoadErr] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const sectionRefs = useRef<Partial<Record<Section, HTMLDivElement | null>>>({});
 
   useEffect(() => {
@@ -394,8 +404,21 @@ export default function Forms() {
       .catch(() => setFormsLoadErr('שגיאה בטעינת מסמכים'));
   }, [token]);
 
-  const handleUpdate = (updated: FormItemDTO) =>
+  const handleUpdate = (updated: FormItemDTO) => {
+    setSubmitError(null);
     setFormItems((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+  };
+
+  const handleSubmit = () => {
+    if (!token) return;
+    const missing = formItems.filter(blocksSubmit);
+    if (missing.length > 0) {
+      setSubmitError('יש להשלים את כל השדות המסומנים כחובה לפני המשך לניווט');
+      document.getElementById(`form-item-${missing[0].id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    navigate(`/visit/${token}/navigation`);
+  };
 
   const sections = SECTION_ORDER.filter(({ key }) => formItems.some((i) => i.section === key));
 
@@ -435,22 +458,33 @@ export default function Forms() {
             <div className="space-y-3">
               {formItems
                 .filter((i) => i.section === key)
-                .map((item) => renderItem(item, token!, handleUpdate))}
+                .map((item) => (
+                  <div key={item.id} id={`form-item-${item.id}`} className="scroll-mt-4">
+                    {renderItem(item, token!, handleUpdate)}
+                  </div>
+                ))}
             </div>
           </div>
         ))}
 
+        {submitError && (
+          <p data-testid="forms-submit-error" role="alert" className="text-error text-base text-right mt-2">
+            {submitError}
+          </p>
+        )}
+
         {formItems.length > 0 && (
           <button
             type="button"
+            data-testid="forms-submit-btn"
             disabled={!isOnline}
-            onClick={() => token && navigate(`/visit/${token}/navigation`)}
+            onClick={handleSubmit}
             className="w-full h-[64px] rounded-2xl font-bold text-[20px] flex items-center justify-center gap-3 shadow-md bg-teal hover:bg-teal-hover text-white disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>שלח טופס והמשך לניווט</span>
+            <span>המשך לניווט</span>
           </button>
         )}
       </div>
