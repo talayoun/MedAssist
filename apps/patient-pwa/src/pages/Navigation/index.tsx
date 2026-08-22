@@ -116,14 +116,17 @@ export default function Navigation() {
       if (result.next_step) stepCache.current.set(result.next_step.order, result.next_step);
       loadNavigation();
     } catch (err: unknown) {
-      // A dropped connection is not an ApiError, so it used to land here and do
-      // nothing at all: the spinner stopped and the patient got no sign the tap
-      // failed. Shown inline so the navigation step stays on screen to retry from.
-      setConfirmError(
-        err instanceof ApiError && err.message
-          ? err.message
-          : 'לא הצלחנו לעדכן שהגעת. בדוק את החיבור ונסה שוב.'
-      );
+      if (err instanceof ApiError) {
+        // Unchanged: a rejected request (expired link, no longer this patient's
+        // step) is not something retrying the tap fixes, so it still takes over
+        // the page rather than sitting quietly under the button.
+        setError(err.message);
+      } else {
+        // A dropped connection is not an ApiError, so it used to land here and do
+        // nothing at all: the spinner stopped and the patient got no sign the tap
+        // failed. Shown inline so the step stays on screen to retry from.
+        setConfirmError('לא הצלחנו לעדכן שהגעת. בדוק את החיבור ונסה שוב.');
+      }
     } finally {
       setLoading(false);
     }
