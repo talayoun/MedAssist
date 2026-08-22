@@ -68,8 +68,10 @@ test.describe('staff: forms export', () => {
     expect(resp.status()).toBe(200);
     const appt = await resp.json();
 
-    await expect(page.getByText(appt.patient_name)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(appt.department_name)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(appt.patient_name, { exact: true })).toBeVisible({ timeout: 10_000 });
+    // exact: a short department name like עיניים is a substring of form labels on the
+    // same page ("סיכום רפואי מרופא העיניים המפנה"), which trips strict mode.
+    await expect(page.getByText(appt.department_name, { exact: true })).toBeVisible({ timeout: 10_000 });
   });
 
   test('back button navigates to queue', async ({ page }) => {

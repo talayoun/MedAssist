@@ -643,7 +643,9 @@ const styles: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
     gap: 8,
   },
-  patientName: { fontWeight: 700, fontSize: 16, color: '#111827', marginRight: 10 },
+  // marginInline, not marginRight: the row is RTL, so a physical right margin lands on
+  // the wrong visual side and the status pill ends up crowding the name.
+  patientName: { fontWeight: 700, fontSize: 16, color: '#111827', marginInline: 10 },
   cardCheckbox: { marginLeft: 10 },
   phaseBadge: {
     display: 'inline-block',

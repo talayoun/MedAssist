@@ -397,7 +397,7 @@
       <div><dt>Demo</dt><dd>~4 Sep 2026</dd></div>
       <div><dt>Runway</dt><dd>Under 2 weeks</dd></div>
       <div><dt>Hosting</dt><dd>Laptop + hotspot</dd></div>
-      <div><dt>Phase</dt><dd>0 done, 1 next</dd></div>
+      <div><dt>Phase</dt><dd>1 done, 2 next</dd></div>
     </dl>
   </header>
 
@@ -516,8 +516,8 @@
         </p>
       </article>
 
-      <article class="phase">
-        <div class="phase-head"><span class="phase-n">Phase 1</span><h3>Walk the flow and write down every break</h3></div>
+      <article class="phase" style="border-color: color-mix(in srgb, var(--done) 42%, transparent)">
+        <div class="phase-head"><span class="phase-n">Phase 1 · done</span><h3>Walk the flow and write down every break</h3></div>
         <p>On the fresh database, in a real browser, exactly as demo day runs it:</p>
         <ol class="walk">
           <li>Staff logs in to the back office</li>
@@ -536,10 +536,29 @@
           tagged blocker, visible, or cosmetic. <strong>No fixing during the walk</strong> — observing and
           fixing at once is how a walkthrough becomes a three-hour tangent.
         </p>
+        <p>
+          <strong>The flow works end to end.</strong> Steps 1 to 9 were walked in a real browser: the back
+          office created the patient, <strong>a real Telegram message was sent and delivered</strong>, the
+          link opened, the checklist showed all eight eye items, the forms gate correctly refused to move on
+          with documents missing, <strong>all seven Wolfson photos rendered in order</strong> through to the
+          reception desk, the waiting screen showed a live queue position, and the patient reappeared in the
+          back office as waiting. A visitor could be walked through this today.
+        </p>
+        <p>
+          <strong>One blocker.</strong> The procedure field staff type when creating a patient is free text,
+          and the suggestion list the app itself offers does not match any real template — picking its own
+          suggestion produces a patient whose checklist does not exist. That is the first thing a visitor
+          watches being typed. Below it sit several visible rough edges: the patient is shown a raw English
+          slug, the forms picker offers every procedure's paperwork at once, nothing is attached unless
+          staff ticks it, and long Hebrew labels break the row layout.
+        </p>
+        <p>
+          The ER track and the admin configuration screens have not been walked yet.
+        </p>
       </article>
 
       <article class="phase">
-        <div class="phase-head"><span class="phase-n">Phase 2</span><h3>Fix, ranked by what a visitor sees</h3></div>
+        <div class="phase-head"><span class="phase-n">Phase 2 · next</span><h3>Fix, ranked by what a visitor sees</h3></div>
         <p>
           Work the list top down. Blockers, then visible problems, then cosmetics only if time remains.
           Four issues are already known and likely to surface: a session expiring mid-upload on the admin
