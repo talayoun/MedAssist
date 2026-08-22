@@ -28,14 +28,22 @@ export default function Waiting() {
   const { token } = useParams<{ token: string }>();
   const { patientName, isOnline } = useVisitInfo();
   const [data, setData] = useState<WaitingResponse | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const fetchStatus = useCallback(() => {
     if (!token) return;
     getWaitingStatus(token)
-      .then(setData)
-      .catch((err: unknown) => {
-        console.error('Failed to refresh waiting status:', err);
+      .then((res) => {
+        setData(res);
+        setLoadError(null);
+      })
+      .catch(() => {
+        // Only the first load has nothing to fall back on. Once data has arrived a
+        // failed poll keeps the last known queue state on screen; the next poll
+        // refreshes it. Either way the patient is no longer stuck on a spinner
+        // with no idea anything went wrong.
+        setLoadError('לא הצלחנו לטעון את מצב התור. בודקים שוב עוד רגע.');
       });
   }, [token]);
 
@@ -50,7 +58,13 @@ export default function Waiting() {
   if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg">
-        <p className="text-[#555]">טוען מצב תור...</p>
+        {loadError ? (
+          <p role="alert" className="text-[#c00] text-base p-6 text-center">
+            {loadError}
+          </p>
+        ) : (
+          <p className="text-[#555]">טוען מצב תור...</p>
+        )}
       </div>
     );
   }
