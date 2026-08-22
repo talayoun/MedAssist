@@ -259,9 +259,9 @@
     </div>
 
     <div class="progress-wrap">
-      <div class="progress-label"><span>Progress</span><strong>4/25 done · 0 wip · 21 open</strong></div>
+      <div class="progress-label"><span>Progress</span><strong>6/25 done · 0 wip · 19 open</strong></div>
       <div class="bar">
-        <div class="seg-done" style="width: 16%"></div>
+        <div class="seg-done" style="width: 24%"></div>
       </div>
       <div class="legend">
         <span><i style="background:var(--ok-fill)"></i>Done</span>
@@ -322,6 +322,19 @@
       <li><strong>Verified both directions,</strong> and re-checked red against the unfixed code after the test was restructured — not just once at the start.</li>
       <li><strong>Known gap left open on purpose:</strong> after an undo, the server still holds the tick the screen reverted; the next successful save reconciles it. Properly fixing that means re-sending after failure, which risks a retry loop. Folded into the offline work (M2), which has to solve queue-and-replay anyway.</li>
       <li><strong>Shipped.</strong> Patient PWA suite 13 passed / 1 pre-existing skip, typecheck clean. Committed (<span class="ref">e329678</span>), merged, pushed. Worktree removed.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>E11 + E12 — Network failures the patient never saw <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/e11-e12-network-error-paths</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">a9bf7ca</span>)</p>
+    <ol class="timeline">
+      <li><strong>Two pages, one defect.</strong> Both swallowed connection errors, so they were done as a pair in one branch. On Navigation, tapping "אני כאן" with a dropped connection stopped the spinner and showed nothing at all. On Waiting, a failed first load left the patient on "טוען מצב תור..." with no indication anything was wrong.</li>
+      <li><strong>Design agreed before any code was written.</strong> Navigation shows the error inline under the button, so the step stays on screen and the patient can just tap again. Waiting swaps the loading line for an error line, reusing the error text style already used elsewhere.</li>
+      <li><strong>No retry button, on purpose.</strong> The Waiting page already re-checks on a timer, so it recovers on its own once the connection is back — and the patient app has no retry button anywhere today. Adding the first one was not worth it for a screen that heals itself.</li>
+      <li><strong>Last known state is kept.</strong> Once the queue has loaded, a later failed check leaves the real queue position on screen rather than replacing it with an error.</li>
+      <li class="turn"><strong>Two harness traps found while testing.</strong> Blocking "waiting" requests also blocked the page itself from loading, and the navigation screen opens on the "getting to the hospital" view — the step confirm sits behind it. Both cost a round of red tests before the specs were right.</li>
+      <li><strong>Shipped.</strong> All four specs verified red pre-fix, green after. Patient PWA suite 17 passed / 1 pre-existing skip, typecheck clean. Committed (<span class="ref">b4e4537</span>), merged, pushed. Worktree removed.</li>
     </ol>
   </div>
 
@@ -393,8 +406,8 @@
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E8</span><span class="item-where">api</span></div><p>Oversized file upload surfaces as a generic 500 instead of 413.</p></div>
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E9</span><span class="item-where">api</span></div><p>Form uploads hold a pooled PG connection open across an S3 network round-trip — pool exhaustion risk under load.</p></div>
     <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E10</span><span class="item-where">api</span></div><p>Staff can add/complete patient stations for any department — no scope check, unlike the queue endpoints.</p></div>
-    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E11</span><span class="item-where">patient-pwa</span></div><p>Offline/flaky network on Navigation's "I'm here" tap fails silently — no visible error.</p></div>
-    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E12</span><span class="item-where">patient-pwa</span></div><p>Waiting page's first load failing leaves an infinite spinner, no retry.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E11</span><span class="item-where">patient-pwa</span></div><p>Offline/flaky network on Navigation's "I'm here" tap fails silently — no visible error.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E12</span><span class="item-where">patient-pwa</span></div><p>Waiting page's first load failing leaves an infinite spinner, no retry.</p></div>
     <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E13</span><span class="item-where">patient-pwa</span></div><p>Rapid double-tap on a checklist item hits a stale-closure rollback bug.</p></div>
   </section>
 
