@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAdmin } from '../../middleware/auth';
+import { requireStaffAuth, requireAdmin } from '../../middleware/auth';
 import { query } from '../../db/db';
 
 const UpdateArrivalSchema = z.object({
@@ -12,7 +12,10 @@ const UpdateArrivalSchema = z.object({
 });
 
 const router = Router();
-router.use(requireAdmin);
+// Both, explicitly: requireAdmin does reject an unauthenticated request on its
+// own today, but leaving the auth step implicit made this router's safety depend
+// on where it happens to be mounted in app.ts. Matches the other admin routers.
+router.use(requireStaffAuth, requireAdmin);
 
 /** GET /api/admin/departments — full rows including arrival info, for the admin editor */
 router.get('/departments', async (_req, res, next) => {

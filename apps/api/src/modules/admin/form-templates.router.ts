@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAdmin } from '../../middleware/auth';
+import { requireStaffAuth, requireAdmin } from '../../middleware/auth';
 import { pdfUpload } from '../forms/upload.middleware';
 import * as svc from './form-templates.service';
 
@@ -30,7 +30,9 @@ const PatchSchema = z.object({
 });
 
 const router = Router();
-router.use(requireAdmin);
+// See departments.router.ts — auth stated explicitly rather than relying on
+// mount order in app.ts.
+router.use(requireStaffAuth, requireAdmin);
 
 router.get('/form-templates', async (_req, res, next) => {
   try { res.json({ items: await svc.listTemplateItems() }); }

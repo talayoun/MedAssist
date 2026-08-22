@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { requireStaffAuth } from '../../middleware/auth';
+import { requireStaffAuth, callerCtx } from '../../middleware/auth';
 import { z } from 'zod';
 import { addStation, reorderStations, markStationComplete } from './stations.service';
 
@@ -15,9 +15,18 @@ router.post('/patients/:appointment_id/stations', requireStaffAuth, async (req: 
   try {
     const parsed = AddStationSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
-    const result = await addStation(req.params.appointment_id as string, parsed.data.department_id, parsed.data.order_index);
+    const result = await addStation(
+      req.params.appointment_id as string,
+      parsed.data.department_id,
+      parsed.data.order_index,
+      callerCtx(req)
+    );
     res.status(201).json(result);
-  } catch (err) { next(err); }
+  } catch (err: unknown) {
+    const e = err as { status?: number };
+    if (e.status === 404) { res.status(404).json({ error: 'not_found' }); return; }
+    next(err);
+  }
 });
 
 const ReorderSchema = z.object({ station_ids: z.array(z.string().uuid()).min(1) });
@@ -27,9 +36,13 @@ router.put('/patients/:appointment_id/stations/order', requireStaffAuth, async (
   try {
     const parsed = ReorderSchema.safeParse(req.body);
     if (!parsed.success) { res.status(400).json({ error: 'invalid_request' }); return; }
-    await reorderStations(req.params.appointment_id as string, parsed.data.station_ids);
+    await reorderStations(req.params.appointment_id as string, parsed.data.station_ids, callerCtx(req));
     res.json({ updated: true });
-  } catch (err) { next(err); }
+  } catch (err: unknown) {
+    const e = err as { status?: number };
+    if (e.status === 404) { res.status(404).json({ error: 'not_found' }); return; }
+    next(err);
+  }
 });
 
 const CompleteSchema = z.object({ status: z.literal('complete') });
@@ -42,7 +55,8 @@ router.patch('/patients/:appointment_id/stations/:station_id', requireStaffAuth,
     const result = await markStationComplete(
       req.params.appointment_id as string,
       req.params.station_id as string,
-      req.staffAuth!.sub
+      req.staffAuth!.sub,
+      callerCtx(req)
     );
     res.json(result);
   } catch (err: unknown) {
