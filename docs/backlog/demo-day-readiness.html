@@ -397,7 +397,7 @@
       <div><dt>Demo</dt><dd>~4 Sep 2026</dd></div>
       <div><dt>Runway</dt><dd>Under 2 weeks</dd></div>
       <div><dt>Hosting</dt><dd>Laptop + hotspot</dd></div>
-      <div><dt>Route</dt><dd>7 steps, real photos</dd></div>
+      <div><dt>Phase</dt><dd>0 done, 1 next</dd></div>
     </dl>
   </header>
 
@@ -471,19 +471,49 @@
   </section>
 
   <section>
+    <h2>The one that would have gone off on stage</h2>
+    <p class="dek">Found after Phase 0 shipped, fixed the same afternoon.</p>
+    <div class="callout risk">
+      <span class="callout-label">Caught before the booth</span>
+      <p>
+        The magic-link message is queued in Redis <em>after</em> the database work commits, so wiping the
+        database left the queued messages untouched. <strong>451 of them had piled up.</strong> Starting the
+        worker with sending switched on would have drained every one to a real phone — a burst of messages,
+        most of them carrying tokens that no longer resolve to anything but an error page.
+      </p>
+      <p>
+        The reset now clears the queue too. One reset means exactly one pending message, which is the whole
+        point of having a reset ritual.
+      </p>
+    </div>
+  </section>
+
+  <section>
     <h2>The plan</h2>
     <p class="dek">Four phases, strictly in order. Phase 0 is what makes Phase 1 meaningful — walking the flow on a swamp database tells us nothing about what a visitor will see.</p>
 
     <div class="phases">
 
-      <article class="phase">
-        <div class="phase-head"><span class="phase-n">Phase 0</span><h3>Clean slate with real content</h3></div>
+      <article class="phase" style="border-color: color-mix(in srgb, var(--done) 42%, transparent)">
+        <div class="phase-head"><span class="phase-n">Phase 0 · done</span><h3>Clean slate with real content</h3></div>
         <ul>
           <li><strong>A reset command.</strong> One script that wipes every data table and reseeds. This becomes the booth ritual: run it between visitors so every walkthrough starts identical, and once before demo day so the junk department and the 54 test routes are gone. Guarded so it refuses to run against anything but the development database.</li>
           <li><strong>Real photos in the real route.</strong> The route grows from five steps to seven, matching the prototype. The seven Wolfson photos get committed into the repo and uploaded through the same path a staff upload uses, so they are compressed and stored identically.</li>
           <li><strong>Instruction text per step</strong> is drafted from the photos and shown for approval before anything is committed — it is patient-facing copy.</li>
           <li><strong>The department becomes real.</strong> Address, parking, transit and map position are all fields the patient sees and all currently empty, which leaves the arrival screen looking half-built.</li>
         </ul>
+        <p style="margin-top:2px">
+          <strong>Shipped.</strong> The database now holds one patient, two departments and two routes, and the
+          demo route carries all seven real photos. The photos turned out to end at <span class="he">מחלקת עיניים</span>,
+          not cardiology, so the demo department, procedure, checklist and forms are all ophthalmology now —
+          cardiology stays seeded because twelve test files look it up by name. Three suites green: 83 API,
+          18 patient app, 15 back office.
+        </p>
+        <p>
+          Four pre-existing bugs surfaced and were fixed on the way: re-seeding a live database left the demo
+          appointment with <em>no forms at all</em>, and the bulk-delete spec had three separate faults that
+          meant it had never run green.
+        </p>
       </article>
 
       <article class="phase">
@@ -526,7 +556,9 @@
       <article class="phase">
         <div class="phase-head"><span class="phase-n">Phase 3</span><h3>Network dress rehearsal on the real phone</h3></div>
         <ul>
+          <li><strong>Order matters:</strong> set the addresses first, <em>then</em> reset. The photo URLs are written into the database when the route is seeded, so changing the address afterwards does nothing to rows that already exist.</li>
           <li>Bring the stack up bound to the hotspot address rather than localhost — including the storage endpoint, the one everybody forgets.</li>
+          <li><strong>Already checked:</strong> storage is published on all interfaces, so the hotspot address reaches it from both the laptop and the phone. This stays a configuration change; no code needed.</li>
           <li>Send a real Telegram link to the actual demo phone, over the actual hotspot, and run the whole journey on it: images load, uploads work, the camera opens, the signature works with a finger.</li>
           <li>Rehearse the reset-between-visitors ritual end to end at least twice.</li>
         </ul>
