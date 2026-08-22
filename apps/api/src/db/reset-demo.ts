@@ -47,10 +47,24 @@ async function resetDemo() {
   }
 
   // A destructive command must never be one typo away from a real database.
-  const dbName = new URL(url).pathname.replace(/^\//, '');
   const forced = process.argv.includes('--force');
+
+  const dbName = new URL(url).pathname.replace(/^\//, '');
   if (!dbName.endsWith('_dev') && !forced) {
     console.error(`Refusing to wipe "${dbName}" — this command only runs against a *_dev database.`);
+    console.error('Pass --force if you genuinely mean to reset this one.');
+    process.exit(1);
+  }
+
+  // Gate every destructive target, not just the first one. This command also
+  // obliterates the BullMQ queue, which lives on REDIS_URL — a separate value.
+  // Checking only the database name would let a dev Postgres paired with a
+  // shared Redis pass the gate and still wipe someone else's queue.
+  const redisUrl = process.env.REDIS_URL ?? 'redis://localhost:6379';
+  const redisHost = new URL(redisUrl).hostname;
+  const redisIsLocal = ['localhost', '127.0.0.1', '::1', 'redis', 'medassist_redis'].includes(redisHost);
+  if (!redisIsLocal && !forced) {
+    console.error(`Refusing to obliterate the notification queue on "${redisHost}" — it is not a local Redis.`);
     console.error('Pass --force if you genuinely mean to reset this one.');
     process.exit(1);
   }
@@ -72,9 +86,7 @@ async function resetDemo() {
   // adds one more pending message: start the worker with sending enabled and it
   // drains the whole backlog at once, to a real phone, in front of a visitor.
   // One reset must mean exactly one pending message.
-  const connection = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
-    maxRetriesPerRequest: null,
-  });
+  const connection = new IORedis(redisUrl, { maxRetriesPerRequest: null });
   const queue = new Queue('notifications', { connection });
   try {
     const pending = await queue.getJobCounts();
