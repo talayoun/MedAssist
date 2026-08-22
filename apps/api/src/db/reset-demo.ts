@@ -9,6 +9,8 @@
  * The migration ledger is deliberately preserved — this resets data, not schema.
  */
 import { Pool } from 'pg';
+import IORedis from 'ioredis';
+import { Queue } from 'bullmq';
 import { spawnSync } from 'child_process';
 import { join } from 'path';
 
@@ -63,6 +65,29 @@ async function resetDemo() {
     process.exit(1);
   } finally {
     await pool.end();
+  }
+
+  // The seed enqueues its magic-link job to Redis after COMMIT, so truncating
+  // the notifications table leaves those jobs behind. Without this, every reset
+  // adds one more pending message: start the worker with sending enabled and it
+  // drains the whole backlog at once, to a real phone, in front of a visitor.
+  // One reset must mean exactly one pending message.
+  const connection = new IORedis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
+    maxRetriesPerRequest: null,
+  });
+  const queue = new Queue('notifications', { connection });
+  try {
+    const pending = await queue.getJobCounts();
+    await queue.obliterate({ force: true });
+    const cleared = Object.values(pending).reduce((sum, n) => sum + n, 0);
+    console.log(`📭 Notification queue cleared (${cleared} job${cleared === 1 ? '' : 's'} discarded).
+`);
+  } catch (err) {
+    console.error('Could not clear the notification queue:', err);
+    process.exit(1);
+  } finally {
+    await queue.close();
+    await connection.quit();
   }
 
   // Run the seed in its own process: it owns its Postgres pool, its Redis
