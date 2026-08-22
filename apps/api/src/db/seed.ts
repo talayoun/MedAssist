@@ -352,8 +352,14 @@ async function seed() {
        WHERE procedure_type = 'general-baseline' AND hospital_id = $1`,
       [HOSPITAL_ID]
     );
+    // Protect the cardiology baseline only. The demo route must stay editable:
+    // "look how configurable this is" is part of the admin-screens segment, and a
+    // protected route also makes the protected-guard fire before the in-active-use
+    // guard that the admin route tests assert against.
     await client.query(
-      `UPDATE navigation_routes SET is_protected = TRUE WHERE is_default = TRUE`
+      `UPDATE navigation_routes SET is_protected = (id = $1)
+       WHERE is_default = TRUE AND archived = FALSE`,
+      [cardioRouteId],
     );
 
     // ─── Form template items ───────────────────────────────────────────────────
