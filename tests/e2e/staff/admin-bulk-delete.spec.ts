@@ -11,6 +11,9 @@ import { test, expect } from '@playwright/test';
  *   pnpm --filter staff-backoffice dev
  */
 
+// Absolute, like every other staff spec: the back-office dev server has no /api
+// proxy, so a relative path resolves against :5174 and 404s.
+const API_URL = process.env.API_URL ?? 'http://localhost:3000';
 const ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL ?? 'admin@medassist.test';
 const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASSWORD ?? 'AdminPassword123';
 
@@ -53,9 +56,12 @@ test.describe('admin bulk delete — checklist templates', () => {
     // and never deletes seeded data. Unused templates have zero checklist_progress
     // rows, so they hard-delete rather than archive: the expected split is "נמחקו 2".
     // page.request shares the logged-in browser context's session cookie.
-    const names = ['בדיקה-מחיקה-א', 'בדיקה-מחיקה-ב'];
+    // Unique per run: fixed names meant one aborted run left rows behind and every
+    // later run died on duplicate_procedure_type.
+    const run = Date.now().toString().slice(-6);
+    const names = [`בדיקה-מחיקה-א-${run}`, `בדיקה-מחיקה-ב-${run}`];
     for (const procedure_type of names) {
-      const res = await page.request.post('/api/admin/checklists', {
+      const res = await page.request.post(`${API_URL}/api/admin/checklists`, {
         data: { procedure_type, items: [] },
       });
       expect(res.status(), await res.text()).toBe(201);
@@ -67,7 +73,8 @@ test.describe('admin bulk delete — checklist templates', () => {
     }
     await page.getByRole('button', { name: 'מחק נבחרים' }).click();
     await expect(page.getByText('למחוק 2 תבניות?')).toBeVisible();
-    await page.getByRole('button', { name: 'מחק' }).click();
+    // exact: the bulk bar's "מחק נבחרים" also matches a loose name.
+    await page.getByRole('button', { name: 'מחק', exact: true }).click();
 
     await expect(page.getByText('נמחקו 2')).toBeVisible();
     for (const name of names) {
