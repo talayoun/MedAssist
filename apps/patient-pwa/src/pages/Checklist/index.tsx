@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getChecklist, saveChecklistProgress, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
@@ -43,18 +43,36 @@ export default function Checklist() {
       });
   }, [token]);
 
+  // Tapping twice quickly fires two saves before either resolves. Reading the set
+  // from a ref (kept current on every tap, not just on re-render) means the second
+  // tap builds on the first instead of on a stale render's snapshot.
+  const completedIdsRef = useRef(completedIds);
+  useEffect(() => {
+    completedIdsRef.current = completedIds;
+  }, [completedIds]);
+
   const toggleItem = useCallback(
     (item: ChecklistItem) => {
       if (!token || !data) return;
-      const next = new Set(completedIds);
-      if (next.has(item.id)) next.delete(item.id);
+      const next = new Set(completedIdsRef.current);
+      const wasCompleted = next.has(item.id);
+      if (wasCompleted) next.delete(item.id);
       else next.add(item.id);
+      completedIdsRef.current = next;
       setCompletedIds(next);
+
       saveChecklistProgress(token, Array.from(next)).catch(() => {
-        setCompletedIds(completedIds);
+        // Undo only this item. Restoring a whole captured snapshot would also wipe
+        // any taps the patient made while this request was still in flight.
+        setCompletedIds((current) => {
+          const rolledBack = new Set(current);
+          if (wasCompleted) rolledBack.add(item.id);
+          else rolledBack.delete(item.id);
+          return rolledBack;
+        });
       });
     },
-    [token, data, completedIds]
+    [token, data]
   );
 
   const goToForms = useCallback(() => {
