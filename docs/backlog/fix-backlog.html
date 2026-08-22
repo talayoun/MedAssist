@@ -1,0 +1,367 @@
+<title>MedAssist Fix Backlog</title>
+<style>
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  :root {
+    --bg: #F6F7F6;
+    --surface: #FFFFFF;
+    --surface-alt: #EFF3F1;
+    --ink: #10201C;
+    --ink-muted: #4B5D57;
+    --ink-faint: #7A8B85;
+    --border: #DCE6E1;
+    --border-strong: #C2D2CB;
+    --accent: #0F766E;
+    --accent-fill: #0D9488;
+    --accent-soft: #E1F3F0;
+    --critical: #A32A20;
+    --critical-fill: #B3261E;
+    --critical-soft: #FBEAE8;
+    --warning: #7A4D08;
+    --warning-fill: #92590A;
+    --warning-soft: #FBF0DD;
+    --ok: #1E7A4C;
+    --ok-fill: #1E7A4C;
+    --ok-soft: #E7F5EC;
+    --wip: #6D4FC2;
+    --wip-soft: #EFEAFB;
+    --code-bg: #10201C;
+    --code-ink: #DCEAE5;
+    --shadow: 0 1px 2px rgba(16, 32, 28, 0.06), 0 8px 24px -12px rgba(16, 32, 28, 0.14);
+    --font-display: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-body: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Roboto Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0D1512;
+      --surface: #131F1B;
+      --surface-alt: #182823;
+      --ink: #E7EEEB;
+      --ink-muted: #9BB0A9;
+      --ink-faint: #6C817A;
+      --border: #24352F;
+      --border-strong: #33473F;
+      --accent: #5EEAD4;
+      --accent-fill: #2DD4BF;
+      --accent-soft: #16302B;
+      --critical: #F2867F;
+      --critical-fill: #E15349;
+      --critical-soft: #2A1512;
+      --warning: #EFC275;
+      --warning-fill: #D99A2B;
+      --warning-soft: #2A2011;
+      --ok: #6FDBA0;
+      --ok-fill: #6FDBA0;
+      --ok-soft: #12241A;
+      --wip: #B7A4F2;
+      --wip-soft: #241C33;
+      --code-bg: #0A130F;
+      --code-ink: #B9D6CC;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0D1512;
+    --surface: #131F1B;
+    --surface-alt: #182823;
+    --ink: #E7EEEB;
+    --ink-muted: #9BB0A9;
+    --ink-faint: #6C817A;
+    --border: #24352F;
+    --border-strong: #33473F;
+    --accent: #5EEAD4;
+    --accent-fill: #2DD4BF;
+    --accent-soft: #16302B;
+    --critical: #F2867F;
+    --critical-fill: #E15349;
+    --critical-soft: #2A1512;
+    --warning: #EFC275;
+    --warning-fill: #D99A2B;
+    --warning-soft: #2A2011;
+    --ok: #6FDBA0;
+    --ok-fill: #6FDBA0;
+    --ok-soft: #12241A;
+    --wip: #B7A4F2;
+    --wip-soft: #241C33;
+    --code-bg: #0A130F;
+    --code-ink: #B9D6CC;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 2px; }
+
+  .ref {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 0.1em 0.45em;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .shell { max-width: 900px; margin: 0 auto; padding: 0 24px 96px; }
+
+  header.masthead { padding: 56px 0 28px; border-bottom: 1px solid var(--border); }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1.title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(26px, 4vw, 38px);
+    letter-spacing: -0.015em;
+    margin: 10px 0 8px;
+    text-wrap: balance;
+  }
+
+  .subtitle { color: var(--ink-muted); font-size: 16px; max-width: 66ch; margin: 0 0 20px; }
+
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px 20px;
+    font-size: 13.5px; color: var(--ink-faint); font-family: var(--font-mono);
+  }
+  .meta-row a { color: var(--ink-faint); }
+  .meta-row strong { color: var(--ink-muted); font-weight: 600; }
+
+  /* progress bar */
+  .progress-wrap { margin: 28px 0 4px; }
+  .progress-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); margin-bottom: 6px;
+  }
+  .progress-label strong { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border); overflow: hidden; display: flex; }
+  .bar .seg-done { background: var(--ok-fill); }
+  .bar .seg-wip { background: var(--wip); }
+  .legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--ink-faint); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+  section.block { margin: 44px 0; }
+  h2.block-title {
+    font-family: var(--font-display); font-size: 20px; font-weight: 700;
+    letter-spacing: -0.01em; margin: 0 0 4px;
+  }
+  .block-dek { color: var(--ink-muted); font-size: 14.5px; margin: 0 0 20px; }
+
+  /* status pill */
+  .status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+  }
+  .status.done { background: var(--ok-soft); color: var(--ok); }
+  .status.wip  { background: var(--wip-soft); color: var(--wip); }
+  .status.open { background: var(--surface-alt); color: var(--ink-faint); }
+
+  .sev {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .sev.critical { background: var(--critical-soft); color: var(--critical); }
+  .sev.high { background: var(--warning-soft); color: var(--warning); }
+  .sev.medium { background: var(--surface-alt); color: var(--ink-muted); }
+
+  /* item row */
+  .item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .item.is-done { opacity: 0.62; }
+  .item.is-wip { border-color: var(--wip); box-shadow: 0 0 0 1px var(--wip) inset; }
+
+  .item-top {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;
+  }
+  .item-id { font-family: var(--font-mono); font-weight: 700; color: var(--ink-faint); font-size: 13px; }
+  .item-where {
+    margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint);
+    background: var(--surface-alt); border: 1px solid var(--border); padding: 2px 7px; border-radius: 5px;
+  }
+  .item p { margin: 0; font-size: 14px; color: var(--ink-muted); line-height: 1.55; }
+  .item.is-done p { text-decoration: line-through; text-decoration-color: var(--border-strong); }
+
+  /* M1 story */
+  .story {
+    border: 1px solid var(--wip);
+    border-radius: 12px;
+    background: var(--wip-soft);
+    padding: 22px 24px;
+    margin: 20px 0 0;
+  }
+  .story.is-done { border-color: var(--ok-fill); background: var(--ok-soft); }
+  .story.is-done ol.timeline li::before { background: var(--ok-fill); }
+  .story h3 {
+    font-family: var(--font-display); font-size: 16px; margin: 0 0 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .story .story-dek { font-size: 13.5px; color: var(--ink-muted); margin: 0 0 16px; }
+  ol.timeline { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--border-strong); }
+  ol.timeline li {
+    position: relative; padding: 0 0 16px 20px; font-size: 14px; color: var(--ink-muted); line-height: 1.6;
+  }
+  ol.timeline li:last-child { padding-bottom: 0; }
+  ol.timeline li::before {
+    content: ""; position: absolute; left: -5px; top: 5px;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--wip);
+  }
+  ol.timeline li strong { color: var(--ink); }
+  ol.timeline li.turn::before { background: var(--warning-fill); }
+
+  footer.closing {
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--border);
+    color: var(--ink-faint); font-size: 13px;
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="eyebrow">Working Backlog — Live</div>
+    <h1 class="title">MedAssist Fix Backlog</h1>
+    <p class="subtitle">The 25 items from the readiness audit, tracked as they get picked up — one per branch/worktree, verified before merge.</p>
+    <div class="meta-row">
+      <span><strong>Source</strong> <a href="https://claude.ai/code/artifact/f2aac20c-91b9-4d45-96eb-f0fb51383a1c">MedAssist Readiness Report</a></span>
+      <span><strong>Updated</strong> 2026-08-15</span>
+      <span><strong>Branch</strong> feat/final-figma-redesign</span>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Progress</span><strong>1/25 done · 0 wip · 24 open</strong></div>
+      <div class="bar">
+        <div class="seg-done" style="width: 4%"></div>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--ok-fill)"></i>Done</span>
+        <span><i style="background:var(--wip)"></i>In progress</span>
+        <span><i style="background:var(--border-strong)"></i>Open</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="story is-done">
+    <h3>M1 — Logout doesn't revoke the staff session <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/logout-session-revocation</span> → merged <span class="ref">--no-ff</span> into <span class="ref">feat/final-figma-redesign</span> (<span class="ref">b6d3701</span>)</p>
+    <ol class="timeline">
+      <li><strong>Fix applied.</strong> <span class="ref">logout()</span> now calls <span class="ref">addToRevocationSet</span> (the correctly-prefixed function) instead of writing to the wrong Redis key. Dead duplicate <span class="ref">verifyToken</span> removed.</li>
+      <li><strong>Code review dispatched</strong> (<span class="ref">/superpowers:requesting-code-review</span>). Verdict: production fix correct, verified live — but the regression test was a <strong>false negative</strong>. Playwright's client auto-clears its cookie on logout's <span class="ref">Set-Cookie</span> response, so the "same cookie after logout" check never actually replayed the revoked token.</li>
+      <li><strong>Test rewritten</strong> to replay the raw token explicitly (the real threat model: a stolen/cached cookie). Verified in both directions by swapping in the pre-fix file contents — fails pre-fix (200), passes post-fix (401).</li>
+      <li class="turn"><strong>Second bug found while verifying</strong>, unrelated to the code review: running the new test alongside others caused 3 unrelated failures. Root cause — staff JWTs had no unique-per-login ID, so two logins to the same account in the same second produced the <em>identical token string</em>; logging out of one silently revoked the other. Invisible before this fix (logout didn't revoke anything for real), a live cross-session bug now that it does.</li>
+      <li><strong>Scope decision (asked user):</strong> folded into M1. Added <span class="ref">jti: randomUUID()</span> to the JWT payload so every login's token is unique regardless of timing.</li>
+      <li><strong>Verified:</strong> full <span class="ref">tests/api</span> suite — 63/63 passing — after the <span class="ref">jti</span> fix.</li>
+      <li><strong>Shipped.</strong> Committed (<span class="ref">28b4092</span>), merged, pushed. Worktree removed.</li>
+    </ol>
+  </div>
+
+  <section class="block">
+    <h2 class="block-title">Missing / Incomplete</h2>
+    <p class="block-dek">M-numbered. Full detail in the readiness report — this view is for tracking pickup, not re-explaining each finding.</p>
+
+    <div class="item is-done">
+      <div class="item-top"><span class="status done">Done</span><span class="item-id">M1</span><span class="sev critical">Critical</span><span class="item-where">api</span></div>
+      <p>Logout doesn't revoke JWT — key mismatch between <span class="ref">auth.service.ts</span> and <span class="ref">db/redis.ts</span>'s revocation prefix.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M2</span><span class="sev critical">Critical</span><span class="item-where">patient-pwa</span></div>
+      <p>Offline banner is fake — service worker is an empty stub, zero cached data anywhere. Violates constitution principle 6.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M3</span><span class="sev high">High</span><span class="item-where">patient-pwa + api</span></div>
+      <p>Digital forms have no submit — the CTA just navigates, no finalize call, no required-field validation.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M4</span><span class="sev high">High</span><span class="item-where">patient-pwa</span></div>
+      <p>Medical content (fasting/med instructions, department) leaks into Google Calendar export URLs.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M5</span><span class="sev high">High</span><span class="item-where">api tests</span></div>
+      <p>Zero test coverage on 7 major API modules — magic-links, patient checklist/navigation, waiting, notifications/worker, staff queue, admin timing-rules.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M6</span><span class="sev high">High</span><span class="item-where">api + schema</span></div>
+      <p>Two abandoned half-features: staff lockout (schema exists, never written) and multi-hospital support (unused columns). Finish or rip out.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M7</span><span class="sev medium">Medium</span><span class="item-where">api</span></div>
+      <p>Checklist reminder SMS unimplemented — scheduler function defined, never invoked.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M8</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>Departments admin page has no create/delete, only edits arrival-info on existing rows.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M9</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>Form templates can't be edited once created — the patch endpoint exists but no UI calls it.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M10</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>No admin table has search, filter, or pagination — deliberate at current scale, no safety net if it grows.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M11</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>No shared design-system layer in the backoffice — styles copy-pasted per page.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M12</span><span class="sev medium">Medium</span><span class="item-where">repo hygiene</span></div>
+      <p><span class="ref">main</span> is 55+ commits stale, 60+ mostly-dead branches, <span class="ref">tasks.md</span> shows zero progress despite months of shipped work.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Edge Cases to Verify</h2>
+    <p class="block-dek">E-numbered. Plausible from reading the code, not yet confirmed broken in practice.</p>
+
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E1</span><span class="item-where">api</span></div><p>Notification cap silently exhausted by patient "contact staff" taps (broadcast rows count against the SMS cap).</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E2</span><span class="item-where">api</span></div><p>Notification cap/dedup check races under concurrent triggers — no transaction/lock.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E3</span><span class="item-where">api</span></div><p>Two devices loading Waiting simultaneously for the first time — no <span class="ref">ON CONFLICT</span>, unique-violation 500.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E4</span><span class="item-where">api</span></div><p>POST checklist progress for a procedure type with no seeded template — unguarded, uncaught 500.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E5</span><span class="item-where">api</span></div><p>Checklist template lookup ignores the <span class="ref">archived</span> flag and <span class="ref">hospital_id</span>.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E6</span><span class="item-where">api</span></div><p>Two admin routers skip <span class="ref">requireStaffAuth</span> — works only by mount-order accident in <span class="ref">app.ts</span>.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E7</span><span class="item-where">staff-backoffice</span></div><p>Session expiry mid-upload of a navigation step image skips the 401→redirect other uploads have.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E8</span><span class="item-where">api</span></div><p>Oversized file upload surfaces as a generic 500 instead of 413.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E9</span><span class="item-where">api</span></div><p>Form uploads hold a pooled PG connection open across an S3 network round-trip — pool exhaustion risk under load.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E10</span><span class="item-where">api</span></div><p>Staff can add/complete patient stations for any department — no scope check, unlike the queue endpoints.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E11</span><span class="item-where">patient-pwa</span></div><p>Offline/flaky network on Navigation's "I'm here" tap fails silently — no visible error.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E12</span><span class="item-where">patient-pwa</span></div><p>Waiting page's first load failing leaves an infinite spinner, no retry.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E13</span><span class="item-where">patient-pwa</span></div><p>Rapid double-tap on a checklist item hits a stale-closure rollback bug.</p></div>
+  </section>
+
+  <footer class="closing">
+    Tracks <span class="ref">C:\Users\User\.claude\plans\make-yourself-a-list-generic-hejlsberg.md</span> — republished each time an item's status changes. Full findings (file:line citations, edge-case reasoning) live in the <a href="https://claude.ai/code/artifact/f2aac20c-91b9-4d45-96eb-f0fb51383a1c">readiness report</a>.
+  </footer>
+
+</div>
+
+
