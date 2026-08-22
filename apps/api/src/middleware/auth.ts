@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import type { StaffAuthContext } from '@medassist/shared-types';
 import { query } from '../db/db';
 import { isTokenRevoked } from '../db/redis';
 
@@ -164,6 +165,19 @@ export function requireMagicLinkToken(req: Request, res: Response, next: NextFun
       next();
     })
     .catch(next);
+}
+
+// ─── Caller scope ─────────────────────────────────────────────────────────────
+
+/**
+ * Narrows the JWT payload to the authorization context services take: a staff
+ * user carries a department and is confined to it, an admin carries none and is
+ * unrestricted. Lives here rather than inside one router so every module that
+ * scopes by department derives it identically.
+ */
+export function callerCtx(req: Request): StaffAuthContext {
+  const deptId = req.staffAuth!.departmentId;
+  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
 }
 
 // ─── Companion read-only guard ────────────────────────────────────────────────
