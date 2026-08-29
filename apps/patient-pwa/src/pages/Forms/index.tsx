@@ -20,6 +20,13 @@ const SECTION_ORDER: { key: Section; label: string }[] = [
   { key: 'consent', label: 'הסכמות וחתימות' },
 ];
 
+// Values the visit already holds, matched to intake fields by label: template items
+// have no field key, only Hebrew text. The patient table stores nothing else usable
+// (name and phone only, and no template asks for the phone), so this is the whole list.
+const PREFILL_RULES: { match: RegExp; from: (info: { patientName: string | null }) => string | null }[] = [
+  { match: /^שם\s*(מלא)?$/, from: (info) => info.patientName },
+];
+
 function TrashIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -35,6 +42,12 @@ function TextFieldItem({ item, token, onUpdate }: { item: FormItemDTO; token: st
   const initial = (item.value as { text?: string } | null)?.text ?? '';
   const [text, setText] = useState(initial);
   const [saving, setSaving] = useState(false);
+
+  // A value that arrives after mount (the name prefill lands once the visit resolves)
+  // must reach the input, but never over something the patient has already typed.
+  useEffect(() => {
+    setText((prev) => (prev === '' && initial !== '' ? initial : prev));
+  }, [initial]);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -391,11 +404,12 @@ function blocksSubmit(item: FormItemDTO): boolean {
 export default function Forms() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { isOnline } = useVisitInfo();
+  const { isOnline, patientName } = useVisitInfo();
   const [formItems, setFormItems] = useState<FormItemDTO[]>([]);
   const [formsLoadErr, setFormsLoadErr] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const sectionRefs = useRef<Partial<Record<Section, HTMLDivElement | null>>>({});
+  const prefilled = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!token) return;
@@ -403,6 +417,28 @@ export default function Forms() {
       .then(({ items }) => setFormItems(items))
       .catch(() => setFormsLoadErr('שגיאה בטעינת מסמכים'));
   }, [token]);
+
+  // Fill in what the visit already knows so the patient never retypes it. The visit
+  // fetch and the forms fetch race, so this runs again when the name lands; the ref
+  // keeps it from re-sending a value it has already saved.
+  useEffect(() => {
+    if (!token || formItems.length === 0) return;
+    const info = { patientName };
+
+    formItems.forEach((item) => {
+      if (item.item_type !== 'text_field') return;
+      if (prefilled.current.has(item.id)) return;
+      if (((item.value as { text?: string } | null)?.text ?? '').trim() !== '') return;
+
+      const text = PREFILL_RULES.find((r) => r.match.test(item.label))?.from(info);
+      if (!text) return;
+
+      prefilled.current.add(item.id);
+      setFormValue(token, item.id, { item_type: 'text_field', value: { text } })
+        .then(handleUpdate)
+        .catch(() => prefilled.current.delete(item.id));
+    });
+  }, [token, patientName, formItems]);
 
   const handleUpdate = (updated: FormItemDTO) => {
     setSubmitError(null);
