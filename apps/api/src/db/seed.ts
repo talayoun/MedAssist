@@ -19,7 +19,7 @@ const DEMO_ASSETS_DIR = process.env.DEMO_ASSETS_DIR
   ?? join(__dirname, 'demo-assets');
 
 const DEMO_STEPS = [
-  'היכנס לבניין הראשי — לוח המחלקות בקומת הקרקע ממולך',
+  'היכנס לבניין הראשי, לוח המחלקות בקומת הקרקע ממולך',
   'עבור את דלתות הזכוכית לכיוון החצר הפנימית',
   'פנה למסדרון הארוך, לצד מכונות השתייה',
   'המשך ישר עד לשילוט "עזר מציון"',
@@ -106,7 +106,7 @@ async function seed() {
 
     const demoDeptId = await upsertDepartment(
       DEMO_DEPT,
-      'המרכז הרפואי וולפסון, רחוב הלוחמים 62, חולון — בניין ראשי, מחלקת עיניים',
+      'המרכז הרפואי וולפסון, רחוב הלוחמים 62, חולון, בניין ראשי, מחלקת עיניים',
       'חניון מרכזי בכניסה הראשית, שעתיים ראשונות ללא תשלום',
       'קווי אוטובוס 3, 89 ו-131 לתחנת בית החולים וולפסון',
       32.0192, 34.7614,
@@ -371,11 +371,11 @@ async function seed() {
       { procedure_type: null, label: 'תעודת זהות', item_type: 'text_field', required: true, order_index: 1, section: 'personal', sub_label: null, placeholder: '000000000', list_item_placeholder: null },
       { procedure_type: null, label: 'האם יש לך אלרגיות?', item_type: 'yes_no_list', required: false, order_index: 2, section: 'medical', sub_label: null, placeholder: null, list_item_placeholder: 'פרט את האלרגיה' },
       { procedure_type: null, label: 'האם אתה נוטל תרופות באופן קבוע?', item_type: 'yes_no_list', required: false, order_index: 3, section: 'medical', sub_label: null, placeholder: null, list_item_placeholder: 'שם התרופה' },
-      { procedure_type: null, label: 'התחייבות כספית מקופת החולים — טופס 17', item_type: 'patient_upload', required: true, order_index: 4, section: 'financial', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: null, label: 'התחייבות כספית מקופת החולים, טופס 17', item_type: 'patient_upload', required: true, order_index: 4, section: 'financial', sub_label: null, placeholder: null, list_item_placeholder: null },
       { procedure_type: null, label: 'צילום תעודת זהות (כולל הספח)', item_type: 'patient_upload', required: true, order_index: 5, section: 'financial', sub_label: null, placeholder: null, list_item_placeholder: null },
       { procedure_type: 'pre-op-cardiac', label: 'סיכום רפואי מהרופא המפנה', item_type: 'patient_upload', required: true, order_index: 6, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
       { procedure_type: 'pre-op-cardiac', label: 'תוצאות בדיקות דם עדכניות (תפקודי קרישה)', item_type: 'patient_upload', required: true, order_index: 7, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
-      { procedure_type: 'pre-op-cardiac', label: 'בדיקות דימות — פענוח CT / רנטגן / אולטרסאונד', item_type: 'patient_upload', required: false, order_index: 8, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
+      { procedure_type: 'pre-op-cardiac', label: 'בדיקות דימות: פענוח CT / רנטגן / אולטרסאונד', item_type: 'patient_upload', required: false, order_index: 8, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
       { procedure_type: 'pre-op-cardiac', label: 'הסכמה לניתוח', item_type: 'staff_upload_sign', required: true, order_index: 9, section: 'consent', sub_label: null, placeholder: null, list_item_placeholder: null },
       { procedure_type: DEMO_PROCEDURE, label: 'סיכום רפואי מרופא העיניים המפנה', item_type: 'patient_upload', required: true, order_index: 6, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },
       { procedure_type: DEMO_PROCEDURE, label: 'תוצאות בדיקת ביומטריה ולחץ תוך-עיני', item_type: 'patient_upload', required: true, order_index: 7, section: 'documents', sub_label: null, placeholder: null, list_item_placeholder: null },

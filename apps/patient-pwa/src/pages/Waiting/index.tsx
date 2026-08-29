@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getWaitingStatus } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
+import { useScrollTop } from '../../hooks/useScrollTop';
 import { useVisitInfo } from '../../context/VisitPhaseContext';
 import type { WaitingResponse } from '@medassist/shared-types';
 
@@ -30,6 +31,9 @@ export default function Waiting() {
   const [data, setData] = useState<WaitingResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // The screen swaps on a poll, not on a route change: waiting, in treatment, done.
+  useScrollTop(data?.status);
 
   const fetchStatus = useCallback(() => {
     if (!token) return;
