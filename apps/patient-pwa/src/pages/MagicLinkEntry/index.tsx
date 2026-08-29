@@ -117,7 +117,7 @@ export default function MagicLinkEntry() {
             </>
           ) : (
             <div className="bg-[#fff3cd] border border-[#ffc107] rounded-2xl px-5 py-4 text-[17px] text-[#7a5c00] text-center">
-              ⚡ ביקור דחוף — אין צורך בתיאום מראש
+              ⚡ ביקור דחוף, אין צורך בתיאום מראש
             </div>
           )}
         </Card>

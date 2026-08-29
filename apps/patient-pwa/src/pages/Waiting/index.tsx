@@ -81,7 +81,7 @@ export default function Waiting() {
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
-      <AppHeader offlineMessage="אין חיבור לאינטרנט — זמן ההמתנה לא מעודכן" />
+      <AppHeader offlineMessage="אין חיבור לאינטרנט, זמן ההמתנה לא מעודכן" />
       <div className="max-w-[480px] w-full mx-auto px-4 py-5 flex flex-col gap-4">
         {/* Reassurance card */}
         <div className="bg-gradient-to-br from-teal to-teal-hover rounded-2xl p-5 shadow-lg">
@@ -110,7 +110,7 @@ export default function Waiting() {
             </span>
           </div>
           <p className="text-[13px] leading-5 text-[#1E40AF] text-right">
-            שים לב: סדר הכניסה נקבע לפי דחיפות רפואית. אם מטופל אחר נכנס לפניך, זה קורה רק בגלל צורך רפואי דחוף — המערכת עוקבת אחרי המיקום שלך כל הזמן כך שלא נשכח אותך.
+            שים לב: סדר הכניסה נקבע לפי דחיפות רפואית. אם מטופל אחר נכנס לפניך, זה קורה רק בגלל צורך רפואי דחוף. המערכת עוקבת אחרי המיקום שלך כל הזמן כך שלא נשכח אותך.
           </p>
         </div>
 
@@ -209,7 +209,7 @@ export default function Waiting() {
 
         {data.status === 'done' && (
           <div className="bg-white border border-border rounded-2xl p-5 text-center">
-            <p className="text-lg font-semibold text-success">הביקור הסתיים — נתראה!</p>
+            <p className="text-lg font-semibold text-success">הביקור הסתיים, נתראה!</p>
           </div>
         )}
 

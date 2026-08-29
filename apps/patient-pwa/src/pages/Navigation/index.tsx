@@ -56,7 +56,7 @@ function StepPhoto({ step }: { step: NavigationStep }) {
   return (
     <img
       src={step.image_url}
-      alt={`שלב ${step.order} — ${step.instruction}`}
+      alt={`שלב ${step.order}: ${step.instruction}`}
       className="w-full aspect-[4/3] object-cover rounded-[14px] block"
       onError={() => setFailed(true)}
     />
