@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './styles/index.css';
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useParams, useNavigate, useLocation } from 'react-router-dom';
 import MagicLinkEntry from './pages/MagicLinkEntry';
 import Checklist from './pages/Checklist';
 import Navigation from './pages/Navigation';
@@ -14,6 +14,14 @@ import { resolveVisit, ApiError } from './services/api';
 import { VisitPhaseContext } from './context/VisitPhaseContext';
 import type { VisitInfo } from './context/VisitPhaseContext';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { useScrollTop } from './hooks/useScrollTop';
+
+// Every route change starts at the top of the page. Screens inside a route
+// (the navigation steps, for one) call useScrollTop with their own state.
+function ScrollToTop() {
+  useScrollTop(useLocation().pathname);
+  return null;
+}
 
 // Hebrew RTL for all patient-facing content
 document.documentElement.setAttribute('dir', 'rtl');
@@ -61,6 +69,7 @@ function VisitLayout() {
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route path="/visit/:token">
           <Route index element={<MagicLinkEntry />} />

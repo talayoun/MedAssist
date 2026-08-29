@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getNavigation, confirmStep, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
+import { useScrollTop } from '../../hooks/useScrollTop';
 import type { NavigationRoute, NavigationStep } from '@medassist/shared-types';
 
 function CheckIcon() {
@@ -109,6 +110,9 @@ export default function Navigation() {
   }, [token]);
 
   useEffect(() => { loadNavigation(); }, [loadNavigation]);
+
+  // Arrival screen to step view, and every step change in either direction.
+  useScrollTop(arrivedAtClinic, viewOrder, reviewStep);
 
   // "אני כאן" on a step the patient has already confirmed is just forward movement:
   // the server knows about that step, so it only moves the view. Only the step the
