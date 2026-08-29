@@ -120,4 +120,21 @@ test.describe('patient: internal navigation moves freely in both directions', ()
     await page.getByRole('button', { name: 'הגעתי למרפאה' }).click();
     await expect(page.getByRole('button', { name: 'אני כאן' })).toBeVisible();
   });
+  test('the last step is labelled as the arrival, not as another step', async ({ page }) => {
+    const here = page.getByRole('button', { name: 'אני כאן' });
+
+    // Walk to the final step. The cardiac route is short, so this is quick.
+    const total = Number((await page.getByText(/שלב \d+ מתוך \d+/).innerText()).match(/מתוך (\d+)/)![1]);
+    for (let i = 1; i < total; i++) {
+      await here.click();
+      await expect(page.getByText(new RegExp(`שלב ${i + 1} מתוך`))).toBeVisible();
+    }
+
+    await expect(page.getByRole('button', { name: 'הגעתי ליעד' })).toBeVisible();
+    await expect(here).toHaveCount(0);
+
+    // And it still does what the confirm always did: ends navigation.
+    await page.getByRole('button', { name: 'הגעתי ליעד' }).click();
+    await expect(page).toHaveURL(/\/waiting$/);
+  });
 });

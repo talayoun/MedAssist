@@ -67,11 +67,20 @@ export function getMe(): Promise<{ user: StaffUser }> {
   return apiRequest('/auth/me');
 }
 
-export async function getSessionUser(): Promise<StaffUser | null> {
-  const res = await fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' });
-  if (!res.ok) return null;
-  const body = await res.json().catch(() => null);
-  return body?.user ?? null;
+// StrictMode runs the bootstrap effect twice in dev, which fired two
+// unauthenticated /auth/me calls and put two red 401s in the console before
+// anyone had logged in. A concurrent caller gets the request already in flight.
+let sessionProbe: Promise<StaffUser | null> | null = null;
+
+export function getSessionUser(): Promise<StaffUser | null> {
+  if (sessionProbe) return sessionProbe;
+  sessionProbe = (async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' });
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => null);
+    return body?.user ?? null;
+  })().finally(() => { sessionProbe = null; });
+  return sessionProbe;
 }
 
 // ─── Queue ────────────────────────────────────────────────────────────────────
