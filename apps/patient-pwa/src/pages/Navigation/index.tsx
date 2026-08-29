@@ -354,7 +354,9 @@ export default function Navigation() {
           style={{ opacity: loading ? 0.7 : 1 }}
         >
           <CheckIcon />
-          <span>{loading ? 'מעבד...' : 'אני כאן'}</span>
+          {/* The last step ends navigation and moves the patient to waiting, so it
+              should not read like every step before it. */}
+          <span>{loading ? 'מעבד...' : viewOrder >= data.total_steps ? 'הגעתי ליעד' : 'אני כאן'}</span>
         </button>
 
         {confirmError && (
