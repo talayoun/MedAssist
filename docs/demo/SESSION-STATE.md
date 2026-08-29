@@ -49,14 +49,37 @@ page. Also tightened the queue card's RTL spacing at the user's request.
 
 All suites green after: 83 API, 18 patient (1 pre-existing skip), 15 back office, typecheck clean.
 
-## Phase 2 — not started
+## Phase 2 — done 2026-08-30
 
-Fix the walkthrough list top down, blocker first. Each item its own branch, `--no-ff` merge back.
+The whole walkthrough list, in three branches merged into `backlog-fixes`. Plan at
+`~/.claude/plans/sparkling-bubbling-puppy.md`.
 
-Still open from that list, most visible first: the free-text `סוג פרוצדורה` field whose own
-suggestions do not match the seed (blocker), the unfiltered forms picker, forms that attach only when
-staff ticks them, long form labels crushing the row layout, a required consent the patient cannot act
-on, and the department arrival details that never surface.
+- **The procedure is a picker.** `GET /api/staff/procedure-types` lists the seeded checklist
+  templates for non-admin staff (the admin listing is admin-gated and the demo runs as `eyes@`), and
+  the modal selects from it. Hebrew names come from `PROCEDURE_LABELS` in shared-types, since nothing
+  in the database holds a display name; an unknown slug falls back to itself. The patient checklist
+  reads `לקראת: ניתוח קטרקט` instead of the raw slug.
+- **The procedure drives the paperwork.** The forms picker shows that procedure's items plus the
+  universal ones, and its required items are ticked by default. A patient created in the back office
+  now arrives with the same documents as a seeded one, which is also what makes the name prefill
+  visible without anyone remembering to tick `שם מלא`.
+- **Form cards restacked.** Label on its own full-width line with the status trailing its last line,
+  upload buttons on the row beneath. A required consent still waiting on the clinic says
+  `המרפאה תכין את הטופס עבורך, לא נדרשת פעולה מצדך` instead of showing a dead `ממתין`.
+- **Cosmetics.** The last navigation step reads `הגעתי ליעד`. The login page probes the session once
+  rather than twice (StrictMode was double-firing the bootstrap effect).
+
+Suites after: 87 API, 30 patient (1 pre-existing skip), 18 back office, typecheck clean across all
+three apps. Eleven new specs, each verified red first.
+
+**E4 turned out not to be a live hole.** Creating an appointment already rejects a procedure with no
+template, and a template in use by an active appointment cannot be deleted, so the 500 is
+unreachable. Both guards are now pinned by `tests/api/staff-procedure-types.spec.ts`; the null check
+added in `checklist.router.ts` is defence behind them.
+
+**Not fixed, and worth a look before the demo:** the walkthrough's "department arrival details never
+surface" item. The arrival screen inside navigation does show address, parking and transit, so the
+finding may have meant the entry screen specifically. Confirm on the phone rather than assuming.
 
 ## Dry-run review fixes — done 2026-08-30
 
