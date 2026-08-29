@@ -12,6 +12,15 @@ function CheckIcon() {
   );
 }
 
+// Points right: the start edge in an RTL layout.
+function BackIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a202c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 function PinIcon({ color }: { color: string }) {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -101,8 +110,15 @@ export default function Navigation() {
 
   useEffect(() => { loadNavigation(); }, [loadNavigation]);
 
+  // "אני כאן" on a step the patient has already confirmed is just forward movement:
+  // the server knows about that step, so it only moves the view. Only the step the
+  // server is actually waiting on goes over the wire.
   const handleConfirm = useCallback(async () => {
     if (!token || !data || loading || data.completed) return;
+    if (viewOrder !== null && viewOrder < data.current_step) {
+      setViewOrder(viewOrder + 1);
+      return;
+    }
     const currentStep = stepCache.current.get(data.current_step) ?? data.steps.find((s) => s.is_current);
     if (!currentStep) return;
     setLoading(true);
@@ -130,7 +146,7 @@ export default function Navigation() {
     } finally {
       setLoading(false);
     }
-  }, [token, data, loading, navigate, loadNavigation]);
+  }, [token, data, loading, viewOrder, navigate, loadNavigation]);
 
   const handleWaze = useCallback(() => {
     if (!data?.parking_coordinates) return;
@@ -292,52 +308,50 @@ export default function Navigation() {
     );
   }
 
-  const displayedStep = stepCache.current.get(viewOrder) ?? data.steps.find((s) => s.is_current) ?? data.steps[0];
-  const isPeekingPast = viewOrder < data.current_step;
-  const canGoOlder = stepCache.current.has(viewOrder - 1);
+  const displayedStep =
+    data.steps.find((s) => s.order === viewOrder)
+    ?? stepCache.current.get(viewOrder)
+    ?? data.steps.find((s) => s.is_current)
+    ?? data.steps[0];
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
       <AppHeader />
       <div className="max-w-[480px] w-full mx-auto px-4 py-6 flex-1">
-        <div className="text-right mb-5">
-          <h1 className="text-[28px] font-bold text-text mb-2">ניווט בבית החולים</h1>
-          <p className="text-base text-text-muted">שלב {viewOrder} מתוך {data.total_steps}</p>
-        </div>
-
-        {isPeekingPast && (
-          <div className="bg-[#f0fdfa] border border-teal rounded-[10px] px-3 py-2 text-sm text-teal-hover text-center mb-3">
-            צופה בשלב קודם — ההתקדמות שלך נשמרה בשלב {data.current_step}
+        <div className="flex items-start gap-2 mb-5">
+          {data.arrival && (
+            <button
+              type="button"
+              onClick={() => { setArrivedAtClinic(false); setViewOrder(data.current_step); }}
+              aria-label="חזרה לדרך לבית החולים"
+              className="min-w-11 min-h-11 flex items-center justify-center rounded-xl border border-border bg-white shrink-0"
+            >
+              <BackIcon />
+            </button>
+          )}
+          <div className="flex-1 text-right">
+            <h1 className="text-[28px] font-bold text-text mb-2">ניווט בבית החולים</h1>
+            <p className="text-base text-text-muted">שלב {viewOrder} מתוך {data.total_steps}</p>
           </div>
-        )}
+        </div>
 
         <div className="bg-white border-2 border-teal rounded-2xl p-5 mb-5">
           <p className="text-xl font-semibold text-[#1a202c] text-right mb-4 leading-normal">{displayedStep.instruction}</p>
           <StepPhoto step={displayedStep} />
         </div>
 
-        <Dots total={data.total_steps} current={viewOrder} filledUpTo={data.current_step} />
+        <Dots total={data.total_steps} current={viewOrder} filledUpTo={viewOrder} />
 
-        {isPeekingPast ? (
-          <button
-            type="button"
-            onClick={() => setViewOrder(data.current_step)}
-            className="w-full min-h-16 flex items-center justify-center gap-3 bg-teal text-white rounded-2xl text-xl font-bold mb-3 shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
-          >
-            <span>חזרה לשלב הנוכחי</span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleConfirm}
-            disabled={loading}
-            className="w-full min-h-16 flex items-center justify-center gap-3 bg-teal text-white rounded-2xl text-xl font-bold mb-3 shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
-            style={{ opacity: loading ? 0.7 : 1 }}
-          >
-            <CheckIcon />
-            <span>{loading ? 'מעבד...' : 'אני כאן'}</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleConfirm}
+          disabled={loading}
+          className="w-full min-h-16 flex items-center justify-center gap-3 bg-teal text-white rounded-2xl text-xl font-bold mb-3 shadow-[0_2px_6px_rgba(13,148,136,0.35)]"
+          style={{ opacity: loading ? 0.7 : 1 }}
+        >
+          <CheckIcon />
+          <span>{loading ? 'מעבד...' : 'אני כאן'}</span>
+        </button>
 
         {confirmError && (
           <p role="alert" className="text-error text-base mb-3 text-right">
@@ -345,16 +359,14 @@ export default function Navigation() {
           </p>
         )}
 
-        {canGoOlder && (
-          <button
-            type="button"
-            onClick={() => setViewOrder((v) => (v ?? 1) - 1)}
-            disabled={loading}
-            className="w-full min-h-14 flex items-center justify-center gap-2 bg-white border border-border rounded-2xl text-[17px] font-bold text-[#1a202c] mb-5"
-          >
-            <span>שלב קודם</span>
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setViewOrder((v) => (v ?? 1) - 1)}
+          disabled={loading || viewOrder <= 1}
+          className="w-full min-h-14 flex items-center justify-center gap-2 bg-white border border-border rounded-2xl text-[17px] font-bold text-[#1a202c] mb-5 disabled:opacity-40"
+        >
+          <span>השלב הקודם</span>
+        </button>
 
         {!data.arrival && data.parking_coordinates && (
           <div className="flex flex-col gap-3">
