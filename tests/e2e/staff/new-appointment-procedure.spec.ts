@@ -42,6 +42,8 @@ test.describe('staff: the new-appointment modal picks a real procedure', () => {
 
     const select = procedureSelect(modal);
     await expect(select).toBeVisible();
+    // The list is fetched, so the placeholder option is on screen first.
+    await expect(select.locator('option').first()).not.toHaveText('אין פרוצדורות זמינות');
 
     const options = await select.locator('option').allTextContents();
     expect(options).toContain('ניתוח קטרקט');
