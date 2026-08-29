@@ -156,7 +156,7 @@ GET /visit/:token/navigation
 }
 ```
 
-Note: `steps` array contains only the current step and the next step (for prefetch). The full route is not exposed to the client at once.
+Note: `steps` contains the steps the patient has already reached, plus the next one (for prefetch), so the patient can walk back through the route after a reload. Steps beyond the next one are not exposed.
 
 ### Confirm step arrival (advance to next step)
 
