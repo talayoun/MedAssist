@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { createAppointment, listStaffFormTemplates, CreateAppointmentBody, ApiError } from '../../services/api';
-import type { Department, FormTemplateItemDTO } from '@medassist/shared-types';
+import { createAppointment, listStaffFormTemplates, listProcedureTypes, CreateAppointmentBody, ApiError } from '../../services/api';
+import type { Department, FormTemplateItemDTO, ProcedureTypeDTO } from '@medassist/shared-types';
+import { procedureLabel } from '@medassist/shared-types';
 
 type Category = 'bring' | 'fast' | 'medication' | 'other';
 
@@ -28,7 +29,8 @@ export default function NewAppointment({
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [departmentId, setDepartmentId] = useState(defaultDepartmentId ?? '');
-  const [procedureType, setProcedureType] = useState('pre-op-cardiac');
+  const [procedureType, setProcedureType] = useState('');
+  const [procedures, setProcedures] = useState<ProcedureTypeDTO[]>([]);
   const [visitDatetime, setVisitDatetime] = useState(defaultVisitDateTime());
   const [customItems, setCustomItems] = useState<CustomItemDraft[]>([]);
   const [sendNow, setSendNow] = useState(true);
@@ -42,7 +44,32 @@ export default function NewAppointment({
     listStaffFormTemplates()
       .then(({ items }) => setFormTemplates(items))
       .catch(() => setTemplateLoadError(true));
+
+    // The procedure decides which forms are offered, so it has to be a real
+    // seeded procedure rather than whatever someone types.
+    listProcedureTypes()
+      .then(({ procedures }) => {
+        setProcedures(procedures);
+        setProcedureType((prev) => prev || procedures[0]?.procedure_type || '');
+      })
+      .catch(() => setProcedures([]));
   }, []);
+
+  // Forms for this procedure, plus the ones every patient gets.
+  const availableFormTemplates = formTemplates.filter(
+    (tpl) => tpl.procedure_type === null || tpl.procedure_type === procedureType,
+  );
+
+  // Required paperwork is attached by default: leaving it opt-in meant a patient
+  // created here arrived with almost nothing to fill in. Staff can still untick.
+  useEffect(() => {
+    if (formTemplates.length === 0 || !procedureType) return;
+    setSelectedFormIds(
+      formTemplates
+        .filter((tpl) => (tpl.procedure_type === null || tpl.procedure_type === procedureType) && tpl.required)
+        .map((tpl) => tpl.id),
+    );
+  }, [procedureType, formTemplates]);
 
   function addCustomItem() {
     setCustomItems((prev) => [
@@ -67,7 +94,7 @@ export default function NewAppointment({
     const normalizedPhone = normalizeIsraeliPhone(phone.trim());
     if (!normalizedPhone) { setError('מספר טלפון לא תקין (למשל 0526068400)'); return; }
     if (!departmentId) { setError('נא לבחור מחלקה'); return; }
-    if (!procedureType.trim()) { setError('נא להזין סוג פרוצדורה'); return; }
+    if (!procedureType.trim()) { setError('נא לבחור סוג פרוצדורה'); return; }
     if (!visitDatetime) { setError('נא לבחור מועד ביקור'); return; }
 
     const cleanedCustomItems = customItems
@@ -183,27 +210,19 @@ export default function NewAppointment({
 
           <label style={styles.field}>
             <span style={styles.label}>סוג פרוצדורה</span>
-            <input
+            <select
               value={procedureType}
               onChange={(e) => setProcedureType(e.target.value)}
-              list="procedure-type-options"
-              placeholder="pre-op-cardiac"
               style={styles.input}
-              autoComplete="off"
-            />
+            >
+              {procedures.length === 0 && <option value="">אין פרוצדורות זמינות</option>}
+              {procedures.map((p) => (
+                <option key={p.procedure_type} value={p.procedure_type}>
+                  {procedureLabel(p.procedure_type)}
+                </option>
+              ))}
+            </select>
           </label>
-          <datalist id="procedure-type-options">
-            <option value="pre-op-cardiac" />
-            <option value="pre-op-orthopedic" />
-            <option value="pre-op-general" />
-            <option value="pre-op-gastro" />
-            <option value="pre-op-neuro" />
-            <option value="colonoscopy" />
-            <option value="gastroscopy" />
-            <option value="cataract" />
-            <option value="mri" />
-            <option value="biopsy" />
-          </datalist>
 
           <label style={styles.field}>
             <span style={styles.label}>מועד ביקור</span>
@@ -262,11 +281,11 @@ export default function NewAppointment({
             <span style={styles.label}>טפסים לשליחה למטופל (אופציונלי)</span>
             {templateLoadError ? (
               <p style={{ fontSize: 13, color: '#b91c1c', margin: 0 }}>לא ניתן לטעון טפסים</p>
-            ) : formTemplates.length === 0 ? (
+            ) : availableFormTemplates.length === 0 ? (
               <p style={{ fontSize: 13, color: '#9ca3af', margin: 0 }}>אין טפסים זמינים</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {formTemplates.map((tpl) => (
+                {availableFormTemplates.map((tpl) => (
                   <label key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#374151' }}>
                     <input
                       type="checkbox"

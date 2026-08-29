@@ -50,6 +50,12 @@ router.post('/progress', requireMagicLinkToken, async (req: Request, res: Respon
       'SELECT id FROM checklist_templates WHERE procedure_type = $1 LIMIT 1',
       [appt.procedure_type]
     );
+    // A procedure with no template behind it (a typo from the days when the
+    // field was free text) used to reach the patient as a raw 500.
+    if (!template) {
+      res.status(404).json({ error: 'checklist_not_found' });
+      return;
+    }
 
     const result = await saveProgress(
       appointmentId,

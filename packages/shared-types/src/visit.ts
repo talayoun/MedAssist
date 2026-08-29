@@ -219,3 +219,28 @@ export const FormTemplateItemDTOSchema = z.object({
 });
 
 export type FormTemplateItemDTO = z.infer<typeof FormTemplateItemDTOSchema>;
+
+// ─── Procedure types ─────────────────────────────────────────────────────────
+
+/**
+ * Hebrew names for the seeded procedure slugs. Nothing in the database holds a
+ * display name, and both the back office and the patient app were showing the
+ * raw slug. A procedure created by an admin falls back to its own slug.
+ */
+export const PROCEDURE_LABELS: Record<string, string> = {
+  'cataract-surgery': 'ניתוח קטרקט',
+  'pre-op-cardiac': 'הכנה לניתוח לב',
+  'general-baseline': 'בדיקה כללית',
+};
+
+export function procedureLabel(slug: string | null | undefined): string {
+  if (!slug) return '';
+  return PROCEDURE_LABELS[slug] ?? slug;
+}
+
+export const ProcedureTypeDTOSchema = z.object({
+  procedure_type: z.string(),
+  item_count: z.number().int(),
+});
+
+export type ProcedureTypeDTO = z.infer<typeof ProcedureTypeDTOSchema>;

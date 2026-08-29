@@ -27,6 +27,30 @@ const CreateAppointmentSchema = z.object({
   form_template_ids: z.array(z.string().uuid()).max(50).optional(),
 });
 
+/**
+ * GET /api/staff/procedure-types
+ *
+ * The procedures a patient can actually be booked for: every non-archived
+ * checklist template. The admin listing is admin-only, and the staff who create
+ * patients are not admins, so the modal needs its own way to ask.
+ */
+router.get('/procedure-types', requireStaffAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query<{ procedure_type: string; item_count: string }>(
+      `SELECT procedure_type, jsonb_array_length(items_json) AS item_count
+       FROM checklist_templates
+       WHERE archived = false
+       ORDER BY procedure_type`,
+    );
+    res.json({
+      procedures: rows.map((r) => ({
+        procedure_type: r.procedure_type,
+        item_count: Number(r.item_count),
+      })),
+    });
+  } catch (err) { next(err); }
+});
+
 /** GET /api/staff/form-templates — lightweight list for the new-appointment modal */
 router.get('/form-templates', requireStaffAuth, async (_req: Request, res: Response, next: NextFunction) => {
   try {
