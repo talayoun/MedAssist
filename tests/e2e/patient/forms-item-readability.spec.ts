@@ -67,7 +67,7 @@ test.describe('patient: form items stay readable', () => {
   test('a long label gets the full width of its card', async ({ page }) => {
     await page.goto(`/visit/${token}/forms`);
 
-    const label = page.getByText(LONG_LABEL, { exact: true });
+    const label = page.getByTestId('form-item-label').filter({ hasText: LONG_LABEL });
     await expect(label).toBeVisible({ timeout: 10_000 });
 
     const labelBox = await label.boundingBox();
@@ -83,7 +83,7 @@ test.describe('patient: form items stay readable', () => {
   test('a consent the clinic has not prepared explains itself', async ({ page }) => {
     await page.goto(`/visit/${token}/forms`);
 
-    const consent = page.getByText(PENDING_CONSENT, { exact: true });
+    const consent = page.getByTestId('form-item-label').filter({ hasText: PENDING_CONSENT });
     await expect(consent).toBeVisible({ timeout: 10_000 });
 
     const card = consent.locator('xpath=ancestor::div[contains(@class,"rounded")][1]');

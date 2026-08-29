@@ -285,18 +285,29 @@ function FormDocumentItem({
   // only thing missing was telling them why it is stuck.
   const awaitingClinic = item.item_type === 'staff_upload_sign' && item.status === 'pending';
 
+  // An item waiting on the clinic renders no control at all, so its card should
+  // not keep an empty action row under the label.
+  const hasActions = item.item_type === 'patient_upload' || item.status === 'staff_uploaded';
+
   return (
     <>
       <Card variant={isComplete ? 'success' : 'default'} className="flex flex-col gap-3 !p-4">
         <div className="text-right">
-          <p className="text-[17px] font-semibold text-text leading-6">{item.label}</p>
+          <p className="text-[17px] font-semibold text-text leading-6">
+            <span data-testid="form-item-label">{item.label}</span>
+            {/* Trails the label text, so it lands on the sentence's last line
+                instead of taking a row of its own. */}
+            <span className={`text-[13px] font-normal whitespace-nowrap mr-2 ${isComplete ? 'text-success' : 'text-[#718096]'}`}>
+              {statusLabel}
+            </span>
+          </p>
           {awaitingClinic && (
             <p className="text-sm text-text-muted mt-1">המרפאה תכין את הטופס עבורך, לא נדרשת פעולה מצדך</p>
           )}
         </div>
+        {(hasActions || uploadError) && (
         <div className="flex items-center gap-2.5 flex-wrap">
           {uploadError && <span className="text-xs text-error">{uploadError}</span>}
-          <span className={`text-[13px] whitespace-nowrap ${isComplete ? 'text-success' : 'text-[#718096]'}`}>{statusLabel}</span>
           {item.item_type === 'patient_upload' && !isComplete && (
             <>
               <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -346,6 +357,7 @@ function FormDocumentItem({
             </a>
           )}
         </div>
+        )}
       </Card>
 
       {confirmDelete && (
