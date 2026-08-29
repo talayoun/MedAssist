@@ -43,9 +43,11 @@ test('staff can onboard a new elective patient via the UI', async ({ page }) => 
   const departmentSelect = modal.locator('select').first();
   await departmentSelect.selectOption({ label: 'קרדיולוגיה' });
 
-  // procedure_type defaults to 'pre-op-cardiac' — leave it
-  // visit_datetime defaults to +3 days — leave it
-  // send_now checkbox is on by default — leave it
+  // The procedure is a picker now, so choose one rather than trusting a default.
+  await modal.locator('select').nth(1).selectOption({ label: 'הכנה לניתוח לב' });
+
+  // visit_datetime defaults to +3 days, leave it
+  // send_now checkbox is on by default, leave it
 
   await page.getByRole('button', { name: 'צור פגישה' }).click();
 

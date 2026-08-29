@@ -6,6 +6,7 @@ import { Card } from '../../components/ui/Card';
 import { CheckboxRow } from '../../components/ui/CheckboxRow';
 import { StatusPill } from '../../components/ui/StatusPill';
 import type { ChecklistResponse, ChecklistItem } from '@medassist/shared-types';
+import { procedureLabel } from '@medassist/shared-types';
 
 // Figma groups checklist items into 3 headings, in this fixed order: 'fast' and
 // 'medication' share a heading even though they're separate categories server-side.
@@ -143,7 +144,7 @@ export default function Checklist() {
         <div className="text-right mb-6">
           <h1 className="text-[28px] font-bold text-text mb-2">מה להביא ולהכין</h1>
           <p className="text-base text-text-muted">
-            {isUrgentWindow ? '⚠️ הביקור שלך בעוד פחות מ-24 שעות: בדוק פריטים דחופים' : `לקראת: ${data.procedure_type}`}
+            {isUrgentWindow ? '⚠️ הביקור שלך בעוד פחות מ-24 שעות: בדוק פריטים דחופים' : `לקראת: ${procedureLabel(data.procedure_type)}`}
           </p>
         </div>
 

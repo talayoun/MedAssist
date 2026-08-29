@@ -1,7 +1,7 @@
 import type {
   StaffUser, QueueResponse, PatientStationDTO, AppointmentPhase, Department,
   TimingRule, AdminRoute, AdminRouteStep, ChecklistTemplate,
-  FormItemDTO, StaffFormsResponseDTO, FormTemplateItemDTO,
+  FormItemDTO, StaffFormsResponseDTO, FormTemplateItemDTO, ProcedureTypeDTO,
   DepartmentArrivalInfo, UpdateDepartmentArrivalInfoRequest,
 } from '@medassist/shared-types';
 import type { z } from 'zod';
@@ -461,6 +461,10 @@ export function exportForms(appointmentId: string): Promise<{ pdf_url: string; g
 
 export function listStaffFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
   return apiRequest('/staff/form-templates');
+}
+
+export function listProcedureTypes(): Promise<{ procedures: ProcedureTypeDTO[] }> {
+  return apiRequest('/staff/procedure-types');
 }
 
 // ─── Admin: Form Templates ───────────────────────────────────────────────────
