@@ -53,6 +53,38 @@ All suites green after: 83 API, 18 patient (1 pre-existing skip), 15 back office
 
 Fix the walkthrough list top down, blocker first. Each item its own branch, `--no-ff` merge back.
 
+Still open from that list, most visible first: the free-text `סוג פרוצדורה` field whose own
+suggestions do not match the seed (blocker), the unfiltered forms picker, forms that attach only when
+staff ticks them, long form labels crushing the row layout, a required consent the patient cannot act
+on, and the department arrival details that never surface.
+
+## Dry-run review fixes — done 2026-08-30
+
+Separate from the walkthrough list: feedback from the project dry run, merged into `backlog-fixes`
+as four branches. Plan at `~/.claude/plans/sparkling-bubbling-puppy.md`.
+
+- **Forms pre-fill.** `שם מלא` opens filled from the visit and stays editable. Matching is by label,
+  since template items carry no field key; the value is persisted so the submit gate and the staff
+  PDF agree with what the patient sees. The database holds nothing else usable (name and phone only,
+  no national ID or email), so the name is the whole list today.
+- **Navigation.** `אני כאן` and `השלב הקודם` are both always on screen, the peek state and its
+  "return to current step" gate are gone, and confirming an already-confirmed step only moves the
+  view. The dots follow the viewed step. A back arrow leaves internal navigation for the
+  route-to-the-hospital screen and clears the arrival state. `GET /visit/:token/navigation` now
+  returns the steps already reached plus the next one, so walking back survives a reload; contract
+  note updated.
+- **Scroll.** Every screen change starts at the top: a route-level reset plus the navigation page's
+  own sub-screen and step state.
+- **Em dashes.** None left in either app, comments included.
+
+Five new patient specs (`navigation-back-forward`, `scroll-reset`), each verified red before the fix.
+Suites after: 83 API, 23 patient (1 pre-existing skip), 15 back office, typecheck clean.
+
+One API test, `admin-navigation-routes` "returns 409 when route is the default for an active
+appointment dept", fails on a residue-heavy database: it takes whichever default route comes first,
+and with 14 routes around that was the protected demo route, so the 409 says `item_protected`. Green
+on a reset database. Another reason the order stays: run the tests, then reset, then demo.
+
 ## Phase 3 — not started, highest remaining risk
 
 The network dress rehearsal on the real phone. Do it early, not the night before.
