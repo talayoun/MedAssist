@@ -36,7 +36,7 @@ function TrashIcon() {
   );
 }
 
-// ─── Text field / consent / yes-no-list — patient-entered intake data ────────
+// ─── Text field / consent / yes-no-list: patient-entered intake data ────────
 
 function TextFieldItem({ item, token, onUpdate }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void }) {
   const initial = (item.value as { text?: string } | null)?.text ?? '';
@@ -55,7 +55,7 @@ function TextFieldItem({ item, token, onUpdate }: { item: FormItemDTO; token: st
       const updated = await setFormValue(token, item.id, { item_type: 'text_field', value: { text } });
       onUpdate(updated);
     } catch {
-      // non-fatal — keep local text, retry on next blur
+      // non-fatal, keep local text, retry on next blur
     } finally {
       setSaving(false);
     }
@@ -211,7 +211,7 @@ function ConsentItem({ item, token, onUpdate }: { item: FormItemDTO; token: stri
   );
 }
 
-// ─── Documents — patient_upload / staff_upload_sign ───────────────────────────
+// ─── Documents: patient_upload / staff_upload_sign ───────────────────────────
 
 function FormDocumentItem({
   item,
@@ -394,7 +394,7 @@ function renderItem(item: FormItemDTO, token: string, onUpdate: (u: FormItemDTO)
 
 // A required item blocks the CTA only when the patient has a control to act on.
 // A staff_upload_sign item still at 'pending' has no rendered affordance (staff has
-// not uploaded the blank form yet) — gating on it would strand the patient here.
+// not uploaded the blank form yet), gating on it would strand the patient here.
 function blocksSubmit(item: FormItemDTO): boolean {
   if (!item.required || item.status === 'patient_submitted') return false;
   if (item.item_type === 'staff_upload_sign' && item.status === 'pending') return false;
@@ -460,7 +460,7 @@ export default function Forms() {
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
-      <AppHeader offlineMessage="אין חיבור לאינטרנט — לא ניתן לשלוח טפסים" />
+      <AppHeader offlineMessage="אין חיבור לאינטרנט, לא ניתן לשלוח טפסים" />
       <div className="max-w-[480px] w-full mx-auto px-4 pt-4 pb-8">
         <div className="text-right mb-4">
           <h1 className="text-[28px] font-bold text-text mb-2">מסמכים</h1>

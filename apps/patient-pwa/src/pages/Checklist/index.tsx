@@ -7,7 +7,7 @@ import { CheckboxRow } from '../../components/ui/CheckboxRow';
 import { StatusPill } from '../../components/ui/StatusPill';
 import type { ChecklistResponse, ChecklistItem } from '@medassist/shared-types';
 
-// Figma groups checklist items into 3 headings, in this fixed order — 'fast' and
+// Figma groups checklist items into 3 headings, in this fixed order: 'fast' and
 // 'medication' share a heading even though they're separate categories server-side.
 const GROUP_ORDER: { key: string; label: string; categories: ChecklistItem['category'][] }[] = [
   { key: 'bring', label: 'מה להביא', categories: ['bring'] },
@@ -101,7 +101,7 @@ export default function Checklist() {
   const allComplete = totalCount > 0 && completedCount === totalCount;
   const isUrgentWindow = data.hours_until_visit !== null && data.hours_until_visit < 24;
 
-  // No checklist items — typically the ER track, which has no pre-visit preparation.
+  // No checklist items, typically the ER track, which has no pre-visit preparation.
   if (totalCount === 0) {
     return (
       <div className="min-h-screen flex flex-col bg-bg">
@@ -143,7 +143,7 @@ export default function Checklist() {
         <div className="text-right mb-6">
           <h1 className="text-[28px] font-bold text-text mb-2">מה להביא ולהכין</h1>
           <p className="text-base text-text-muted">
-            {isUrgentWindow ? '⚠️ הביקור שלך בעוד פחות מ-24 שעות — בדוק פריטים דחופים' : `לקראת: ${data.procedure_type}`}
+            {isUrgentWindow ? '⚠️ הביקור שלך בעוד פחות מ-24 שעות: בדוק פריטים דחופים' : `לקראת: ${data.procedure_type}`}
           </p>
         </div>
 

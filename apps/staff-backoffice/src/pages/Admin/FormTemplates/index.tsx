@@ -392,7 +392,7 @@ export function FormTemplates() {
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>{item.required ? '✓' : ''}</td>
                   <td style={{ padding: '10px 4px', textAlign: 'center' }}>
                     {!UPLOAD_TYPES.includes(item.item_type as ItemType) ? (
-                      <span style={{ color: '#cbd5e1' }}>—</span>
+                      <span style={{ color: '#cbd5e1' }}>-</span>
                     ) : item.blank_form_url ? (
                       <button
                         type="button"

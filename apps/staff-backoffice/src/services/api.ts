@@ -243,7 +243,7 @@ export function listStaff(departmentId?: string): Promise<{ staff: StaffUser[] }
   return apiRequest(`/admin/staff${qs}`);
 }
 
-// ─── Admin — Navigation Routes ────────────────────────────────────────────────
+// ─── Admin: Navigation Routes ────────────────────────────────────────────────
 
 export function listNavigationRoutes(
   includeArchived = false
@@ -433,7 +433,7 @@ export function listTimingRules(): Promise<{ rules: TimingRule[] }> {
   return apiRequest('/admin/timing-rules');
 }
 
-// ─── Staff — Forms ────────────────────────────────────────────────────────────
+// ─── Staff: Forms ────────────────────────────────────────────────────────────
 
 export function getStaffForms(appointmentId: string): Promise<StaffFormsResponseDTO> {
   return apiRequest(`/staff/patients/${appointmentId}/forms`);
@@ -457,13 +457,13 @@ export function exportForms(appointmentId: string): Promise<{ pdf_url: string; g
   return apiRequest(`/staff/patients/${appointmentId}/forms/export`, { method: 'POST' });
 }
 
-// ─── Staff — Form Templates (lightweight list for new-appointment modal) ─────
+// ─── Staff: Form Templates (lightweight list for new-appointment modal) ─────
 
 export function listStaffFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
   return apiRequest('/staff/form-templates');
 }
 
-// ─── Admin — Form Templates ───────────────────────────────────────────────────
+// ─── Admin: Form Templates ───────────────────────────────────────────────────
 
 export function listFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
   return apiRequest('/admin/form-templates');
@@ -512,7 +512,7 @@ export async function uploadFormTemplateBlank(id: string, file: File): Promise<F
   return body as FormTemplateItemDTO;
 }
 
-// ─── Admin — Departments (clinic-arrival info) ────────────────────────────────
+// ─── Admin: Departments (clinic-arrival info) ────────────────────────────────
 
 export function listDepartments(): Promise<{ departments: DepartmentArrivalInfo[] }> {
   return apiRequest('/admin/departments');
