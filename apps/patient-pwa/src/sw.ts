@@ -1,4 +1,5 @@
-// Service Worker: stub (implemented in Phase 12, T080)
-// vite-plugin-pwa injectManifest will inject self.__WB_MANIFEST here
+import { precacheAndRoute } from 'workbox-precaching';
 
-export {};
+declare const self: { __WB_MANIFEST: Array<{ url: string; revision: string | null }> };
+
+precacheAndRoute(self.__WB_MANIFEST);
