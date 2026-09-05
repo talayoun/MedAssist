@@ -30,7 +30,7 @@ function toDraft(dept: DepartmentArrivalInfo): EditDraft {
 }
 
 function truncate(text: string | null, max = 40): string {
-  if (!text) return '—';
+  if (!text) return '-';
   return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
@@ -109,7 +109,7 @@ export function Departments() {
       <div style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '1.375rem', fontWeight: 700, margin: 0 }}>פרטי הגעה למחלקות</h1>
         <p style={{ fontSize: '0.875rem', color: '#64748b', marginTop: '6px' }}>
-          כתובת, חניה, תחבורה ציבורית ומיקום במפה — מוצג למטופל לפני שלבי הניווט בתוך בית החולים.
+          כתובת, חניה, תחבורה ציבורית ומיקום במפה, מוצג למטופל לפני שלבי הניווט בתוך בית החולים.
         </p>
       </div>
 
@@ -185,7 +185,7 @@ export function Departments() {
                             <input
                               value={draft.transit_info}
                               onChange={(e) => setDraft((d) => d && ({ ...d, transit_info: e.target.value }))}
-                              placeholder="קווי אוטובוס 12, 45 — תחנה &quot;בית החולים&quot;"
+                              placeholder="קווי אוטובוס 12, 45: תחנה &quot;בית החולים&quot;"
                               style={{ padding: '8px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px' }}
                             />
                           </label>

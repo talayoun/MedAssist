@@ -1,0 +1,460 @@
+<title>MedAssist Fix Backlog</title>
+<style>
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+
+  :root {
+    --bg: #F6F7F6;
+    --surface: #FFFFFF;
+    --surface-alt: #EFF3F1;
+    --ink: #10201C;
+    --ink-muted: #4B5D57;
+    --ink-faint: #7A8B85;
+    --border: #DCE6E1;
+    --border-strong: #C2D2CB;
+    --accent: #0F766E;
+    --accent-fill: #0D9488;
+    --accent-soft: #E1F3F0;
+    --critical: #A32A20;
+    --critical-fill: #B3261E;
+    --critical-soft: #FBEAE8;
+    --warning: #7A4D08;
+    --warning-fill: #92590A;
+    --warning-soft: #FBF0DD;
+    --ok: #1E7A4C;
+    --ok-fill: #1E7A4C;
+    --ok-soft: #E7F5EC;
+    --wip: #6D4FC2;
+    --wip-soft: #EFEAFB;
+    --code-bg: #10201C;
+    --code-ink: #DCEAE5;
+    --shadow: 0 1px 2px rgba(16, 32, 28, 0.06), 0 8px 24px -12px rgba(16, 32, 28, 0.14);
+    --font-display: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-body: ui-sans-serif, -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, "Roboto Mono", monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0D1512;
+      --surface: #131F1B;
+      --surface-alt: #182823;
+      --ink: #E7EEEB;
+      --ink-muted: #9BB0A9;
+      --ink-faint: #6C817A;
+      --border: #24352F;
+      --border-strong: #33473F;
+      --accent: #5EEAD4;
+      --accent-fill: #2DD4BF;
+      --accent-soft: #16302B;
+      --critical: #F2867F;
+      --critical-fill: #E15349;
+      --critical-soft: #2A1512;
+      --warning: #EFC275;
+      --warning-fill: #D99A2B;
+      --warning-soft: #2A2011;
+      --ok: #6FDBA0;
+      --ok-fill: #6FDBA0;
+      --ok-soft: #12241A;
+      --wip: #B7A4F2;
+      --wip-soft: #241C33;
+      --code-bg: #0A130F;
+      --code-ink: #B9D6CC;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0D1512;
+    --surface: #131F1B;
+    --surface-alt: #182823;
+    --ink: #E7EEEB;
+    --ink-muted: #9BB0A9;
+    --ink-faint: #6C817A;
+    --border: #24352F;
+    --border-strong: #33473F;
+    --accent: #5EEAD4;
+    --accent-fill: #2DD4BF;
+    --accent-soft: #16302B;
+    --critical: #F2867F;
+    --critical-fill: #E15349;
+    --critical-soft: #2A1512;
+    --warning: #EFC275;
+    --warning-fill: #D99A2B;
+    --warning-soft: #2A2011;
+    --ok: #6FDBA0;
+    --ok-fill: #6FDBA0;
+    --ok-soft: #12241A;
+    --wip: #B7A4F2;
+    --wip-soft: #241C33;
+    --code-bg: #0A130F;
+    --code-ink: #B9D6CC;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent-fill); outline-offset: 2px; }
+
+  .ref {
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    background: var(--code-bg);
+    color: var(--code-ink);
+    padding: 0.1em 0.45em;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .shell { max-width: 900px; margin: 0 auto; padding: 0 24px 96px; }
+
+  header.masthead { padding: 56px 0 28px; border-bottom: 1px solid var(--border); }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  h1.title {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(26px, 4vw, 38px);
+    letter-spacing: -0.015em;
+    margin: 10px 0 8px;
+    text-wrap: balance;
+  }
+
+  .subtitle { color: var(--ink-muted); font-size: 16px; max-width: 66ch; margin: 0 0 20px; }
+
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 8px 20px;
+    font-size: 13.5px; color: var(--ink-faint); font-family: var(--font-mono);
+  }
+  .meta-row a { color: var(--ink-faint); }
+  .meta-row strong { color: var(--ink-muted); font-weight: 600; }
+
+  /* progress bar */
+  .progress-wrap { margin: 28px 0 4px; }
+  .progress-label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-faint); margin-bottom: 6px;
+  }
+  .progress-label strong { color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+  .bar { height: 8px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border); overflow: hidden; display: flex; }
+  .bar .seg-done { background: var(--ok-fill); }
+  .bar .seg-wip { background: var(--wip); }
+  .legend { display: flex; gap: 16px; margin-top: 8px; font-size: 12px; color: var(--ink-faint); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+
+  section.block { margin: 44px 0; }
+  h2.block-title {
+    font-family: var(--font-display); font-size: 20px; font-weight: 700;
+    letter-spacing: -0.01em; margin: 0 0 4px;
+  }
+  .block-dek { color: var(--ink-muted); font-size: 14.5px; margin: 0 0 20px; }
+
+  /* status pill */
+  .status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+  }
+  .status.done { background: var(--ok-soft); color: var(--ok); }
+  .status.wip  { background: var(--wip-soft); color: var(--wip); }
+  .status.open { background: var(--surface-alt); color: var(--ink-faint); }
+  .status.closed { background: var(--surface-alt); color: var(--ink-muted); border: 1px solid var(--border-strong); }
+
+  .sev {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-family: var(--font-mono); font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 3px 8px; border-radius: 999px; white-space: nowrap;
+  }
+  .sev.critical { background: var(--critical-soft); color: var(--critical); }
+  .sev.high { background: var(--warning-soft); color: var(--warning); }
+  .sev.medium { background: var(--surface-alt); color: var(--ink-muted); }
+
+  /* item row */
+  .item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 14px 16px;
+    margin-bottom: 10px;
+  }
+  .item.is-done { opacity: 0.62; }
+  .item.is-wip { border-color: var(--wip); box-shadow: 0 0 0 1px var(--wip) inset; }
+
+  .item-top {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px;
+  }
+  .item-id { font-family: var(--font-mono); font-weight: 700; color: var(--ink-faint); font-size: 13px; }
+  .item-where {
+    margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint);
+    background: var(--surface-alt); border: 1px solid var(--border); padding: 2px 7px; border-radius: 5px;
+  }
+  .item p { margin: 0; font-size: 14px; color: var(--ink-muted); line-height: 1.55; }
+  .item.is-done p { text-decoration: line-through; text-decoration-color: var(--border-strong); }
+
+  /* M1 story */
+  .story {
+    border: 1px solid var(--wip);
+    border-radius: 12px;
+    background: var(--wip-soft);
+    padding: 22px 24px;
+    margin: 20px 0 0;
+  }
+  .story.is-done { border-color: var(--ok-fill); background: var(--ok-soft); }
+  .story.is-done ol.timeline li::before { background: var(--ok-fill); }
+  .story h3 {
+    font-family: var(--font-display); font-size: 16px; margin: 0 0 4px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .story .story-dek { font-size: 13.5px; color: var(--ink-muted); margin: 0 0 16px; }
+  ol.timeline { list-style: none; margin: 0; padding: 0; border-left: 2px solid var(--border-strong); }
+  ol.timeline li {
+    position: relative; padding: 0 0 16px 20px; font-size: 14px; color: var(--ink-muted); line-height: 1.6;
+  }
+  ol.timeline li:last-child { padding-bottom: 0; }
+  ol.timeline li::before {
+    content: ""; position: absolute; left: -5px; top: 5px;
+    width: 8px; height: 8px; border-radius: 50%; background: var(--wip);
+  }
+  ol.timeline li strong { color: var(--ink); }
+  ol.timeline li.turn::before { background: var(--warning-fill); }
+
+  footer.closing {
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--border);
+    color: var(--ink-faint); font-size: 13px;
+  }
+</style>
+
+<div class="shell">
+
+  <header class="masthead">
+    <div class="eyebrow">Working Backlog — Live</div>
+    <h1 class="title">MedAssist Fix Backlog</h1>
+    <p class="subtitle">The 25 items from the readiness audit, tracked as they get picked up — one per branch/worktree, verified before merge.</p>
+    <div class="meta-row">
+      <span><strong>Source</strong> <a href="https://claude.ai/code/artifact/f2aac20c-91b9-4d45-96eb-f0fb51383a1c">MedAssist Readiness Report</a></span>
+      <span><strong>Updated</strong> 2026-08-22</span>
+      <span><strong>Branch</strong> backlog-fixes</span>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label"><span>Progress</span><strong>9/25 done · 1 won't fix · 15 open</strong></div>
+      <div class="bar">
+        <div class="seg-done" style="width: 36%"></div>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--ok-fill)"></i>Done</span>
+        <span><i style="background:var(--wip)"></i>In progress</span>
+        <span><i style="background:var(--border-strong)"></i>Open</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="story is-done">
+    <h3>M1 — Logout doesn't revoke the staff session <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/logout-session-revocation</span> → merged <span class="ref">--no-ff</span> into <span class="ref">feat/final-figma-redesign</span> (<span class="ref">b6d3701</span>)</p>
+    <ol class="timeline">
+      <li><strong>Fix applied.</strong> <span class="ref">logout()</span> now calls <span class="ref">addToRevocationSet</span> (the correctly-prefixed function) instead of writing to the wrong Redis key. Dead duplicate <span class="ref">verifyToken</span> removed.</li>
+      <li><strong>Code review dispatched</strong> (<span class="ref">/superpowers:requesting-code-review</span>). Verdict: production fix correct, verified live — but the regression test was a <strong>false negative</strong>. Playwright's client auto-clears its cookie on logout's <span class="ref">Set-Cookie</span> response, so the "same cookie after logout" check never actually replayed the revoked token.</li>
+      <li><strong>Test rewritten</strong> to replay the raw token explicitly (the real threat model: a stolen/cached cookie). Verified in both directions by swapping in the pre-fix file contents — fails pre-fix (200), passes post-fix (401).</li>
+      <li class="turn"><strong>Second bug found while verifying</strong>, unrelated to the code review: running the new test alongside others caused 3 unrelated failures. Root cause — staff JWTs had no unique-per-login ID, so two logins to the same account in the same second produced the <em>identical token string</em>; logging out of one silently revoked the other. Invisible before this fix (logout didn't revoke anything for real), a live cross-session bug now that it does.</li>
+      <li><strong>Scope decision (asked user):</strong> folded into M1. Added <span class="ref">jti: randomUUID()</span> to the JWT payload so every login's token is unique regardless of timing.</li>
+      <li><strong>Verified:</strong> full <span class="ref">tests/api</span> suite — 63/63 passing — after the <span class="ref">jti</span> fix.</li>
+      <li><strong>Shipped.</strong> Committed (<span class="ref">28b4092</span>), merged, pushed. Worktree removed.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>M12 — Repo hygiene: stale main, dead branches, misleading tasks.md <span class="status done">Done</span></h3>
+    <p class="story-dek">Not a code fix — the groundwork batch. Done directly on <span class="ref">main</span> / <span class="ref">backlog-fixes</span>, no worktree.</p>
+    <ol class="timeline">
+      <li><strong>Execution plan written</strong> for the remaining items: batch order (demo-visible first, then constitution/security, then robustness) plus an explicit deferral list, so nothing runs out the clock by accident.</li>
+      <li><strong>PR #3 merged.</strong> <span class="ref">feat/final-figma-redesign</span> → <span class="ref">main</span> (<span class="ref">c6ebc94</span>). <span class="ref">main</span> is no longer 60+ commits behind the real work.</li>
+      <li><strong>Integration branch cut.</strong> <span class="ref">backlog-fixes</span> off the freshly-merged <span class="ref">main</span>. Each remaining item still gets its own <span class="ref">fix/&lt;slug&gt;</span> worktree branch, merged <span class="ref">--no-ff</span> into it.</li>
+      <li><strong>This page is now version-controlled.</strong> Its source moved into the repo at <span class="ref">docs/backlog/fix-backlog.html</span>, so status changes are git-diffable and survive across sessions instead of living in a temp dir.</li>
+      <li><span class="ref">specs/001-patient-visit-companion/tasks.md</span> <strong>flagged as superseded</strong> with a header pointing here, rather than retro-ticking months of boxes that would only drift again.</li>
+      <li class="turn"><strong>Branch prune.</strong> Local 60 → 2, remote 19 → 3. Every deleted branch was first verified to have zero commits not already on <span class="ref">main</span>.</li>
+      <li><strong>One branch deliberately kept:</strong> <span class="ref">chore/poster-demo-seed</span> holds <span class="ref">seed-demo-patients.ts</span> (demo-patient seed for the BO poster screenshots) which is not on <span class="ref">main</span>. Merge decision deferred to before the demo.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>E3 — Two devices opening Waiting at the same moment <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/e3-waiting-upsert</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">03d111f</span>)</p>
+    <ol class="timeline">
+      <li><strong>Fix applied.</strong> The waiting-queue row is created lazily on first load, but <span class="ref">appointment_id</span> is <span class="ref">UNIQUE</span> and the insert had no <span class="ref">ON CONFLICT</span> — whoever lost the race got a raw duplicate-key 500. The arrival path in <span class="ref">navigation.service.ts</span> already wrote this same insert correctly; the two sibling paths now match.</li>
+      <li><strong>Scope past the ticket, deliberately.</strong> Restructured so the race loser re-reads the winner's actual row (real status, wait estimate, broadcast fields) instead of a hardcoded <span class="ref">'waiting'</span> plus nulls. That also closed an unguarded crash: an appointment with no matching row used to throw a 500, now returns a clean 404.</li>
+      <li class="turn"><strong>Reproducing it was the hard part.</strong> Firing requests in parallel never triggered it — 10 Playwright requests on one connection, 10 on separate connections, 20 raw fetches: all serialized (20 requests in 64ms, a straight line). The collision window is roughly a millisecond wide, and volume does not reliably land in it.</li>
+      <li><strong>Test made deterministic instead of lucky.</strong> A second database connection opens a transaction, inserts the row, and holds it uncommitted; the real request then goes in flight and blocks on the unique index. The race happens on purpose, every run.</li>
+      <li><strong>Verified both directions:</strong> fails against pre-fix code with the exact 500, passes after. Full <span class="ref">tests/api</span> suite — 66/66.</li>
+      <li><strong>Shipped.</strong> Committed (<span class="ref">acb57dc</span>), merged, pushed. Worktree removed.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>E13 — A failed checklist save erased a later tap <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/e13-checklist-rollback</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">a720116</span>)</p>
+    <ol class="timeline">
+      <li><strong>The bug.</strong> Ticking a box updates the screen immediately and saves in the background. If that save failed, the screen was restored to how it looked when the tap started — so any box the patient ticked while the save was still in flight got silently un-ticked too.</li>
+      <li><strong>Fix applied.</strong> A failed save now undoes only its own box, and each tap reads the current state rather than a stale snapshot, so a fast second tap builds on the first.</li>
+      <li class="turn"><strong>Same test trap as E3, different shape.</strong> The first version of the test failed the save instantly — which resolved before the second tap even happened, so the two never overlapped and the test passed against the broken code. Holding the failure open for 800ms puts the taps in the order that actually breaks it.</li>
+      <li><strong>Verified both directions,</strong> and re-checked red against the unfixed code after the test was restructured — not just once at the start.</li>
+      <li><strong>Known gap left open on purpose:</strong> after an undo, the server still holds the tick the screen reverted; the next successful save reconciles it. Properly fixing that means re-sending after failure, which risks a retry loop. Folded into the offline work (M2), which has to solve queue-and-replay anyway.</li>
+      <li><strong>Shipped.</strong> Patient PWA suite 13 passed / 1 pre-existing skip, typecheck clean. Committed (<span class="ref">e329678</span>), merged, pushed. Worktree removed.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>E11 + E12 — Network failures the patient never saw <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/e11-e12-network-error-paths</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">a9bf7ca</span>)</p>
+    <ol class="timeline">
+      <li><strong>Two pages, one defect.</strong> Both swallowed connection errors, so they were done as a pair in one branch. On Navigation, tapping "אני כאן" with a dropped connection stopped the spinner and showed nothing at all. On Waiting, a failed first load left the patient on "טוען מצב תור..." with no indication anything was wrong.</li>
+      <li><strong>Design agreed before any code was written.</strong> Navigation shows the error inline under the button, so the step stays on screen and the patient can just tap again. Waiting swaps the loading line for an error line, reusing the error text style already used elsewhere.</li>
+      <li><strong>No retry button, on purpose.</strong> The Waiting page already re-checks on a timer, so it recovers on its own once the connection is back — and the patient app has no retry button anywhere today. Adding the first one was not worth it for a screen that heals itself.</li>
+      <li><strong>Last known state is kept.</strong> Once the queue has loaded, a later failed check leaves the real queue position on screen rather than replacing it with an error.</li>
+      <li class="turn"><strong>Two harness traps found while testing.</strong> Blocking "waiting" requests also blocked the page itself from loading, and the navigation screen opens on the "getting to the hospital" view — the step confirm sits behind it. Both cost a round of red tests before the specs were right.</li>
+      <li><strong>Shipped.</strong> All four specs verified red pre-fix, green after. Patient PWA suite 17 passed / 1 pre-existing skip, typecheck clean. Committed (<span class="ref">b4e4537</span>), merged, pushed. Worktree removed.</li>
+      <li><strong>Follow-up correction</strong> (<span class="ref">542228e</span>): the first pass sent <em>every</em> confirm failure to the new inline message, including rejected requests like an expired link. Those are not fixed by tapping again, so they go back to taking over the page. Inline is now reserved for connection failures, which is what was actually agreed.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>E6 + E10 — Staff permissions on the back office <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/e6-e10-staff-authz</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">b869c2c</span>)</p>
+    <ol class="timeline">
+      <li class="turn"><strong>E6 turned out not to be a hole.</strong> The audit read it as admin pages protected only by accident of configuration order. Probing the running API first says otherwise: with no login they already return 401, and to a non-admin staff member 403. Nothing was exposed. Two of the five admin areas simply didn't <em>state</em> their protection, leaving it dependent on setup order.</li>
+      <li><strong>Fixed anyway, cheaply.</strong> Both now declare it like the other three. The accompanying test passes against the old code too — it exists to make a future reshuffle fail loudly, not because anything was broken. Worth being clear about that rather than claiming a vulnerability was closed.</li>
+      <li class="turn"><strong>E10 was real.</strong> Adding, reordering, or completing a patient's treatment stations had no department check at all — a staff member in one department could act on any other department's patients. The queue screens already prevent this; stations were simply missed.</li>
+      <li><strong>Same rule now applies:</strong> staff act only within their own department, admins are unrestricted, and anything out of scope reads as "not found" rather than "forbidden", so it doesn't reveal that the patient exists.</li>
+      <li><strong>Sending a patient onward to another department still works</strong> — that's routine, and the check is on which department owns the patient, not where they're being sent. Covered by a test so it can't be tightened by mistake later.</li>
+      <li><strong>Shipped.</strong> The three cross-department tests verified red pre-fix, green after. Full API suite 83/83, typecheck clean. Committed (<span class="ref">1c1e820</span>), merged, pushed. Worktree removed.</li>
+      <li><strong>Follow-up</strong> (<span class="ref">e569de4</span>): reviewing this turned up four copies of the same permission-scope logic across the code, and they disagreed with each other about whether an admin assigned to a department counts as an admin. Consolidated into one, keyed on role. Not reachable today, settled so it stays that way.</li>
+    </ol>
+  </div>
+
+  <div class="story is-done">
+    <h3>M3 — The forms button that didn't check anything <span class="status done">Done</span></h3>
+    <p class="story-dek">Branch <span class="ref">fix/m3-forms-submit-validation</span> → merged <span class="ref">--no-ff</span> into <span class="ref">backlog-fixes</span> (<span class="ref">d219b26</span>)</p>
+    <ol class="timeline">
+      <li class="turn"><strong>Half the ticket was already built.</strong> The audit said there was no way to submit a form and no finalize step on the server. The server side turned out to be complete: every field — an uploaded photo, a typed answer, a signature — already records itself as submitted the moment the patient fills it in. Nothing was missing there, and nothing was added.</li>
+      <li><strong>The real gap was one button.</strong> Tapping "שלח טופס והמשך לניווט" simply moved the patient to the navigation screen. A patient could skip every required document and walk into their visit with nothing filled in, and the app would say nothing.</li>
+      <li><strong>It now checks first.</strong> If a required item is still incomplete, the patient stays on the page, sees what's missing, and the screen scrolls to the first item that needs them.</li>
+      <li class="turn"><strong>The trap we nearly shipped.</strong> The obvious rule — block on any incomplete required item — would have stranded patients. A document the staff hasn't uploaded yet shows no button for the patient to press, so they'd have been held at a gate they had no way to open. Those items deliberately don't block.</li>
+      <li><strong>The label was a small lie, so it changed.</strong> Nothing is sent when the button is tapped — the form saved itself as it was filled in. It now reads "המשך לניווט", which is what it actually does. Approved before changing anything the patient sees.</li>
+      <li><strong>Shipped.</strong> The new test was confirmed to fail against the old code before the fix went in. Patient app 18 passed, API 83 passed, typecheck clean.</li>
+    </ol>
+  </div>
+
+  <div class="story">
+    <h3>M4 — Medical detail in calendar exports <span class="status closed">Won't fix</span></h3>
+    <p class="story-dek">Closed by product decision, 2026-08-22. Not deferred for time — decided against.</p>
+    <ol class="timeline">
+      <li><strong>The decision:</strong> the "add to calendar" buttons stay exactly as they are. Being able to save "you need to fast" or "go get blood tests" into your own calendar is worth a small amount of medical detail leaving the app. The patient chooses to tap it.</li>
+      <li class="turn"><strong>The audit called this a constitution violation. It isn't.</strong> The constitution says links "contain no medical data in the URL" and that medical detail is never included in <em>a Magic Link URL</em> or written to logs. Both are scoped to Magic Links. The project's summary of that rule shortens it to "no medical data in URLs", which is what made this look like a breach. A Google Calendar link the patient deliberately opens is not a Magic Link.</li>
+      <li><strong>So no constitution amendment is needed,</strong> and the hard rules are untouched: nothing medical in Magic Link URLs, nothing medical in logs.</li>
+      <li><strong>Recorded so it does not come back</strong> as an open finding in a future audit.</li>
+    </ol>
+  </div>
+
+  <section class="block">
+    <h2 class="block-title">Missing / Incomplete</h2>
+    <p class="block-dek">M-numbered. Full detail in the readiness report — this view is for tracking pickup, not re-explaining each finding.</p>
+
+    <div class="item is-done">
+      <div class="item-top"><span class="status done">Done</span><span class="item-id">M1</span><span class="sev critical">Critical</span><span class="item-where">api</span></div>
+      <p>Logout doesn't revoke JWT — key mismatch between <span class="ref">auth.service.ts</span> and <span class="ref">db/redis.ts</span>'s revocation prefix.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M2</span><span class="sev critical">Critical</span><span class="item-where">patient-pwa</span></div>
+      <p>Offline banner is fake — service worker is an empty stub, zero cached data anywhere. Violates constitution principle 6.</p>
+    </div>
+    <div class="item is-done">
+      <div class="item-top"><span class="status done">Done</span><span class="item-id">M3</span><span class="sev high">High</span><span class="item-where">patient-pwa</span></div>
+      <p>Digital forms have no submit — the CTA just navigated on, with nothing checking that the required documents were actually filled in.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status closed">Won't fix</span><span class="item-id">M4</span><span class="sev high">High</span><span class="item-where">patient-pwa</span></div>
+      <p>Medical content (fasting/med instructions, department) leaks into Google Calendar export URLs. <strong>Closed as a deliberate product decision, and the constitution does not actually forbid it</strong> — see below.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M5</span><span class="sev high">High</span><span class="item-where">api tests</span></div>
+      <p>Zero test coverage on 7 major API modules — magic-links, patient checklist/navigation, waiting, notifications/worker, staff queue, admin timing-rules.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M6</span><span class="sev high">High</span><span class="item-where">api + schema</span></div>
+      <p>Two abandoned half-features: staff lockout (schema exists, never written) and multi-hospital support (unused columns). Finish or rip out.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M7</span><span class="sev medium">Medium</span><span class="item-where">api</span></div>
+      <p>Checklist reminder SMS unimplemented — scheduler function defined, never invoked.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M8</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>Departments admin page has no create/delete, only edits arrival-info on existing rows.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M9</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>Form templates can't be edited once created — the patch endpoint exists but no UI calls it.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M10</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>No admin table has search, filter, or pagination — deliberate at current scale, no safety net if it grows.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status open">Open</span><span class="item-id">M11</span><span class="sev medium">Medium</span><span class="item-where">staff-backoffice</span></div>
+      <p>No shared design-system layer in the backoffice — styles copy-pasted per page.</p>
+    </div>
+    <div class="item">
+      <div class="item-top"><span class="status done">Done</span><span class="item-id">M12</span><span class="sev medium">Medium</span><span class="item-where">repo hygiene</span></div>
+      <p><span class="ref">main</span> is 55+ commits stale, 60+ mostly-dead branches, <span class="ref">tasks.md</span> shows zero progress despite months of shipped work.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Edge Cases to Verify</h2>
+    <p class="block-dek">E-numbered. Plausible from reading the code, not yet confirmed broken in practice.</p>
+
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E1</span><span class="item-where">api</span></div><p>Notification cap silently exhausted by patient "contact staff" taps (broadcast rows count against the SMS cap).</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E2</span><span class="item-where">api</span></div><p>Notification cap/dedup check races under concurrent triggers — no transaction/lock.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E3</span><span class="item-where">api</span></div><p>Two devices loading Waiting simultaneously for the first time — no <span class="ref">ON CONFLICT</span>, unique-violation 500.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E4</span><span class="item-where">api</span></div><p>POST checklist progress for a procedure type with no seeded template — unguarded, uncaught 500.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E5</span><span class="item-where">api</span></div><p>Checklist template lookup ignores the <span class="ref">archived</span> flag and <span class="ref">hospital_id</span>.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E6</span><span class="item-where">api</span></div><p>Two admin routers skip <span class="ref">requireStaffAuth</span> — works only by mount-order accident in <span class="ref">app.ts</span>. <strong>Re-checked against the running API: not actually exploitable</strong> — hardening only.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E7</span><span class="item-where">staff-backoffice</span></div><p>Session expiry mid-upload of a navigation step image skips the 401→redirect other uploads have.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E8</span><span class="item-where">api</span></div><p>Oversized file upload surfaces as a generic 500 instead of 413.</p></div>
+    <div class="item"><div class="item-top"><span class="status open">Open</span><span class="item-id">E9</span><span class="item-where">api</span></div><p>Form uploads hold a pooled PG connection open across an S3 network round-trip — pool exhaustion risk under load.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E10</span><span class="item-where">api</span></div><p>Staff can add/complete patient stations for any department — no scope check, unlike the queue endpoints. <strong>Confirmed real.</strong></p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E11</span><span class="item-where">patient-pwa</span></div><p>Offline/flaky network on Navigation's "I'm here" tap fails silently — no visible error.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E12</span><span class="item-where">patient-pwa</span></div><p>Waiting page's first load failing leaves an infinite spinner, no retry.</p></div>
+    <div class="item"><div class="item-top"><span class="status done">Done</span><span class="item-id">E13</span><span class="item-where">patient-pwa</span></div><p>Rapid double-tap on a checklist item hits a stale-closure rollback bug.</p></div>
+  </section>
+
+  <footer class="closing">
+    Tracks <span class="ref">C:\Users\User\.claude\plans\make-yourself-a-list-generic-hejlsberg.md</span> — republished each time an item's status changes. Full findings (file:line citations, edge-case reasoning) live in the <a href="https://claude.ai/code/artifact/f2aac20c-91b9-4d45-96eb-f0fb51383a1c">readiness report</a>.
+  </footer>
+
+</div>
+
+

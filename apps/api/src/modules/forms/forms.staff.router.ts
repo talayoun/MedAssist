@@ -1,15 +1,8 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { requireStaffAuth } from '../../middleware/auth';
+import { requireStaffAuth, callerCtx } from '../../middleware/auth';
 import { pdfUpload } from './upload.middleware';
 import * as svc from './forms.service';
 import { buildExport } from './pdf-export.service';
-import type { StaffAuthContext } from '@medassist/shared-types';
-
-function callerCtx(req: Request): StaffAuthContext {
-  return req.staffAuth!.role === 'admin'
-    ? { role: 'admin' }
-    : { role: 'staff', departmentId: req.staffAuth!.departmentId! };
-}
 
 const router = Router();
 router.use(requireStaffAuth);

@@ -15,8 +15,12 @@ async function getScopedStaffDeptId(request: APIRequestContext): Promise<string>
   const res = await request.get(`${API_URL}/api/staff/departments`);
   expect(res.status()).toBe(200);
   const { departments } = await res.json();
-  expect(departments.length).toBeGreaterThan(0);
-  return departments[0].id as string;
+  // By name, not departments[0]: the seeded staff user belongs to קרדיולוגיה
+  // specifically, and the list is ordered by name, so any other department added
+  // to the database silently made this the wrong one.
+  const own = departments.find((d: { name: string }) => d.name === 'קרדיולוגיה');
+  expect(own, 'seeded department must exist').toBeTruthy();
+  return own.id as string;
 }
 
 function appointmentPayload(departmentId: string) {

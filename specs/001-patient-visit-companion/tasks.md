@@ -1,5 +1,16 @@
 # Tasks: MedAssist — Patient Visit Companion System
 
+> **⚠️ SUPERSEDED — historical spec artifact, not live status.**
+>
+> This breakdown was written at the start of the MVP and its checkboxes were
+> never maintained. The unchecked boxes below do **not** mean the work is open:
+> the MVP shipped, plus the Figma redesign, digital forms, navigation routes,
+> admin batch-delete and more. Read `git log` for what landed.
+>
+> Live status lives in `docs/backlog/fix-backlog.html` (the MedAssist Fix
+> Backlog) and its ticket source of truth. Kept here as a record of the
+> original spec-driven decomposition.
+
 **Input**: Design documents from `/specs/001-patient-visit-companion/`
 **Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, data-model.md ✅, contracts/ ✅, quickstart.md ✅
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getWaitingStatus } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
+import { useScrollTop } from '../../hooks/useScrollTop';
 import { useVisitInfo } from '../../context/VisitPhaseContext';
 import type { WaitingResponse } from '@medassist/shared-types';
 
@@ -28,14 +29,25 @@ export default function Waiting() {
   const { token } = useParams<{ token: string }>();
   const { patientName, isOnline } = useVisitInfo();
   const [data, setData] = useState<WaitingResponse | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // The screen swaps on a poll, not on a route change: waiting, in treatment, done.
+  useScrollTop(data?.status);
 
   const fetchStatus = useCallback(() => {
     if (!token) return;
     getWaitingStatus(token)
-      .then(setData)
-      .catch((err: unknown) => {
-        console.error('Failed to refresh waiting status:', err);
+      .then((res) => {
+        setData(res);
+        setLoadError(null);
+      })
+      .catch(() => {
+        // Only the first load has nothing to fall back on. Once data has arrived a
+        // failed poll keeps the last known queue state on screen; the next poll
+        // refreshes it. Either way the patient is no longer stuck on a spinner
+        // with no idea anything went wrong.
+        setLoadError('לא הצלחנו לטעון את מצב התור. בודקים שוב עוד רגע.');
       });
   }, [token]);
 
@@ -50,7 +62,13 @@ export default function Waiting() {
   if (!data) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-bg">
-        <p className="text-[#555]">טוען מצב תור...</p>
+        {loadError ? (
+          <p role="alert" className="text-[#c00] text-base p-6 text-center">
+            {loadError}
+          </p>
+        ) : (
+          <p className="text-[#555]">טוען מצב תור...</p>
+        )}
       </div>
     );
   }
@@ -67,7 +85,7 @@ export default function Waiting() {
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
-      <AppHeader offlineMessage="אין חיבור לאינטרנט — זמן ההמתנה לא מעודכן" />
+      <AppHeader offlineMessage="אין חיבור לאינטרנט, זמן ההמתנה לא מעודכן" />
       <div className="max-w-[480px] w-full mx-auto px-4 py-5 flex flex-col gap-4">
         {/* Reassurance card */}
         <div className="bg-gradient-to-br from-teal to-teal-hover rounded-2xl p-5 shadow-lg">
@@ -96,7 +114,7 @@ export default function Waiting() {
             </span>
           </div>
           <p className="text-[13px] leading-5 text-[#1E40AF] text-right">
-            שים לב: סדר הכניסה נקבע לפי דחיפות רפואית. אם מטופל אחר נכנס לפניך, זה קורה רק בגלל צורך רפואי דחוף — המערכת עוקבת אחרי המיקום שלך כל הזמן כך שלא נשכח אותך.
+            שים לב: סדר הכניסה נקבע לפי דחיפות רפואית. אם מטופל אחר נכנס לפניך, זה קורה רק בגלל צורך רפואי דחוף. המערכת עוקבת אחרי המיקום שלך כל הזמן כך שלא נשכח אותך.
           </p>
         </div>
 
@@ -195,7 +213,7 @@ export default function Waiting() {
 
         {data.status === 'done' && (
           <div className="bg-white border border-border rounded-2xl p-5 text-center">
-            <p className="text-lg font-semibold text-success">הביקור הסתיים — נתראה!</p>
+            <p className="text-lg font-semibold text-success">הביקור הסתיים, נתראה!</p>
           </div>
         )}
 

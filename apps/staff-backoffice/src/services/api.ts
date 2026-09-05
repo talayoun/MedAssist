@@ -1,7 +1,7 @@
 import type {
   StaffUser, QueueResponse, PatientStationDTO, AppointmentPhase, Department,
   TimingRule, AdminRoute, AdminRouteStep, ChecklistTemplate,
-  FormItemDTO, StaffFormsResponseDTO, FormTemplateItemDTO,
+  FormItemDTO, StaffFormsResponseDTO, FormTemplateItemDTO, ProcedureTypeDTO,
   DepartmentArrivalInfo, UpdateDepartmentArrivalInfoRequest,
 } from '@medassist/shared-types';
 import type { z } from 'zod';
@@ -67,11 +67,20 @@ export function getMe(): Promise<{ user: StaffUser }> {
   return apiRequest('/auth/me');
 }
 
-export async function getSessionUser(): Promise<StaffUser | null> {
-  const res = await fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' });
-  if (!res.ok) return null;
-  const body = await res.json().catch(() => null);
-  return body?.user ?? null;
+// StrictMode runs the bootstrap effect twice in dev, which fired two
+// unauthenticated /auth/me calls and put two red 401s in the console before
+// anyone had logged in. A concurrent caller gets the request already in flight.
+let sessionProbe: Promise<StaffUser | null> | null = null;
+
+export function getSessionUser(): Promise<StaffUser | null> {
+  if (sessionProbe) return sessionProbe;
+  sessionProbe = (async () => {
+    const res = await fetch(`${BASE_URL}/api/auth/me`, { credentials: 'include' });
+    if (!res.ok) return null;
+    const body = await res.json().catch(() => null);
+    return body?.user ?? null;
+  })().finally(() => { sessionProbe = null; });
+  return sessionProbe;
 }
 
 // ─── Queue ────────────────────────────────────────────────────────────────────
@@ -243,7 +252,7 @@ export function listStaff(departmentId?: string): Promise<{ staff: StaffUser[] }
   return apiRequest(`/admin/staff${qs}`);
 }
 
-// ─── Admin — Navigation Routes ────────────────────────────────────────────────
+// ─── Admin: Navigation Routes ────────────────────────────────────────────────
 
 export function listNavigationRoutes(
   includeArchived = false
@@ -433,7 +442,7 @@ export function listTimingRules(): Promise<{ rules: TimingRule[] }> {
   return apiRequest('/admin/timing-rules');
 }
 
-// ─── Staff — Forms ────────────────────────────────────────────────────────────
+// ─── Staff: Forms ────────────────────────────────────────────────────────────
 
 export function getStaffForms(appointmentId: string): Promise<StaffFormsResponseDTO> {
   return apiRequest(`/staff/patients/${appointmentId}/forms`);
@@ -457,13 +466,17 @@ export function exportForms(appointmentId: string): Promise<{ pdf_url: string; g
   return apiRequest(`/staff/patients/${appointmentId}/forms/export`, { method: 'POST' });
 }
 
-// ─── Staff — Form Templates (lightweight list for new-appointment modal) ─────
+// ─── Staff: Form Templates (lightweight list for new-appointment modal) ─────
 
 export function listStaffFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
   return apiRequest('/staff/form-templates');
 }
 
-// ─── Admin — Form Templates ───────────────────────────────────────────────────
+export function listProcedureTypes(): Promise<{ procedures: ProcedureTypeDTO[] }> {
+  return apiRequest('/staff/procedure-types');
+}
+
+// ─── Admin: Form Templates ───────────────────────────────────────────────────
 
 export function listFormTemplates(): Promise<{ items: FormTemplateItemDTO[] }> {
   return apiRequest('/admin/form-templates');
@@ -512,7 +525,7 @@ export async function uploadFormTemplateBlank(id: string, file: File): Promise<F
   return body as FormTemplateItemDTO;
 }
 
-// ─── Admin — Departments (clinic-arrival info) ────────────────────────────────
+// ─── Admin: Departments (clinic-arrival info) ────────────────────────────────
 
 export function listDepartments(): Promise<{ departments: DepartmentArrivalInfo[] }> {
   return apiRequest('/admin/departments');

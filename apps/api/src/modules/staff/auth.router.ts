@@ -33,7 +33,7 @@ router.post('/login', async (req: Request, res: Response, next: NextFunction) =>
     // Set httpOnly cookie
     res.cookie('med_session', token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: process.env.NODE_ENV === 'production' && process.env.COOKIE_SECURE !== 'false',
       sameSite: 'lax',
       maxAge: 3600 * 1000, // 1 hour
     });

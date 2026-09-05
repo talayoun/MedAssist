@@ -27,16 +27,18 @@ async function fetchQueuePosition(appointmentId: string): Promise<number | null>
   return rows[0]?.position ? parseInt(rows[0].position, 10) : null;
 }
 
-export async function getWaitingStatus(appointmentId: string): Promise<WaitingStatus> {
-  const { rows } = await query<{
-    status: 'waiting' | 'in_treatment' | 'done';
-    arrival_time: Date;
-    estimated_wait_minutes: number | null;
-    broadcast_message: string | null;
-    broadcast_sent_at: Date | null;
-    updated_at: Date;
-    department_name: string;
-  }>(`
+interface WaitingRow {
+  status: 'waiting' | 'in_treatment' | 'done';
+  arrival_time: Date;
+  estimated_wait_minutes: number | null;
+  broadcast_message: string | null;
+  broadcast_sent_at: Date | null;
+  updated_at: Date;
+  department_name: string;
+}
+
+async function selectWaitingRow(appointmentId: string): Promise<WaitingRow | undefined> {
+  const { rows } = await query<WaitingRow>(`
     SELECT wq.status, wq.arrival_time, wq.estimated_wait_minutes,
            wq.broadcast_message, wq.broadcast_sent_at, wq.updated_at,
            d.name AS department_name
@@ -44,26 +46,28 @@ export async function getWaitingStatus(appointmentId: string): Promise<WaitingSt
     JOIN departments d ON d.id = wq.department_id
     WHERE wq.appointment_id = $1
   `, [appointmentId]);
+  return rows[0];
+}
 
-  if (rows.length === 0) {
-    // Auto-create queue entry if not present (patient arrived via non-navigation path)
-    const { rows: [created] } = await query<{
-      status: 'waiting' | 'in_treatment' | 'done';
-      arrival_time: Date;
-      updated_at: Date;
-      department_name: string;
-    }>(`
+export async function getWaitingStatus(appointmentId: string): Promise<WaitingStatus> {
+  let row = await selectWaitingRow(appointmentId);
+
+  if (!row) {
+    // Auto-create queue entry if not present (patient arrived via non-navigation path).
+    // ON CONFLICT DO NOTHING: two devices can hit this at the same time and
+    // appointment_id is UNIQUE, so the loser of the race must not get a duplicate-key 500.
+    await query(`
       INSERT INTO waiting_queue (appointment_id, department_id, status)
       SELECT id, department_id, 'waiting' FROM appointments WHERE id = $1
-      RETURNING status, arrival_time, updated_at,
-        (SELECT name FROM departments WHERE id = (SELECT department_id FROM appointments WHERE id = $1)) AS department_name
+      ON CONFLICT (appointment_id) DO NOTHING
     `, [appointmentId]);
 
-    const position = await fetchQueuePosition(appointmentId);
-    return buildWaitingStatus(created.status, created.department_name, null, null, null, created.updated_at, position);
+    // Re-select either way: the winner reads back its own row, the loser reads the
+    // winner's (with its real status, not a hardcoded 'waiting'). Still empty means
+    // the INSERT ... SELECT matched no appointment.
+    row = await selectWaitingRow(appointmentId);
+    if (!row) throw Object.assign(new Error('Not found'), { status: 404 });
   }
-
-  const row = rows[0];
 
   // Treat stale broadcasts as null
   const broadcastMessage =

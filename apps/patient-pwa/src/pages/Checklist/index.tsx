@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getChecklist, saveChecklistProgress, ApiError } from '../../services/api';
 import AppHeader from '../../components/AppHeader';
@@ -6,8 +6,9 @@ import { Card } from '../../components/ui/Card';
 import { CheckboxRow } from '../../components/ui/CheckboxRow';
 import { StatusPill } from '../../components/ui/StatusPill';
 import type { ChecklistResponse, ChecklistItem } from '@medassist/shared-types';
+import { procedureLabel } from '@medassist/shared-types';
 
-// Figma groups checklist items into 3 headings, in this fixed order — 'fast' and
+// Figma groups checklist items into 3 headings, in this fixed order: 'fast' and
 // 'medication' share a heading even though they're separate categories server-side.
 const GROUP_ORDER: { key: string; label: string; categories: ChecklistItem['category'][] }[] = [
   { key: 'bring', label: 'מה להביא', categories: ['bring'] },
@@ -43,18 +44,36 @@ export default function Checklist() {
       });
   }, [token]);
 
+  // Tapping twice quickly fires two saves before either resolves. Reading the set
+  // from a ref (kept current on every tap, not just on re-render) means the second
+  // tap builds on the first instead of on a stale render's snapshot.
+  const completedIdsRef = useRef(completedIds);
+  useEffect(() => {
+    completedIdsRef.current = completedIds;
+  }, [completedIds]);
+
   const toggleItem = useCallback(
     (item: ChecklistItem) => {
       if (!token || !data) return;
-      const next = new Set(completedIds);
-      if (next.has(item.id)) next.delete(item.id);
+      const next = new Set(completedIdsRef.current);
+      const wasCompleted = next.has(item.id);
+      if (wasCompleted) next.delete(item.id);
       else next.add(item.id);
+      completedIdsRef.current = next;
       setCompletedIds(next);
+
       saveChecklistProgress(token, Array.from(next)).catch(() => {
-        setCompletedIds(completedIds);
+        // Undo only this item. Restoring a whole captured snapshot would also wipe
+        // any taps the patient made while this request was still in flight.
+        setCompletedIds((current) => {
+          const rolledBack = new Set(current);
+          if (wasCompleted) rolledBack.add(item.id);
+          else rolledBack.delete(item.id);
+          return rolledBack;
+        });
       });
     },
-    [token, data, completedIds]
+    [token, data]
   );
 
   const goToForms = useCallback(() => {
@@ -83,7 +102,7 @@ export default function Checklist() {
   const allComplete = totalCount > 0 && completedCount === totalCount;
   const isUrgentWindow = data.hours_until_visit !== null && data.hours_until_visit < 24;
 
-  // No checklist items — typically the ER track, which has no pre-visit preparation.
+  // No checklist items, typically the ER track, which has no pre-visit preparation.
   if (totalCount === 0) {
     return (
       <div className="min-h-screen flex flex-col bg-bg">
@@ -125,7 +144,7 @@ export default function Checklist() {
         <div className="text-right mb-6">
           <h1 className="text-[28px] font-bold text-text mb-2">מה להביא ולהכין</h1>
           <p className="text-base text-text-muted">
-            {isUrgentWindow ? '⚠️ הביקור שלך בעוד פחות מ-24 שעות — בדוק פריטים דחופים' : `לקראת: ${data.procedure_type}`}
+            {isUrgentWindow ? '⚠️ הביקור שלך בעוד פחות מ-24 שעות: בדוק פריטים דחופים' : `לקראת: ${procedureLabel(data.procedure_type)}`}
           </p>
         </div>
 

@@ -1,0 +1,659 @@
+<title>MedAssist Demo Day Readiness</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Noto+Sans+Hebrew:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --bg: #F2F4F3;
+    --surface: #FFFFFF;
+    --surface-sunk: #E8EDEB;
+    --ink: #0E1A17;
+    --ink-muted: #4A5C57;
+    --ink-faint: #7C8D87;
+    --rule: #D6E0DC;
+    --rule-strong: #B9C9C3;
+    --accent: #0B6B62;
+    --accent-bright: #0E8C80;
+    --accent-wash: #DFF0ED;
+    --blocker: #A32A20;
+    --blocker-wash: #FAE8E6;
+    --visible: #8A5206;
+    --visible-wash: #FBF0DC;
+    --done: #1D6F47;
+    --done-wash: #E3F2E9;
+    --mono-bg: #0E1A17;
+    --mono-ink: #CFE2DC;
+
+    --f-display: "Archivo", ui-sans-serif, "Segoe UI", system-ui, sans-serif;
+    --f-body: "Source Serif 4", "Noto Sans Hebrew", Georgia, serif;
+    --f-he: "Noto Sans Hebrew", "Segoe UI", sans-serif;
+    --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+
+    --shadow: 0 1px 2px rgba(14, 26, 23, .05), 0 12px 28px -18px rgba(14, 26, 23, .28);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0A1210;
+      --surface: #111C18;
+      --surface-sunk: #16241F;
+      --ink: #E4EDEA;
+      --ink-muted: #9AAFA8;
+      --ink-faint: #6B7F79;
+      --rule: #22322C;
+      --rule-strong: #32463E;
+      --accent: #4FD6C4;
+      --accent-bright: #2FBFAC;
+      --accent-wash: #122C28;
+      --blocker: #F0857C;
+      --blocker-wash: #2A1412;
+      --visible: #E4B268;
+      --visible-wash: #2A2011;
+      --done: #6BD49B;
+      --done-wash: #10241A;
+      --mono-bg: #060E0C;
+      --mono-ink: #B2CDC5;
+      --shadow: 0 1px 2px rgba(0,0,0,.35), 0 12px 28px -18px rgba(0,0,0,.7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0A1210;
+    --surface: #111C18;
+    --surface-sunk: #16241F;
+    --ink: #E4EDEA;
+    --ink-muted: #9AAFA8;
+    --ink-faint: #6B7F79;
+    --rule: #22322C;
+    --rule-strong: #32463E;
+    --accent: #4FD6C4;
+    --accent-bright: #2FBFAC;
+    --accent-wash: #122C28;
+    --blocker: #F0857C;
+    --blocker-wash: #2A1412;
+    --visible: #E4B268;
+    --visible-wash: #2A2011;
+    --done: #6BD49B;
+    --done-wash: #10241A;
+    --mono-bg: #060E0C;
+    --mono-ink: #B2CDC5;
+    --shadow: 0 1px 2px rgba(0,0,0,.35), 0 12px 28px -18px rgba(0,0,0,.7);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 820px; margin: 0 auto; padding: 0 24px 112px; }
+
+  a { color: var(--accent); text-underline-offset: 3px; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 3px; border-radius: 3px; }
+
+  code, .ref {
+    font-family: var(--f-mono);
+    font-size: .8em;
+    background: var(--mono-bg);
+    color: var(--mono-ink);
+    padding: .12em .42em;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .he { font-family: var(--f-he); }
+
+  /* ── masthead ─────────────────────────────────────────────── */
+
+  header.top {
+    padding: 60px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .kicker {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  h1 {
+    font-family: var(--f-display);
+    font-weight: 700;
+    font-size: clamp(32px, 5.6vw, 50px);
+    line-height: 1.04;
+    letter-spacing: -.025em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--ink-muted);
+    margin: 0;
+    max-width: 60ch;
+  }
+
+  .countdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .countdown div {
+    flex: 1 1 150px;
+    padding: 16px 20px;
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .countdown div:last-child { border-right: 0; }
+
+  .countdown dt {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .countdown dd {
+    margin: 0;
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 19px;
+    letter-spacing: -.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── sections ─────────────────────────────────────────────── */
+
+  section { margin-top: 56px; }
+
+  h2 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 25px;
+    letter-spacing: -.018em;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+
+  .dek { color: var(--ink-muted); margin: 0 0 24px; font-size: 16.5px; }
+
+  h3 {
+    font-family: var(--f-display);
+    font-weight: 600;
+    font-size: 18.5px;
+    letter-spacing: -.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  p { margin: 0 0 14px; }
+  p:last-child { margin-bottom: 0; }
+
+  .rule { height: 1px; background: var(--rule); border: 0; margin: 0; }
+
+  /* ── the phase sequence ───────────────────────────────────── */
+
+  .phases { display: flex; flex-direction: column; gap: 18px; }
+
+  .phase {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .phase-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+
+  .phase-n {
+    font-family: var(--f-mono);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: .08em;
+    color: var(--accent);
+    background: var(--accent-wash);
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+
+  .phase ul { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 8px; }
+  .phase li::marker { color: var(--rule-strong); }
+
+  /* ── callouts ─────────────────────────────────────────────── */
+
+  .callout {
+    border-radius: 12px;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    border: 1px solid;
+  }
+
+  .callout-label {
+    font-family: var(--f-mono);
+    font-size: 11.5px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  .callout.risk { background: var(--blocker-wash); border-color: color-mix(in srgb, var(--blocker) 32%, transparent); }
+  .callout.risk .callout-label { color: var(--blocker); }
+
+  .callout.note { background: var(--visible-wash); border-color: color-mix(in srgb, var(--visible) 34%, transparent); }
+  .callout.note .callout-label { color: var(--visible); }
+
+  .callout.settled { background: var(--done-wash); border-color: color-mix(in srgb, var(--done) 32%, transparent); }
+  .callout.settled .callout-label { color: var(--done); }
+
+  /* ── table ────────────────────────────────────────────────── */
+
+  .scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow); }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15.5px; }
+
+  th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--rule); }
+  tbody tr:last-child td { border-bottom: 0; }
+
+  th {
+    font-family: var(--f-mono);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    background: var(--surface-sunk);
+    white-space: nowrap;
+  }
+
+  td.num { font-variant-numeric: tabular-nums; font-family: var(--f-display); font-weight: 600; white-space: nowrap; }
+
+  /* ── the walk-through list ────────────────────────────────── */
+
+  ol.walk {
+    counter-reset: step;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  ol.walk li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 32px 1fr;
+    gap: 14px;
+    align-items: baseline;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--rule);
+  }
+  ol.walk li:last-child { border-bottom: 0; }
+
+  ol.walk li::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--f-mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── deliverables ─────────────────────────────────────────── */
+
+  .files { display: flex; flex-direction: column; gap: 0; }
+
+  .file-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .file-row:last-child { border-bottom: 0; }
+  .file-row p { margin: 0; font-size: 15.5px; color: var(--ink-muted); }
+
+  .tag {
+    display: inline-block;
+    font-family: var(--f-mono);
+    font-size: 10.5px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    vertical-align: 2px;
+    margin-inline-start: 8px;
+  }
+  .tag.new { background: var(--accent-wash); color: var(--accent); }
+  .tag.edit { background: var(--surface-sunk); color: var(--ink-muted); }
+
+  pre {
+    background: var(--mono-bg);
+    color: var(--mono-ink);
+    font-family: var(--f-mono);
+    font-size: 13.5px;
+    line-height: 1.65;
+    padding: 18px 20px;
+    border-radius: 12px;
+    overflow-x: auto;
+    margin: 0;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-size: inherit; white-space: pre; }
+
+  footer {
+    margin-top: 64px;
+    padding-top: 22px;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-faint);
+    font-size: 14.5px;
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <span class="kicker">MedAssist · plan of record</span>
+    <h1>Getting one flow demo-ready</h1>
+    <p class="standfirst">
+      Booth format. A visitor walks up, hears the background, then watches the whole MedAssist journey run
+      live: a new patient opened in the back office, a Telegram link landing on a real phone, and the visit
+      unfolding step by step on one route, one procedure, one department — with the real Wolfson photos.
+      The pitch is that on this route it already works, and the rest of the hospital is duplication rather
+      than invention.
+    </p>
+
+    <dl class="countdown">
+      <div><dt>Demo</dt><dd>~4 Sep 2026</dd></div>
+      <div><dt>Runway</dt><dd>Under 2 weeks</dd></div>
+      <div><dt>Hosting</dt><dd>Laptop + hotspot</dd></div>
+      <div><dt>Phase</dt><dd>1 done, 2 next</dd></div>
+    </dl>
+  </header>
+
+  <section>
+    <h2>What changed about the priorities</h2>
+    <p class="dek">The edge-case backlog is parked. The flow is the product now.</p>
+    <div class="callout settled">
+      <span class="callout-label">Decided</span>
+      <p>
+        <strong>M2, the offline service worker, is dropped</strong> — along with the rest of the edge-case
+        queue — until the demo flow itself is presentable. Nothing in that queue is visible during a
+        walkthrough. Effort goes to the journey a visitor actually sees.
+      </p>
+      <p>
+        <strong>Hosting is settled: laptop plus our own hotspot.</strong> An AWS deploy is a stretch goal,
+        attempted only if the flow is solid with days to spare. Deploying competes directly with fixing the
+        flow, and there are only twelve days.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>What the database actually holds</h2>
+    <p class="dek">Queried directly, not inferred from the backlog.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Table</th><th>Rows</th><th>What they are</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Patients</td><td class="num">585</td><td>Test residue</td></tr>
+          <tr><td>Appointments</td><td class="num">497</td><td>Test residue</td></tr>
+          <tr><td>Navigation routes</td><td class="num">54</td><td>Every one named <span class="ref">test-route-*</span>, <span class="ref">steps-test-*</span>, <span class="ref">regression-default-*</span></td></tr>
+          <tr><td>Checklist templates</td><td class="num">34</td><td>32 are <span class="ref">test-proc-*</span>, <span class="ref">dup-proc-*</span>, <span class="ref">update-test-*</span></td></tr>
+          <tr><td>Departments</td><td class="num">2</td><td><span class="he">קרדיולוגיה</span>, plus the junk <span class="he">אורתופדיה (בדיקת הרשאות)</span> a test left behind</td></tr>
+          <tr><td>Form template items</td><td class="num">367</td><td>262 with no procedure type, mostly test-created</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:20px">
+      <strong>Every navigation image in the database is a placeholder</strong> —
+      <span class="ref">example.com/a.jpg</span> or <span class="ref">placeholder.example.com/step-N.jpg</span>.
+      There is no real route in the product. The seeded one has five steps; the Figma route has seven, and
+      its photos are sitting in a folder outside the repo.
+    </p>
+    <p>
+      Opening the back office in front of a visitor today shows a landfill of
+      <span class="ref">test-route-1787405314453</span> rows. That gap between the product and the Figma
+      story is content, not architecture — which is why it is fixable in the time available.
+    </p>
+  </section>
+
+  <section>
+    <h2>The blocker nobody has hit yet</h2>
+    <p class="dek">Found while planning. It only shows up on a real phone.</p>
+    <div class="callout risk">
+      <span class="callout-label">Highest risk in the plan</span>
+      <p>
+        The API builds public image URLs from the storage endpoint. Configured for local development, that
+        endpoint is <span class="ref">localhost:4566</span> — so <strong>the phone receives image URLs
+        pointing at its own localhost</strong> and every navigation photo renders broken. The magic-link
+        address in the Telegram message and the API address the app calls have exactly the same problem.
+      </p>
+      <p>
+        All three are configuration values, not code, so they are cheap to fix — but only if we find them
+        before demo day instead of on stage. This is what Phase 3 exists for.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The one that would have gone off on stage</h2>
+    <p class="dek">Found after Phase 0 shipped, fixed the same afternoon.</p>
+    <div class="callout risk">
+      <span class="callout-label">Caught before the booth</span>
+      <p>
+        The magic-link message is queued in Redis <em>after</em> the database work commits, so wiping the
+        database left the queued messages untouched. <strong>451 of them had piled up.</strong> Starting the
+        worker with sending switched on would have drained every one to a real phone — a burst of messages,
+        most of them carrying tokens that no longer resolve to anything but an error page.
+      </p>
+      <p>
+        The reset now clears the queue too. One reset means exactly one pending message, which is the whole
+        point of having a reset ritual.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The plan</h2>
+    <p class="dek">Four phases, strictly in order. Phase 0 is what makes Phase 1 meaningful — walking the flow on a swamp database tells us nothing about what a visitor will see.</p>
+
+    <div class="phases">
+
+      <article class="phase" style="border-color: color-mix(in srgb, var(--done) 42%, transparent)">
+        <div class="phase-head"><span class="phase-n">Phase 0 · done</span><h3>Clean slate with real content</h3></div>
+        <ul>
+          <li><strong>A reset command.</strong> One script that wipes every data table and reseeds. This becomes the booth ritual: run it between visitors so every walkthrough starts identical, and once before demo day so the junk department and the 54 test routes are gone. Guarded so it refuses to run against anything but the development database.</li>
+          <li><strong>Real photos in the real route.</strong> The route grows from five steps to seven, matching the prototype. The seven Wolfson photos get committed into the repo and uploaded through the same path a staff upload uses, so they are compressed and stored identically.</li>
+          <li><strong>Instruction text per step</strong> is drafted from the photos and shown for approval before anything is committed — it is patient-facing copy.</li>
+          <li><strong>The department becomes real.</strong> Address, parking, transit and map position are all fields the patient sees and all currently empty, which leaves the arrival screen looking half-built.</li>
+        </ul>
+        <p style="margin-top:2px">
+          <strong>Shipped.</strong> The database now holds one patient, two departments and two routes, and the
+          demo route carries all seven real photos. The photos turned out to end at <span class="he">מחלקת עיניים</span>,
+          not cardiology, so the demo department, procedure, checklist and forms are all ophthalmology now —
+          cardiology stays seeded because twelve test files look it up by name. Three suites green: 83 API,
+          18 patient app, 15 back office.
+        </p>
+        <p>
+          Four pre-existing bugs surfaced and were fixed on the way: re-seeding a live database left the demo
+          appointment with <em>no forms at all</em>, and the bulk-delete spec had three separate faults that
+          meant it had never run green.
+        </p>
+      </article>
+
+      <article class="phase" style="border-color: color-mix(in srgb, var(--done) 42%, transparent)">
+        <div class="phase-head"><span class="phase-n">Phase 1 · done</span><h3>Walk the flow and write down every break</h3></div>
+        <p>On the fresh database, in a real browser, exactly as demo day runs it:</p>
+        <ol class="walk">
+          <li>Staff logs in to the back office</li>
+          <li>Creates the appointment, sending the link immediately</li>
+          <li>Telegram message arrives</li>
+          <li>Open the link — entry screen, then arrival info</li>
+          <li>Checklist: tick items, watch the state hold</li>
+          <li>Forms: upload a photo, type a field, sign a consent, continue</li>
+          <li>Navigation: seven steps, real photos, confirm each</li>
+          <li>Waiting: queue position and live updates</li>
+          <li>Back office: patient in the queue, stations advancing, patient called in</li>
+          <li>The side dishes — the ER track and the admin configuration screens</li>
+        </ol>
+        <p>
+          Output is a ranked defect list: every break, every rough edge, every place the story stalls, each
+          tagged blocker, visible, or cosmetic. <strong>No fixing during the walk</strong> — observing and
+          fixing at once is how a walkthrough becomes a three-hour tangent.
+        </p>
+        <p>
+          <strong>The flow works end to end.</strong> Steps 1 to 9 were walked in a real browser: the back
+          office created the patient, <strong>a real Telegram message was sent and delivered</strong>, the
+          link opened, the checklist showed all eight eye items, the forms gate correctly refused to move on
+          with documents missing, <strong>all seven Wolfson photos rendered in order</strong> through to the
+          reception desk, the waiting screen showed a live queue position, and the patient reappeared in the
+          back office as waiting. A visitor could be walked through this today.
+        </p>
+        <p>
+          <strong>One blocker.</strong> The procedure field staff type when creating a patient is free text,
+          and the suggestion list the app itself offers does not match any real template — picking its own
+          suggestion produces a patient whose checklist does not exist. That is the first thing a visitor
+          watches being typed. Below it sit several visible rough edges: the patient is shown a raw English
+          slug, the forms picker offers every procedure's paperwork at once, nothing is attached unless
+          staff ticks it, and long Hebrew labels break the row layout.
+        </p>
+        <p>
+          The ER track and the admin configuration screens have not been walked yet.
+        </p>
+      </article>
+
+      <article class="phase">
+        <div class="phase-head"><span class="phase-n">Phase 2 · next</span><h3>Fix, ranked by what a visitor sees</h3></div>
+        <p>
+          Work the list top down. Blockers, then visible problems, then cosmetics only if time remains.
+          Four issues are already known and likely to surface: a session expiring mid-upload on the admin
+          screens, no way to create or delete a department, form templates that cannot be edited once
+          created, and a checklist reminder that is written but never actually sent.
+        </p>
+        <p>
+          Explicitly out of scope unless the walkthrough proves otherwise: the offline service worker, the
+          notification-cap edge cases, the database connection-pool issue, and the missing API test
+          coverage. None of them appears in a demo.
+        </p>
+      </article>
+
+      <article class="phase">
+        <div class="phase-head"><span class="phase-n">Phase 3</span><h3>Network dress rehearsal on the real phone</h3></div>
+        <ul>
+          <li><strong>Order matters:</strong> set the addresses first, <em>then</em> reset. The photo URLs are written into the database when the route is seeded, so changing the address afterwards does nothing to rows that already exist.</li>
+          <li>Bring the stack up bound to the hotspot address rather than localhost — including the storage endpoint, the one everybody forgets.</li>
+          <li><strong>Already checked:</strong> storage is published on all interfaces, so the hotspot address reaches it from both the laptop and the phone. This stays a configuration change; no code needed.</li>
+          <li>Send a real Telegram link to the actual demo phone, over the actual hotspot, and run the whole journey on it: images load, uploads work, the camera opens, the signature works with a finger.</li>
+          <li>Rehearse the reset-between-visitors ritual end to end at least twice.</li>
+        </ul>
+        <p>This is where the demo fails if it is going to. It happens early enough to fix, not the night before.</p>
+      </article>
+
+    </div>
+  </section>
+
+  <section>
+    <h2>What gets built</h2>
+    <p class="dek">Small surface area. Most of the work is content and verification, not new code.</p>
+    <div class="files">
+      <div class="file-row">
+        <h3>Database reset script<span class="tag new">New</span></h3>
+        <p>Truncate everything, reseed, refuse to touch anything but the development database.</p>
+      </div>
+      <div class="file-row">
+        <h3>Seed script<span class="tag edit">Changed</span></h3>
+        <p>Seven-step route, real photo upload through the existing storage service, department arrival details.</p>
+      </div>
+      <div class="file-row">
+        <h3>The seven Wolfson photos<span class="tag new">New</span></h3>
+        <p>Committed into the repo so the seed works on any machine, not just the one with the original folder.</p>
+      </div>
+      <div class="file-row">
+        <h3>Walkthrough defect list<span class="tag new">New</span></h3>
+        <p>The Phase 1 output. Scratch notes, not shipped.</p>
+      </div>
+    </div>
+
+    <p style="margin-top:22px">
+      Reused rather than rebuilt: the existing upload and compression path, the entire existing seed
+      structure — its Hebrew checklist and form templates are already good — and the appointment-creation
+      flow the tests already exercise.
+    </p>
+  </section>
+
+  <section>
+    <h2>Running it</h2>
+    <p class="dek">Three terminals. The worker is not optional — without it no Telegram message is ever sent.</p>
+    <pre><code>docker compose up -d
+doppler run -p medassist -c dev -- pnpm --filter api db:reset-demo
+
+doppler run -p medassist -c dev -- pnpm dev                 # api + both frontends
+doppler run -p medassist -c dev -- pnpm --filter api worker # required for Telegram</code></pre>
+
+    <div class="callout note" style="margin-top:20px">
+      <span class="callout-label">Order matters at the booth</span>
+      <p>
+        The test suites are what put the junk department and the 54 routes into the database in the first
+        place. Run the tests, <em>then</em> reset, then demo. Never the other way round.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Still open</h2>
+    <ul style="margin:0;padding-inline-start:20px;display:flex;flex-direction:column;gap:10px">
+      <li>
+        <strong>The poster demo seed branch.</strong> It holds a demo-patient seed that never reached main
+        and overlaps what the new reset script does. Fold in what is useful and delete it, or keep it
+        deliberately — decided during Phase 0.
+      </li>
+      <li>
+        <strong>Instruction text for the seven steps</strong> needs sign-off before it is committed.
+      </li>
+      <li>
+        <strong>AWS</strong> stays a stretch goal. It is only attempted once the flow is demo-solid.
+      </li>
+    </ul>
+  </section>
+
+  <footer>
+    Plan of record for demo day. Companion to the fix backlog — that page tracks defects, this one tracks
+    the flow.
+  </footer>
+
+</div>

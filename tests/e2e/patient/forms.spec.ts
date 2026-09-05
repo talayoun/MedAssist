@@ -88,3 +88,25 @@ test.describe('patient: forms (mobile)', () => {
     await expect(page.getByText('שלח חתימה')).toBeVisible();
   });
 });
+
+test.describe('patient: forms submit gate (mobile)', () => {
+  let gateToken: string;
+
+  test.beforeAll(async ({ request }) => {
+    gateToken = await createTokenForTest(request);
+  });
+
+  test('CTA blocks navigation while a required item is incomplete', async ({ page }) => {
+    await page.goto(`/visit/${gateToken}/forms`);
+    await expect(page.getByRole('heading', { name: 'מסמכים', exact: true })).toBeVisible({ timeout: 10_000 });
+
+    const cta = page.getByTestId('forms-submit-btn');
+    await expect(cta).toBeVisible({ timeout: 8_000 });
+
+    // A freshly created appointment has required items nobody has filled in yet.
+    await cta.click();
+
+    await expect(page).toHaveURL(new RegExp(`/visit/${gateToken}/forms$`));
+    await expect(page.getByTestId('forms-submit-error')).toBeVisible();
+  });
+});

@@ -44,7 +44,7 @@ export async function scheduleChecklistReminder(appointmentId: string): Promise<
       patientId: appt.patient_id,
       appointmentId,
       phoneNumber: appt.phone_number,
-      message: `שלום ${appt.patient_name}, תזכורת לביקורך הקרוב — אנא עיין ברשימת ההכנות שלך.`,
+      message: `שלום ${appt.patient_name}, תזכורת לביקורך הקרוב, אנא עיין ברשימת ההכנות שלך.`,
       type: 'checklist_reminder',
       retryCount: 0,
     },

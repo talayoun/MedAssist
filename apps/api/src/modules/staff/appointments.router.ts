@@ -1,15 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { requireStaffAuth } from '../../middleware/auth';
+import { requireStaffAuth, callerCtx } from '../../middleware/auth';
 import { createElectiveAppointment } from './appointments.service';
 import { generateToken } from '../magic-links/magic-links.service';
 import { query } from '../../db/db';
-import type { StaffAuthContext } from '@medassist/shared-types';
-
-function callerCtx(req: Request): StaffAuthContext {
-  const deptId = req.staffAuth!.departmentId;
-  return deptId ? { role: 'staff', departmentId: deptId } : { role: 'admin' };
-}
 
 const router = Router();
 
@@ -31,6 +25,30 @@ const CreateAppointmentSchema = z.object({
   suppressed_template_item_ids: z.array(z.string().uuid()).max(50).default([]),
   send_now: z.boolean().default(false),
   form_template_ids: z.array(z.string().uuid()).max(50).optional(),
+});
+
+/**
+ * GET /api/staff/procedure-types
+ *
+ * The procedures a patient can actually be booked for: every non-archived
+ * checklist template. The admin listing is admin-only, and the staff who create
+ * patients are not admins, so the modal needs its own way to ask.
+ */
+router.get('/procedure-types', requireStaffAuth, async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { rows } = await query<{ procedure_type: string; item_count: string }>(
+      `SELECT procedure_type, jsonb_array_length(items_json) AS item_count
+       FROM checklist_templates
+       WHERE archived = false
+       ORDER BY procedure_type`,
+    );
+    res.json({
+      procedures: rows.map((r) => ({
+        procedure_type: r.procedure_type,
+        item_count: Number(r.item_count),
+      })),
+    });
+  } catch (err) { next(err); }
 });
 
 /** GET /api/staff/form-templates — lightweight list for the new-appointment modal */

@@ -20,6 +20,13 @@ const SECTION_ORDER: { key: Section; label: string }[] = [
   { key: 'consent', label: 'הסכמות וחתימות' },
 ];
 
+// Values the visit already holds, matched to intake fields by label: template items
+// have no field key, only Hebrew text. The patient table stores nothing else usable
+// (name and phone only, and no template asks for the phone), so this is the whole list.
+const PREFILL_RULES: { match: RegExp; from: (info: { patientName: string | null }) => string | null }[] = [
+  { match: /^שם\s*(מלא)?$/, from: (info) => info.patientName },
+];
+
 function TrashIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -29,12 +36,18 @@ function TrashIcon() {
   );
 }
 
-// ─── Text field / consent / yes-no-list — patient-entered intake data ────────
+// ─── Text field / consent / yes-no-list: patient-entered intake data ────────
 
 function TextFieldItem({ item, token, onUpdate }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void }) {
   const initial = (item.value as { text?: string } | null)?.text ?? '';
   const [text, setText] = useState(initial);
   const [saving, setSaving] = useState(false);
+
+  // A value that arrives after mount (the name prefill lands once the visit resolves)
+  // must reach the input, but never over something the patient has already typed.
+  useEffect(() => {
+    setText((prev) => (prev === '' && initial !== '' ? initial : prev));
+  }, [initial]);
 
   const save = useCallback(async () => {
     setSaving(true);
@@ -42,7 +55,7 @@ function TextFieldItem({ item, token, onUpdate }: { item: FormItemDTO; token: st
       const updated = await setFormValue(token, item.id, { item_type: 'text_field', value: { text } });
       onUpdate(updated);
     } catch {
-      // non-fatal — keep local text, retry on next blur
+      // non-fatal, keep local text, retry on next blur
     } finally {
       setSaving(false);
     }
@@ -198,7 +211,7 @@ function ConsentItem({ item, token, onUpdate }: { item: FormItemDTO; token: stri
   );
 }
 
-// ─── Documents — patient_upload / staff_upload_sign ───────────────────────────
+// ─── Documents: patient_upload / staff_upload_sign ───────────────────────────
 
 function FormDocumentItem({
   item,
@@ -267,13 +280,34 @@ function FormDocumentItem({
 
   const isComplete = item.status === 'patient_submitted';
 
+  // Required, but there is nothing on screen to press: staff has not uploaded the
+  // blank form yet. The submit gate deliberately lets the patient past it, so the
+  // only thing missing was telling them why it is stuck.
+  const awaitingClinic = item.item_type === 'staff_upload_sign' && item.status === 'pending';
+
+  // An item waiting on the clinic renders no control at all, so its card should
+  // not keep an empty action row under the label.
+  const hasActions = item.item_type === 'patient_upload' || item.status === 'staff_uploaded';
+
   return (
     <>
-      <Card variant={isComplete ? 'success' : 'default'} className="flex items-center justify-between gap-3 !p-4">
-        <span className="flex-1 text-[17px] font-semibold text-text text-right">{item.label}</span>
-        <div className="flex items-center gap-2.5">
+      <Card variant={isComplete ? 'success' : 'default'} className="flex flex-col gap-3 !p-4">
+        <div className="text-right">
+          <p className="text-[17px] font-semibold text-text leading-6">
+            <span data-testid="form-item-label">{item.label}</span>
+            {/* Trails the label text, so it lands on the sentence's last line
+                instead of taking a row of its own. */}
+            <span className={`text-[13px] font-normal whitespace-nowrap mr-2 ${isComplete ? 'text-success' : 'text-[#718096]'}`}>
+              {statusLabel}
+            </span>
+          </p>
+          {awaitingClinic && (
+            <p className="text-sm text-text-muted mt-1">המרפאה תכין את הטופס עבורך, לא נדרשת פעולה מצדך</p>
+          )}
+        </div>
+        {(hasActions || uploadError) && (
+        <div className="flex items-center gap-2.5 flex-wrap">
           {uploadError && <span className="text-xs text-error">{uploadError}</span>}
-          <span className={`text-[13px] whitespace-nowrap ${isComplete ? 'text-success' : 'text-[#718096]'}`}>{statusLabel}</span>
           {item.item_type === 'patient_upload' && !isComplete && (
             <>
               <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -323,6 +357,7 @@ function FormDocumentItem({
             </a>
           )}
         </div>
+        )}
       </Card>
 
       {confirmDelete && (
@@ -379,13 +414,24 @@ function renderItem(item: FormItemDTO, token: string, onUpdate: (u: FormItemDTO)
   }
 }
 
+// A required item blocks the CTA only when the patient has a control to act on.
+// A staff_upload_sign item still at 'pending' has no rendered affordance (staff has
+// not uploaded the blank form yet), gating on it would strand the patient here.
+function blocksSubmit(item: FormItemDTO): boolean {
+  if (!item.required || item.status === 'patient_submitted') return false;
+  if (item.item_type === 'staff_upload_sign' && item.status === 'pending') return false;
+  return true;
+}
+
 export default function Forms() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
-  const { isOnline } = useVisitInfo();
+  const { isOnline, patientName } = useVisitInfo();
   const [formItems, setFormItems] = useState<FormItemDTO[]>([]);
   const [formsLoadErr, setFormsLoadErr] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const sectionRefs = useRef<Partial<Record<Section, HTMLDivElement | null>>>({});
+  const prefilled = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (!token) return;
@@ -394,14 +440,49 @@ export default function Forms() {
       .catch(() => setFormsLoadErr('שגיאה בטעינת מסמכים'));
   }, [token]);
 
-  const handleUpdate = (updated: FormItemDTO) =>
+  // Fill in what the visit already knows so the patient never retypes it. The visit
+  // fetch and the forms fetch race, so this runs again when the name lands; the ref
+  // keeps it from re-sending a value it has already saved.
+  useEffect(() => {
+    if (!token || formItems.length === 0) return;
+    const info = { patientName };
+
+    formItems.forEach((item) => {
+      if (item.item_type !== 'text_field') return;
+      if (prefilled.current.has(item.id)) return;
+      if (((item.value as { text?: string } | null)?.text ?? '').trim() !== '') return;
+
+      const text = PREFILL_RULES.find((r) => r.match.test(item.label))?.from(info);
+      if (!text) return;
+
+      prefilled.current.add(item.id);
+      setFormValue(token, item.id, { item_type: 'text_field', value: { text } })
+        .then(handleUpdate)
+        .catch(() => prefilled.current.delete(item.id));
+    });
+  }, [token, patientName, formItems]);
+
+  const handleUpdate = (updated: FormItemDTO) => {
+    setSubmitError(null);
     setFormItems((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+  };
+
+  const handleSubmit = () => {
+    if (!token) return;
+    const missing = formItems.filter(blocksSubmit);
+    if (missing.length > 0) {
+      setSubmitError('יש להשלים את כל השדות המסומנים כחובה לפני המשך לניווט');
+      document.getElementById(`form-item-${missing[0].id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    navigate(`/visit/${token}/navigation`);
+  };
 
   const sections = SECTION_ORDER.filter(({ key }) => formItems.some((i) => i.section === key));
 
   return (
     <div className="min-h-screen flex flex-col bg-bg">
-      <AppHeader offlineMessage="אין חיבור לאינטרנט — לא ניתן לשלוח טפסים" />
+      <AppHeader offlineMessage="אין חיבור לאינטרנט, לא ניתן לשלוח טפסים" />
       <div className="max-w-[480px] w-full mx-auto px-4 pt-4 pb-8">
         <div className="text-right mb-4">
           <h1 className="text-[28px] font-bold text-text mb-2">מסמכים</h1>
@@ -435,22 +516,33 @@ export default function Forms() {
             <div className="space-y-3">
               {formItems
                 .filter((i) => i.section === key)
-                .map((item) => renderItem(item, token!, handleUpdate))}
+                .map((item) => (
+                  <div key={item.id} id={`form-item-${item.id}`} className="scroll-mt-4">
+                    {renderItem(item, token!, handleUpdate)}
+                  </div>
+                ))}
             </div>
           </div>
         ))}
 
+        {submitError && (
+          <p data-testid="forms-submit-error" role="alert" className="text-error text-base text-right mt-2">
+            {submitError}
+          </p>
+        )}
+
         {formItems.length > 0 && (
           <button
             type="button"
+            data-testid="forms-submit-btn"
             disabled={!isOnline}
-            onClick={() => token && navigate(`/visit/${token}/navigation`)}
+            onClick={handleSubmit}
             className="w-full h-[64px] rounded-2xl font-bold text-[20px] flex items-center justify-center gap-3 shadow-md bg-teal hover:bg-teal-hover text-white disabled:opacity-50 disabled:cursor-not-allowed mt-2"
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            <span>שלח טופס והמשך לניווט</span>
+            <span>המשך לניווט</span>
           </button>
         )}
       </div>

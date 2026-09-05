@@ -139,21 +139,23 @@ export async function getNavigation(appointmentId: string): Promise<NavigationRo
 
   await advanceAppointmentPhase(appointmentId, 'navigation');
 
-  // Fetch current + next step only (not full route)
+  // Steps the patient has already reached, plus the next one for prefetch. Walking
+  // back through the route is a normal thing to do (a wrong turn, a second look at
+  // the previous sign), and after a reload the client has no history of its own.
+  // The part of the route ahead of the patient is still not exposed.
   const { rows: steps } = await query<StepRow>(`
     SELECT id, step_order, image_url, instruction_text
     FROM route_steps
-    WHERE route_id = $1 AND step_order >= $2
+    WHERE route_id = $1 AND step_order <= $2 + 1
     ORDER BY step_order ASC
-    LIMIT 2
   `, [routeRow.route_id, currentStepOrder]);
 
-  const responseSteps: NavigationStepResponse[] = steps.map((s, idx) => ({
+  const responseSteps: NavigationStepResponse[] = steps.map((s) => ({
     step_id: s.id,
     order: s.step_order,
     image_url: s.image_url,
     instruction: s.instruction_text,
-    is_current: idx === 0,
+    is_current: s.step_order === currentStepOrder,
   }));
 
   return {

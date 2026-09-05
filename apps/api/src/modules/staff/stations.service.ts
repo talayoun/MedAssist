@@ -1,11 +1,37 @@
 import { query } from '../../db/db';
+import type { StaffAuthContext } from '@medassist/shared-types';
 import { enqueueNotification } from '../notifications/notifications.producer';
+
+/**
+ * Station writes had no department scoping at all, so any staff user could add
+ * or complete stations for a patient in someone else's department. Mirrors the
+ * rule queue.service already applies: 'staff' is confined to their own
+ * department, admins are unrestricted, and out-of-scope reads as 404 rather
+ * than 403 so it does not confirm the appointment exists.
+ *
+ * Scoped on the appointment's department, not the station's — routing a patient
+ * onward to a different department is the normal case and must stay allowed.
+ */
+async function assertAppointmentInScope(
+  appointmentId: string,
+  caller: StaffAuthContext
+): Promise<void> {
+  if (caller.role !== 'staff') return;
+  const { rows } = await query(
+    'SELECT 1 FROM appointments WHERE id = $1 AND department_id = $2',
+    [appointmentId, caller.departmentId]
+  );
+  if (rows.length === 0) throw Object.assign(new Error('not_found'), { status: 404 });
+}
 
 export async function addStation(
   appointmentId: string,
   departmentId: string,
-  orderIndex: number
+  orderIndex: number,
+  caller: StaffAuthContext
 ): Promise<{ station_id: string; department: string; order_index: number; status: string }> {
+  await assertAppointmentInScope(appointmentId, caller);
+
   const { rows: [station] } = await query<{ id: string }>(`
     INSERT INTO patient_stations (appointment_id, department_id, order_index, status)
     VALUES ($1, $2, $3, 'pending')
@@ -37,8 +63,10 @@ export async function addStation(
 
 export async function reorderStations(
   appointmentId: string,
-  stationIds: string[]
+  stationIds: string[],
+  caller: StaffAuthContext
 ): Promise<void> {
+  await assertAppointmentInScope(appointmentId, caller);
   for (let i = 0; i < stationIds.length; i++) {
     await query(
       'UPDATE patient_stations SET order_index = $1 WHERE id = $2 AND appointment_id = $3',
@@ -50,8 +78,10 @@ export async function reorderStations(
 export async function markStationComplete(
   appointmentId: string,
   stationId: string,
-  staffId: string
+  staffId: string,
+  caller: StaffAuthContext
 ): Promise<{ station_id: string; status: string; completed_at: string }> {
+  await assertAppointmentInScope(appointmentId, caller);
   const { rows: [row] } = await query<{ id: string; completed_at: Date }>(`
     UPDATE patient_stations
     SET status = 'complete', completed_at = NOW(), completed_by_staff_id = $1
