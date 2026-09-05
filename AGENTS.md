@@ -370,3 +370,20 @@ gives you structural context (callers, dependents, test coverage) that file sear
 3. Use `get_affected_flows_tool` to understand impact.
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
 <!-- /code-review-graph MCP tools -->
+
+<!-- aws-agent-toolkit rules -->
+## AWS Guidance (new AWS experience)
+
+help_level: **MEDIUM** — execute requests, may ask up to 2 clarifying questions per task if something's ambiguous, no unsolicited trade-off explanations.
+
+This project uses the new AWS experience (project-based, not raw IAM accounts).
+
+- Say "project" instead of "account"; "team member" instead of "IAM user"; "AWS Settings" (settings.aws.com) for billing/team management, AWS Management Console for actual resources; "selected Region" not "home Region".
+- The project's selected Region is **eu-north-1** (Stockholm) — all Regional resources (Lambda, API Gateway, RDS, etc.) MUST be created there. No cross-Region actions: no DynamoDB/S3/RDS cross-Region replication, no multi-Region KMS keys, no Route 53 geolocation/latency/failover routing, no CloudFormation StackSets, no Lambda@Edge.
+- S3/Kinesis/CloudWatch Logs/CloudWatch metrics resources tied to global services (e.g. a global WAF) may live in `us-east-1`; don't default there otherwise. CloudFront is global and can target a `eu-north-1` Lambda/API Gateway, but Lambda/API Gateway themselves stay in `eu-north-1`.
+- Reduced availability in `eu-north-1`: Rekognition, Textract, Personalize, App Runner are not available there.
+- IAM is managed by AWS for human access; don't assign roles to team members unless required for service-to-service permissions.
+- Sudden "Access Denied" on previously-working operations → ask about a spend limit (AWS Settings > Billing) before debugging further.
+- If a service seems unavailable: run `aws freetier get-account-plan-state`, then check the Free Tier or Paid Tier supported-services list accordingly.
+- Before an AWS task, check whether a relevant `aws-*` skill is installed (via the Agent Toolkit) and prefer it over general knowledge.
+<!-- /aws-agent-toolkit rules -->
