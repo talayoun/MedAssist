@@ -27,6 +27,19 @@ const PREFILL_RULES: { match: RegExp; from: (info: { patientName: string | null 
   { match: /^שם\s*(מלא)?$/, from: (info) => info.patientName },
 ];
 
+/**
+ * Marks an item the patient still has to deal with. Driven by `blocksSubmit`, so
+ * the marker and the gate can never disagree: it disappears the moment the item
+ * stops blocking, and never appears on the consent that waits on the clinic.
+ */
+function RequiredChip() {
+  return (
+    <span className="text-[13px] font-normal text-text-muted bg-[#f1f5f9] rounded-full px-2 py-0.5 whitespace-nowrap">
+      חובה
+    </span>
+  );
+}
+
 function TrashIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -38,7 +51,7 @@ function TrashIcon() {
 
 // ─── Text field / consent / yes-no-list: patient-entered intake data ────────
 
-function TextFieldItem({ item, token, onUpdate }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void }) {
+function TextFieldItem({ item, token, onUpdate, invalid }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void; invalid?: boolean }) {
   const initial = (item.value as { text?: string } | null)?.text ?? '';
   const [text, setText] = useState(initial);
   const [saving, setSaving] = useState(false);
@@ -62,20 +75,22 @@ function TextFieldItem({ item, token, onUpdate }: { item: FormItemDTO; token: st
   }, [token, item.id, text, onUpdate]);
 
   return (
-    <Card className="!p-4">
+    <Card variant={invalid ? 'error' : 'default'} className="!p-4">
       <InputField
         label={item.label}
         placeholder={item.placeholder ?? undefined}
         value={text}
         onChange={setText}
         onBlur={save}
+        error={invalid ? 'שדה חובה' : undefined}
+        helperText={blocksSubmit(item) ? 'חובה' : undefined}
       />
       {saving && <span className="text-xs text-text-muted">שומר...</span>}
     </Card>
   );
 }
 
-function YesNoListItem({ item, token, onUpdate }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void }) {
+function YesNoListItem({ item, token, onUpdate, invalid }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void; invalid?: boolean }) {
   const initial = item.value as { answer?: boolean; items?: string[] } | null;
   const [answer, setAnswer] = useState(initial?.answer ?? false);
   const [entries, setEntries] = useState<string[]>(initial?.items?.length ? initial.items : ['']);
@@ -108,8 +123,11 @@ function YesNoListItem({ item, token, onUpdate }: { item: FormItemDTO; token: st
   const removeEntry = (i: number) => setEntries((prev) => prev.filter((_, idx) => idx !== i));
 
   return (
-    <Card className="!p-4">
-      <p className="text-[17px] font-semibold text-text text-right mb-3">{item.label}</p>
+    <Card variant={invalid ? 'error' : 'default'} className="!p-4">
+      <p className="text-[17px] font-semibold text-text text-right mb-3">
+        {item.label}
+        {blocksSubmit(item) && <span className="mr-2"><RequiredChip /></span>}
+      </p>
       <div className="flex gap-3 justify-end mb-3">
         <button
           type="button"
@@ -168,7 +186,7 @@ function YesNoListItem({ item, token, onUpdate }: { item: FormItemDTO; token: st
   );
 }
 
-function ConsentItem({ item, token, onUpdate }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void }) {
+function ConsentItem({ item, token, onUpdate, invalid }: { item: FormItemDTO; token: string; onUpdate: (u: FormItemDTO) => void; invalid?: boolean }) {
   const initial = (item.value as { accepted?: boolean } | null)?.accepted ?? false;
   const [accepted, setAccepted] = useState(initial);
 
@@ -185,6 +203,7 @@ function ConsentItem({ item, token, onUpdate }: { item: FormItemDTO; token: stri
 
   return (
     <Card
+      variant={invalid ? 'error' : 'default'}
       className="!p-4 flex items-start gap-3 flex-row-reverse cursor-pointer"
       onClick={toggle}
     >
@@ -204,7 +223,10 @@ function ConsentItem({ item, token, onUpdate }: { item: FormItemDTO; token: stri
         )}
       </div>
       <div className="flex-1 text-right">
-        <p className="text-[17px] font-semibold text-text">{item.label}</p>
+        <p className="text-[17px] font-semibold text-text">
+          {item.label}
+          {blocksSubmit(item) && <span className="mr-2"><RequiredChip /></span>}
+        </p>
         {item.sub_label && <p className="text-base text-text-muted mt-1">{item.sub_label}</p>}
       </div>
     </Card>
@@ -217,10 +239,12 @@ function FormDocumentItem({
   item,
   token,
   onUpdate,
+  invalid,
 }: {
   item: FormItemDTO;
   token: string;
   onUpdate: (updated: FormItemDTO) => void;
+  invalid?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
@@ -291,7 +315,7 @@ function FormDocumentItem({
 
   return (
     <>
-      <Card variant={isComplete ? 'success' : 'default'} className="flex flex-col gap-3 !p-4">
+      <Card variant={invalid ? 'error' : isComplete ? 'success' : 'default'} className="flex flex-col gap-3 !p-4">
         <div className="text-right">
           <p className="text-[17px] font-semibold text-text leading-6">
             <span data-testid="form-item-label">{item.label}</span>
@@ -300,6 +324,7 @@ function FormDocumentItem({
             <span className={`text-[13px] font-normal whitespace-nowrap mr-2 ${isComplete ? 'text-success' : 'text-[#718096]'}`}>
               {statusLabel}
             </span>
+            {blocksSubmit(item) && <span className="mr-2"><RequiredChip /></span>}
           </p>
           {awaitingClinic && (
             <p className="text-sm text-text-muted mt-1">המרפאה תכין את הטופס עבורך, לא נדרשת פעולה מצדך</p>
@@ -401,16 +426,16 @@ function FormDocumentItem({
   );
 }
 
-function renderItem(item: FormItemDTO, token: string, onUpdate: (u: FormItemDTO) => void) {
+function renderItem(item: FormItemDTO, token: string, onUpdate: (u: FormItemDTO) => void, invalid: boolean) {
   switch (item.item_type) {
     case 'text_field':
-      return <TextFieldItem key={item.id} item={item} token={token} onUpdate={onUpdate} />;
+      return <TextFieldItem key={item.id} item={item} token={token} onUpdate={onUpdate} invalid={invalid} />;
     case 'yes_no_list':
-      return <YesNoListItem key={item.id} item={item} token={token} onUpdate={onUpdate} />;
+      return <YesNoListItem key={item.id} item={item} token={token} onUpdate={onUpdate} invalid={invalid} />;
     case 'consent':
-      return <ConsentItem key={item.id} item={item} token={token} onUpdate={onUpdate} />;
+      return <ConsentItem key={item.id} item={item} token={token} onUpdate={onUpdate} invalid={invalid} />;
     default:
-      return <FormDocumentItem key={item.id} item={item} token={token} onUpdate={onUpdate} />;
+      return <FormDocumentItem key={item.id} item={item} token={token} onUpdate={onUpdate} invalid={invalid} />;
   }
 }
 
@@ -430,6 +455,9 @@ export default function Forms() {
   const [formItems, setFormItems] = useState<FormItemDTO[]>([]);
   const [formsLoadErr, setFormsLoadErr] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Items that stopped the last submit. Empty until the patient actually taps the
+  // CTA: before that, a required item is outstanding, not wrong.
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
   const sectionRefs = useRef<Partial<Record<Section, HTMLDivElement | null>>>({});
   const prefilled = useRef<Set<string>>(new Set());
 
@@ -465,11 +493,21 @@ export default function Forms() {
   const handleUpdate = (updated: FormItemDTO) => {
     setSubmitError(null);
     setFormItems((prev) => prev.map((f) => (f.id === updated.id ? updated : f)));
+    // Clear this card the moment it is satisfied, without waiting for another tap.
+    if (!blocksSubmit(updated)) {
+      setBlockedIds((prev) => {
+        if (!prev.has(updated.id)) return prev;
+        const next = new Set(prev);
+        next.delete(updated.id);
+        return next;
+      });
+    }
   };
 
   const handleSubmit = () => {
     if (!token) return;
     const missing = formItems.filter(blocksSubmit);
+    setBlockedIds(new Set(missing.map((i) => i.id)));
     if (missing.length > 0) {
       setSubmitError('יש להשלים את כל השדות המסומנים כחובה לפני המשך לניווט');
       document.getElementById(`form-item-${missing[0].id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -517,8 +555,13 @@ export default function Forms() {
               {formItems
                 .filter((i) => i.section === key)
                 .map((item) => (
-                  <div key={item.id} id={`form-item-${item.id}`} className="scroll-mt-4">
-                    {renderItem(item, token!, handleUpdate)}
+                  <div
+                    key={item.id}
+                    id={`form-item-${item.id}`}
+                    data-invalid={blockedIds.has(item.id) ? 'true' : undefined}
+                    className="scroll-mt-4"
+                  >
+                    {renderItem(item, token!, handleUpdate, blockedIds.has(item.id))}
                   </div>
                 ))}
             </div>

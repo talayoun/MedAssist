@@ -62,25 +62,18 @@ export async function createElectiveAppointment(
     });
   }
 
-  // Upsert patient by phone (reuse existing rows to preserve history)
-  const { rows: existing } = await query<{ id: string; name: string }>(
-    'SELECT id, name FROM patients WHERE phone_number = $1',
-    [input.phone_number]
+  // Upsert patient by phone, reusing existing rows to preserve history. A
+  // select-then-insert lost the race when two staff booked the same phone at
+  // once: both saw no row, both inserted, and the second got a unique violation
+  // straight back as a 500. The conflict clause makes that a no-op instead.
+  const { rows: [patient] } = await query<{ id: string }>(
+    `INSERT INTO patients (name, phone_number)
+     VALUES ($1, $2)
+     ON CONFLICT (phone_number) DO UPDATE SET name = EXCLUDED.name
+     RETURNING id`,
+    [input.patient_name, input.phone_number]
   );
-
-  let patientId: string;
-  if (existing.length > 0) {
-    patientId = existing[0].id;
-    if (existing[0].name !== input.patient_name) {
-      await query('UPDATE patients SET name = $1 WHERE id = $2', [input.patient_name, patientId]);
-    }
-  } else {
-    const { rows: [created] } = await query<{ id: string }>(
-      `INSERT INTO patients (name, phone_number) VALUES ($1, $2) RETURNING id`,
-      [input.patient_name, input.phone_number]
-    );
-    patientId = created.id;
-  }
+  const patientId = patient.id;
 
   const { rows: [appt] } = await query<{ id: string }>(
     `INSERT INTO appointments

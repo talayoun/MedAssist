@@ -71,13 +71,14 @@ test.describe('patient: form items stay readable', () => {
     await expect(label).toBeVisible({ timeout: 10_000 });
 
     const labelBox = await label.boundingBox();
-    const cardBox = await label.locator('xpath=ancestor::div[contains(@class,"rounded")][1]').boundingBox();
     expect(labelBox, 'label must be laid out').toBeTruthy();
-    expect(cardBox, 'card must be laid out').toBeTruthy();
 
-    // Pre-fix the label shared its row with the status and two buttons, taking
-    // barely a third of the card and wrapping one word per line.
-    expect(labelBox!.width).toBeGreaterThan(cardBox!.width * 0.7);
+    // Pre-fix the label shared its row with the status and two buttons, so it had
+    // roughly a third of the card and broke to four lines of one word each. Height
+    // is the honest measure: an inline box hugs its text, so its width says more
+    // about the string than about the room it was given.
+    const lineHeight = await label.evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+    expect(labelBox!.height, 'the label must fit in at most two lines').toBeLessThanOrEqual(lineHeight * 2 + 2);
   });
 
   test('a consent the clinic has not prepared explains itself', async ({ page }) => {
