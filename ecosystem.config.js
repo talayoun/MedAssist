@@ -3,7 +3,8 @@ module.exports = {
     {
       name: 'api',
       cwd: 'apps/api',
-      script: 'dist/app.js',
+      script: 'pnpm',
+      args: 'run start:prod',
     },
     {
       name: 'notifications-worker',
