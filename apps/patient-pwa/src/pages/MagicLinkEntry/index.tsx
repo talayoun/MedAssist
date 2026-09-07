@@ -60,7 +60,7 @@ export default function MagicLinkEntry() {
     const start = new Date(ctx.patient.visit_date);
     const end = new Date(start.getTime() + 60 * 60 * 1000);
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
-      `ביקור ב${ctx.patient.department}`
+      `ביקור במחלקת ${ctx.patient.department}`
     )}&dates=${toGCalStamp(start)}/${toGCalStamp(end)}&details=${encodeURIComponent(
       `ביקור מתוכנן במחלקת ${ctx.patient.department}`
     )}`;

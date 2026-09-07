@@ -90,28 +90,28 @@ export default function Waiting() {
         {/* Reassurance card */}
         <div className="bg-gradient-to-br from-teal to-teal-hover rounded-2xl p-5 shadow-lg">
           <div className="flex items-center justify-end gap-2 mb-4">
-            <span className="text-xs font-bold text-white/80 uppercase tracking-wider">עדכון חי</span>
             <span className="relative w-3 h-3">
               <span className="absolute inset-0 rounded-full bg-[#4ADE80] animate-ping opacity-75" />
               <span className="relative block rounded-full w-3 h-3 bg-[#22C55E]" />
             </span>
+            <span className="text-xs font-bold text-white/80 uppercase tracking-wider">עדכון חי</span>
           </div>
           <h2 className="text-[22px] font-bold text-white text-right mb-3">
             {firstName ? `${firstName}, ` : ''}המקום שלך בתור שמור ומעודכן
           </h2>
           <p className="text-[15px] leading-6 text-white/85 text-right">
-            הצוות ב{data.department} יודע שהגעת ורואה אותך במערכת. נעדכן אותך כאן בנייד ברגע שיהיו מוכנים לקבל אותך.
+            הצוות במחלקת {data.department} יודע שהגעת ורואה אותך במערכת. נעדכן אותך כאן בנייד ברגע שיהיו מוכנים לקבל אותך.
           </p>
         </div>
 
         {/* Real-time / triage explanation card */}
         <div className="bg-[#EFF6FF] border-2 border-[#BFDBFE] rounded-2xl p-4">
           <div className="flex items-center justify-end gap-2 mb-2">
-            <span className="text-sm font-bold text-[#1D4ED8]">חיבור בזמן אמת</span>
             <span className="relative w-2.5 h-2.5 shrink-0">
               <span className="absolute inset-0 rounded-full bg-[#3B82F6] animate-ping opacity-60" />
               <span className="relative block rounded-full w-2.5 h-2.5 bg-[#2563EB]" />
             </span>
+            <span className="text-sm font-bold text-[#1D4ED8]">חיבור בזמן אמת</span>
           </div>
           <p className="text-[13px] leading-5 text-[#1E40AF] text-right">
             שים לב: סדר הכניסה נקבע לפי דחיפות רפואית. אם מטופל אחר נכנס לפניך, זה קורה רק בגלל צורך רפואי דחוף. המערכת עוקבת אחרי המיקום שלך כל הזמן כך שלא נשכח אותך.
@@ -121,9 +121,9 @@ export default function Waiting() {
         {/* Current-phase tracker */}
         <div className="bg-white border border-border rounded-2xl p-4">
           <p className="text-xs font-semibold text-[#64748B] uppercase tracking-wider text-right mb-3">שלב נוכחי</p>
-          <div className="flex items-center gap-0 flex-row-reverse">
+          <div className="flex items-center gap-0">
             {steps.map((step, i) => (
-              <div key={step.label} className="flex items-center flex-row-reverse flex-1">
+              <div key={step.label} className="flex items-center flex-1">
                 <div className="flex flex-col items-center gap-1">
                   <div
                     className={`w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold transition-colors ${
@@ -190,7 +190,7 @@ export default function Waiting() {
 
             <div className="flex-1 text-right space-y-3">
               {hasPosition && data.people_ahead !== null && (
-                <div>
+                <div className="inline-block text-center">
                   <p className="text-xs text-[#64748B]">לפניך בתור</p>
                   <p className="font-bold text-2xl leading-tight text-text">{data.people_ahead}</p>
                 </div>
