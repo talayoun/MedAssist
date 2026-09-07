@@ -162,6 +162,33 @@ The one skip (`signature page renders canvas`) is pre-existing. Reset the databa
 
 - **Artifact re-share.** A teammate's link to the fix-backlog page is pinned to an older version;
   republishing does not move them. They must re-share from the share menu on claude.ai.
-- **`chore/poster-demo-seed`** holds a demo-patient seed that never reached main and overlaps
-  `db:reset-demo`. Fold in or delete.
 - The Doppler dev service token exposed on 2026-08-22 was **accepted as a risk** by the user. Closed.
+
+## ER track — walked 2026-09-07
+
+See `WALKTHROUGH-FINDINGS.md` Step 10 for the full findings. Headline: there was no way to create
+an ER-track appointment at all before this — `apps/api/src/db/seed-er-demo.ts` (`pnpm --filter
+api db:seed-er-demo`, run after `db:reset-demo`) now seeds one. Mechanics (12h TTL, skip-to-
+navigation, urgent-visit banner, `מיון` Queue badge) all verified working at the API level. Not
+walked: admin config screens. Doc/behavior mismatch found: constitution says ER lands on an
+"immediate waiting screen," actual behavior lands on `navigation` — unresolved, needs a team call.
+
+## `chore/poster-demo-seed` — resolved 2026-09-07
+
+Folded in, not deleted: cherry-picked `apps/api/src/db/seed-demo-patients.ts` onto
+`feat/er-track-and-queue-seed` and gave it a `db:seed-demo-patients` script entry (it never had
+one). **Filming guidance:** these 13 patients are `קרדיולוגיה`/`pre-op-cardiac` with placeholder
+navigation images and no SMS sent — use them only as Queue-screen background texture (shows a
+realistic mix of phases and both tracks). Never open one of their PatientDetail/Navigation screens
+on camera; the polished end-to-end walkthrough stays on `ישראל ישראלי` (elective) and `מירי אביטן`
+(ER), both under `עיניים` with the real photographed route.
+
+Run order for a filming-ready box: `db:reset-demo` → `db:seed-er-demo` → `db:seed-demo-patients`.
+
+## Telegram recipients — Tal not yet added, blocked on her messaging the bot
+
+`TELEGRAM_CHAT_IDS` (Doppler secret, `stg_ec2_demo` config) is comma-separated;
+`notifications.consumer.ts:14-30` sends to all of them. Plan as of 2026-09-07: add Tal
+(co-developer, +972 54-587-4224) as a second verified recipient. The Bot API can't message a
+phone number directly — she must message the bot herself first so we can read her `chat_id` off
+`getUpdates`, then append it to the secret. Not done yet; waiting on that step.

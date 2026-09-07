@@ -109,6 +109,35 @@ a future session does not mistake it for a delivery bug.
 
 ---
 
+## Step 10 — ER track, walked 2026-09-07
+
+No product path exists to create an `er`-track appointment — `createElectiveAppointment`
+(`apps/api/src/modules/staff/appointments.service.ts:38`) hardcodes `track = 'elective'` in both
+the appointment INSERT and the token generation; the `send_now` checkbox does not affect track,
+it only controls SMS timing. Added `apps/api/src/db/seed-er-demo.ts` (reuses the real
+`generateToken`/`enqueueNotification` services) to seed one ER patient directly for this walk,
+under `עיניים` so it gets the real photographed route rather than placeholder images.
+
+**Verified at the API level** (against the live EC2 box, `GET /api/visit/:token`):
+- `visit_date: null` correctly triggers the "urgent visit, no scheduling needed" path —
+  `MagicLinkEntry` reads this as the `⚡ ביקור דחוף, אין צורך בתיאום מראש` banner.
+- `phase: "navigation"` on first resolve — checklist is skipped entirely, not just hidden,
+  exactly as `magic-links.service.ts:100` implements it.
+- `track: "er"` is present on the Queue endpoint's per-patient DTO
+  (`GET /api/staff/queue`), which is what `Queue/index.tsx:406-408`'s `מיון` badge reads.
+- Notification worker completed the ER magic-link send with no errors in the logs. Real receipt
+  on a phone still needs eyes-on confirmation, same caveat as the elective check.
+
+**VISIBLE — constitution wording doesn't match actual ER behavior.** `.specify/memory/constitution.md`
+describes ER as landing on an "immediate waiting screen." The actual entry phase is `navigation`,
+not `waiting` — a patient walks the same navigation photos as elective, just without a checklist
+first. Not fixed here (this was a walkthrough, not a fix pass) — flagged for the team to decide
+whether the doc or the behavior is wrong.
+
+**Not walked:** the "abbreviated consent forms" behavior the constitution also describes for ER —
+no such branching exists in the forms code; ER patients get the same full form set as elective.
+Also not walked: the admin configuration screens (still open from Phase 1).
+
 ## Next
 
 Phase 2 fixes these top-down, blocker first. Phase 3 is the network dress rehearsal on the real phone,
