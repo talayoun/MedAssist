@@ -82,6 +82,8 @@ Staff access a desktop dashboard to:
   status information
 - Update patient status in one tap (waiting, in treatment, done)
 - Broadcast a message to all waiting patients at once
+- Create new appointments for elective patients — enter name, phone, department,
+  and procedure, and the SMS magic link goes out immediately or on schedule
 - Generate emergency links for unscheduled arrivals
 - View uploaded patient documents and export a single consolidated PDF
 - Add clinical stations (X-ray, pharmacy, etc.) that appear on the patient's screen
@@ -131,6 +133,67 @@ passwords, parameterized SQL, Helmet headers, CORS, presigned S3 URLs
 
 **Testing** - Playwright for API contract tests and end-to-end browser tests;
 Vitest for pure unit tests
+
+---
+
+## Architecture
+
+How the patient app, staff back-office, and API/data layer connect:
+
+```mermaid
+flowchart LR
+    subgraph PatientSide["Patient Side"]
+        PWA["Patient App
+(mobile, Hebrew, offline-ready)"]
+    end
+
+    subgraph StaffSide["Staff Side"]
+        BO["Staff Backoffice
+(desktop, login required)"]
+    end
+
+    subgraph APILayer["API Layer"]
+        direction TB
+        PatientAuth{"Magic Link Check"}
+        StaffAuth{"Staff Login Check"}
+        Modules["Core Modules
+Appointments - Checklist - Forms
+Navigation - Waiting"]
+    end
+
+    subgraph AsyncPipeline["Async Notification Pipeline"]
+        direction TB
+        Enqueue["Queue Notification"]
+        Worker["Notification Worker"]
+    end
+
+    subgraph DataStores["Data Stores"]
+        DB[("PostgreSQL
+system of record")]
+        Cache[("Redis
+sessions + queue")]
+    end
+
+    subgraph External["External Services"]
+        Telegram["Telegram
+(alerts + magic links)"]
+        S3[("S3
+images and PDFs")]
+    end
+
+    PatientAuth --> Modules
+    StaffAuth --> Modules
+    Enqueue --> Worker
+    PWA -->|"visit token in URL"| PatientAuth
+    BO -->|"session cookie"| StaffAuth
+    StaffAuth -.->|"revocation check"| Cache
+    Modules -->|"attach or export files"| S3
+    Modules -->|"appointment created"| Enqueue
+    Enqueue -.->|"backed by"| Cache
+    Worker --> Telegram
+    Telegram -.->|"delivers magic link"| PWA
+    Modules --> DB
+```
 
 ---
 
