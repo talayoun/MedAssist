@@ -113,7 +113,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '-0.3px',
   },
   titleAccent: {
-    color: '#0f1e36',
+    color: '#0a4694',
   },
   subtitle: {
     margin: '6px 0 0',
