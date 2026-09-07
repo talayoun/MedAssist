@@ -70,7 +70,7 @@ async function seedErDemo() {
 
   const patientAppUrl = process.env.MAGIC_LINK_BASE_URL ?? 'http://localhost:5173/visit';
   const linkUrl = `${patientAppUrl}/${token}`;
-  const message = `שלום ${ER_PATIENT_NAME}, קישור לביקורך במיון: ${linkUrl}`;
+  const message = `שלום ${ER_PATIENT_NAME}, קישור לביקורך במחלקת ${ER_DEPT_NAME}:\n${linkUrl}`;
 
   await enqueueNotification({
     patientId,
