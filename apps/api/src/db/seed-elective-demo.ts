@@ -8,14 +8,18 @@
  * Standalone and idempotent (upsert by phone), like seed-er-demo.ts — run
  * this *after* db:seed/db:reset-demo, since it depends on the עיניים
  * department and cataract-surgery checklist/form templates already existing.
+ *
+ * Optional CLI args override the default demo patient: `tsx
+ * seed-elective-demo.ts "<name>" "<phone>"`. Each distinct phone number
+ * seeds (and idempotently re-seeds) its own patient.
  */
 import pool, { query } from './db';
 import { generateToken } from '../modules/magic-links/magic-links.service';
 import { enqueueNotification } from '../modules/notifications/notifications.producer';
 import { notificationQueue } from '../modules/notifications/queue';
 
-const PATIENT_NAME = 'טל עיון';
-const PATIENT_PHONE = '+972529876544';
+const PATIENT_NAME = process.argv[2] ?? 'טל עיון';
+const PATIENT_PHONE = process.argv[3] ?? '+972529876544';
 const DEPT_NAME = 'עיניים';
 const PROCEDURE = 'cataract-surgery';
 const TTL_HOURS = 72;
