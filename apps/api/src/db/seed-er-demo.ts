@@ -96,4 +96,7 @@ seedErDemo()
   .finally(async () => {
     await notificationQueue.close();
     await pool.end();
+    // BullMQ/ioredis leave background timers on the event loop even after
+    // close() resolves — force-exit rather than hang, same as reset-demo.ts.
+    process.exit(process.exitCode ?? 0);
   });
