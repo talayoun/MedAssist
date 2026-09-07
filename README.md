@@ -82,6 +82,8 @@ Staff access a desktop dashboard to:
   status information
 - Update patient status in one tap (waiting, in treatment, done)
 - Broadcast a message to all waiting patients at once
+- Create new appointments for elective patients — enter name, phone, department,
+  and procedure, and the SMS magic link goes out immediately or on schedule
 - Generate emergency links for unscheduled arrivals
 - View uploaded patient documents and export a single consolidated PDF
 - Add clinical stations (X-ray, pharmacy, etc.) that appear on the patient's screen
